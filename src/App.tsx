@@ -1,31 +1,33 @@
-// App.tsx
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import MainLayout from "./assets/components/Layout/MainLayout";
-import Dashboard from "./pages/Dashboard";
-import Inventory from "./pages/Inventory";
-import Reports from "./pages/Reports";
-import InventoryEngine from "./pages/InventoryEngine";
-import LoanEngine from "./pages/LoanEngine";
-import BusinessAdvisor from "./pages/BusinessStartAdvisor";
-import TechAdvisor from "./pages/TechAdvisor";
-import Sales from "./pages/Sales";
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { AppContextProvider } from './context/AppContext';
+import MainLayout from './assets/components/Layout/MainLayout';
+import SmeDashboard from './pages/SmeDashboard';
+import SmeAdvisor from './pages/SmeAdvisor';
+import BankOfficerDashboard from './pages/BankOfficerDashboard';
+import Inventory from './pages/Inventory';
+import Sales from './pages/Sales';
+import Reports from './pages/Reports';
+import TechAdvisor from './pages/TechAdvisor';
+import BusinessStartAdvisor from './pages/BusinessStartAdvisor';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<MainLayout />}>
-          <Route index element={<Dashboard />} />
-          <Route path="inventory" element={<Inventory />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="inventory-engine" element={<InventoryEngine />} />
-          <Route path="loan-engine" element={<LoanEngine />} />
-          <Route path="business-advisor" element={<BusinessAdvisor />} />
-          <Route path="tech-advisor" element={<TechAdvisor />} />
-          <Route path="sales" element={<Sales />} />
-        </Route>
-      </Routes>
-    </Router>
+    <AppContextProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<MainLayout />}>
+            <Route index element={<SmeDashboard />} />
+            <Route path="inventory" element={<Inventory />} />
+            <Route path="sales" element={<Sales />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="advisor" element={<SmeAdvisor />} />
+            <Route path="tech-advisor" element={<TechAdvisor />} />
+            <Route path="business-advisor" element={<BusinessStartAdvisor />} />
+            <Route path="banker" element={<BankOfficerDashboard />} />
+          </Route>
+        </Routes>
+      </Router>
+    </AppContextProvider>
   );
 }
 

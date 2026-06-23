@@ -1,58 +1,49 @@
-# React + TypeScript + Vite
+# Elevata – AI-Powered SME Financial Intelligence Platform
 
-<!-- to push -->
+Elevata is a banking-grade financial decision system and analytics dashboard suite built for Small and Medium Enterprises (SMEs) and credit institutions in Rwanda. It operates as an internal analytics hub and AI-driven advisory portal with dynamic credit risk assessment capabilities.
 
-<!-- git push -u https://mppatrick12@github.com/mppatrick12/FinovatrAI.git main -->
+## 🎨 Design System & Aesthetic Principles
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Elevata adheres to a clean, data-driven, minimalistic fintech layout:
+- **Core Background**: White (`#FFFFFF`) with secondary light slate (`#F8FAFC`).
+- **Cards**: Structured white panels with subtle borders (`#E5E7EB`) and lightweight shadows.
+- **Accents**: Strict, single accent color (Emerald `#10B981`) for secondary UI emphasis.
+- **Status Indicators**:
+  - Success: `#10B981` (Emerald)
+  - Warning: `#F59E0B` (Amber)
+  - Danger: `#EF4444` (Red/Rose)
+  - Info: `#3B82F6` (Blue)
+- **Typography**:
+  - Headings: **Plus Jakarta Sans** (Semi-bold/Bold)
+  - Body Copy: **Inter** (Regular/Medium)
+  - Metrics / Financial KPIs: **JetBrains Mono** (Monospaced alignment)
 
-Currently, two official plugins are available:
+## 📊 Modules & Pages
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+1. **SME Financial Dashboard (`/`)**: High-density business health KPIs, dynamic cash flow widgets, runway monitors, and AI-generated real-time risk alerts.
+2. **Inventory Catalog (`/inventory`)**: SKU management catalog displaying reorder points, low-stock warnings, and capital allocation.
+3. **Record Customer Invoices (`/sales`)**: Record sales journals, subtract matching stock units, and automatically compute profit impacts.
+4. **Financial Performance Reports (`/reports`)**: Double-line trends for revenues and operational cost comparison, paired with historical profit margin analysis.
+5. **Loan Simulator (`/advisor`)**: interactive slider modeling credit facilities, principal, and repayment periods against base profit forecasts.
+6. **Tech Upgrade Advisor (`/tech-advisor`)**: SME equipment advisor recommending tech upgrades based on sector, with investment ROI modeling.
+7. **Business Startup Planner (`/business-advisor`)**: Micro-mart, cafe, and accessory store model planners mapped onto Kigali commercial hub heatmaps (Kimironko, Nyabugogo, Nyamirambo).
+8. **Bank Officer Panel (`/banker`)**: Banker interface to review portfolio health, approve/reject simulated credit applications, or request field audits.
 
-## Expanding the ESLint configuration
+## 🛠️ Stack & Setup
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **Framework**: React 19 (Vite)
+- **Styling**: Tailwind CSS
+- **Icons**: Lucide React
+- **Charts**: Recharts
+- **State Management**: React Context (`AppContext.tsx`) with localStorage persistence
 
-```js
-export default tseslint.config({
-  extends: [
-    // Remove ...tseslint.configs.recommended and replace with this
-    ...tseslint.configs.recommendedTypeChecked,
-    // Alternatively, use this for stricter rules
-    ...tseslint.configs.strictTypeChecked,
-    // Optionally, add this for stylistic rules
-    ...tseslint.configs.stylisticTypeChecked,
-  ],
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
-```
+```bash
+# Install dependencies
+npm install
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+# Run local development server
+npm run dev
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config({
-  plugins: {
-    // Add the react-x and react-dom plugins
-    'react-x': reactX,
-    'react-dom': reactDom,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended typescript rules
-    ...reactX.configs['recommended-typescript'].rules,
-    ...reactDom.configs.recommended.rules,
-  },
-})
+# Build production bundle
+npm run build
 ```
