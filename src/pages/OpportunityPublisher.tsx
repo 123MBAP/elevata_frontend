@@ -22,9 +22,12 @@ import {
   Search,
   ChevronRight,
   Loader2,
-  Check
+  Info,
+  Landmark
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
+
+type OpportunityType = 'loan' | 'grant' | 'fintech' | 'insurance' | 'training' | 'guarantee' | 'savings' | 'other';
 
 export default function OpportunityPublisher() {
   const {
@@ -45,32 +48,163 @@ export default function OpportunityPublisher() {
   const [publishStep, setPublishStep] = useState(1);
   const [matchingAnimation, setMatchingAnimation] = useState(false);
 
-  // New Opportunity Form state
-  const [newOppTitle, setNewOppTitle] = useState('');
-  const [newOppCategory, setNewOppCategory] = useState('Loan');
-  const [newOppDescription, setNewOppDescription] = useState('');
-  const [newOppBenefits, setNewOppBenefits] = useState('');
-  const [newOppDeadline, setNewOppDeadline] = useState('');
-  const [newOppMaxFunding, setNewOppMaxFunding] = useState('');
-  const [newOppSectors, setNewOppSectors] = useState<string[]>([]);
-  const [newOppMinAge, setNewOppMinAge] = useState(1);
-  const [newOppMinRevenue, setNewOppMinRevenue] = useState(2000000);
-  const [newOppMinHealthScore, setNewOppMinHealthScore] = useState(60);
-  const [newOppMinReadiness, setNewOppMinReadiness] = useState(60);
-  const [newOppRegRequired, setNewOppRegRequired] = useState(true);
-  const [newOppTaxRequired, setNewOppTaxRequired] = useState(true);
-  const [newOppCollateralRequired, setNewOppCollateralRequired] = useState(false);
-  const [newOppRequiredDocs, setNewOppRequiredDocs] = useState<string[]>([]);
+  // Dynamic Publisher wizard state
+  const [oppType, setOppType] = useState<OpportunityType>('loan');
+  
+  // Step 2: Basic info
+  const [oppName, setOppName] = useState('');
+  const [oppDesc, setOppDesc] = useState('');
+  const [oppProvider, setOppProvider] = useState('Elevata Underwriting Corp');
+  const [oppCategory, setOppCategory] = useState('Loan');
+  const [oppStage, setOppStage] = useState('Growth');
+  const [oppSectors, setOppSectors] = useState<string[]>(['Agriculture', 'Retail']);
+  const [oppLocation, setOppLocation] = useState('Rwanda');
+  const [oppDeadline, setOppDeadline] = useState('2026-10-31');
+
+  // Step 3: Type specific details
+  // Loan params
+  const [loanType, setLoanType] = useState('Working Capital');
+  const [loanMinAmt, setLoanMinAmt] = useState('1000000');
+  const [loanMaxAmt, setLoanMaxAmt] = useState('25000000');
+  const [loanRate, setLoanRate] = useState('8.5');
+  const [loanTerm, setLoanTerm] = useState('24');
+  const [loanGrace, setLoanGrace] = useState('3');
+  const [loanCollateralReq, setLoanCollateralReq] = useState(false);
+  const [loanCollateralType, setLoanCollateralType] = useState('Asset Registration');
+  const [loanPurpose, setLoanPurpose] = useState('Working Capital');
+
+  // Grant params
+  const [grantAmt, setGrantAmt] = useState('15000000');
+  const [grantCoFundingReq, setGrantCoFundingReq] = useState(false);
+  const [grantCoFundingPct, setGrantCoFundingPct] = useState('20');
+  const [grantDuration, setGrantDuration] = useState('12');
+  const [grantImpact, setGrantImpact] = useState('Employment & Green Tech');
+
+  // Fintech params
+  const [fintechType, setFintechType] = useState('POS Payments');
+  const [fintechFee, setFintechFee] = useState('15000');
+  const [fintechTxFee, setFintechTxFee] = useState('1.5%');
+
+  // Step 4: Business Profile Eligibility Builder
+  const [eligSoleProp, setEligSoleProp] = useState(true);
+  const [eligCompany, setEligCompany] = useState(true);
+  const [eligCooperative, setEligCooperative] = useState(true);
+  const [eligStartup, setEligStartup] = useState(true);
+  const [eligMinAge, setEligMinAge] = useState(1);
+  const [eligMinEmployees, setEligMinEmployees] = useState(3);
+  const [eligLocations, setEligLocations] = useState<string[]>(['Kigali', 'Northern Province']);
+
+  // Step 5: Financial Eligibility Builder
+  const [finMinMonthlyRev, setFinMinMonthlyRev] = useState(2000000);
+  const [finMinAnnualRev, setFinMinAnnualRev] = useState(24000000);
+  const [finMinReadiness, setFinMinReadiness] = useState(65);
+  const [finMinHealth, setFinMinHealth] = useState(60);
+  const [finMaxDebtToRevenue, setFinMaxDebtToRevenue] = useState(35);
+  const [finStatementsReq, setFinStatementsReq] = useState(true);
+
+  // Step 6: Documentation Requirements Dossier checklist
+  const [docRequirements, setDocRequirements] = useState<Record<string, 'Required' | 'Optional' | 'N/A'>>({
+    'Business Registration Certificate': 'Required',
+    'National ID': 'Required',
+    'Tax Clearance': 'Required',
+    'Bank Statements': 'Required',
+    'Financial Statements': 'Optional',
+    'Business Plan': 'Optional',
+    'Cash Flow Projection': 'Optional',
+    'Collateral Documents': 'N/A'
+  });
+
+  // Step 7: Readiness Requirements
+  const [readinessMinRecords, setReadinessMinRecords] = useState('6 months');
+  const [readinessPlanReq, setReadinessPlanReq] = useState(true);
+  const [readinessMinDigitalActivity, setReadinessMinDigitalActivity] = useState('3 months');
+  const [readinessTaxCompliance, setReadinessTaxCompliance] = useState(true);
+
+  // Step 8: Application Process Definition
+  const [appMethod, setAppMethod] = useState('Apply directly through Elevata');
+  const appSteps = [
+    '1. Check eligibility profile',
+    '2. Complete application dossier',
+    '3. Upload required documents',
+    '4. Automated AI risk review',
+    '5. Bank officer interview & disburse'
+  ];
+
+  // Step 9: AI Matching Weights
+  const [weights, setWeights] = useState<Record<string, 'Required' | 'Important' | 'Preferred'>>({
+    'Business sector': 'Required',
+    'Business location': 'Important',
+    'Revenue': 'Required',
+    'Business age': 'Preferred',
+    'Financial health': 'Required',
+    'Loan readiness': 'Required',
+    'Required documents': 'Important',
+    'Business stage': 'Preferred'
+  });
+
+  // Step 10: AI Match Preview & Suitability Simulator Data
+  const simulatedMatches = useMemo(() => {
+    return [
+      {
+        name: 'Green Harvest Ltd',
+        sector: 'Agriculture',
+        matchPercent: 94,
+        status: 'Highly Qualified',
+        checks: [
+          { label: 'Agriculture sector', pass: true },
+          { label: '3 years operating history', pass: true },
+          { label: 'Revenue meets requirement', pass: true },
+          { label: 'Strong cash flow', pass: true },
+          { label: 'Location eligible', pass: true },
+          { label: 'Business profile complete', pass: true }
+        ],
+        missing: ['Updated tax clearance'],
+        readiness: 'Financing Ready',
+        action: 'Upload updated tax clearance and proceed with application.'
+      },
+      {
+        name: "Marie's Kigali Fresh Mart",
+        sector: 'Retail',
+        matchPercent: 78,
+        status: 'Needs Minor Improvements',
+        checks: [
+          { label: 'Retail sector', pass: true },
+          { label: 'Kigali location', pass: true },
+          { label: 'Revenue meets requirement', pass: true },
+          { label: 'Current inventory levels stable', pass: true },
+          { label: 'Missing requirements dossier', pass: false }
+        ],
+        missing: ['Audited Financial Statements', 'Cooperative Certificate'],
+        readiness: 'Needs Prep',
+        action: 'Submit financial statements to unlock full match score.'
+      },
+      {
+        name: 'David Transport Services',
+        sector: 'Logistics',
+        matchPercent: 42,
+        status: 'Needs Preparation',
+        checks: [
+          { label: 'Sector mismatch', pass: false },
+          { label: 'High overhead fuel costs', pass: false },
+          { label: 'Operating history under 12 months', pass: false },
+          { label: 'Debt service coverage below limits', pass: false }
+        ],
+        missing: ['Collateral Documents', 'Tax Returns', 'Business Plan'],
+        readiness: 'Unqualified',
+        action: 'Schedule advisory consultation or complete Record-Keeping training.'
+      }
+    ];
+  }, []);
 
   // Training Form State
   const [isTrainingModalOpen, setIsTrainingModalOpen] = useState(false);
   const [trTitle, setTrTitle] = useState('');
   const [trDescription, setTrDescription] = useState('');
-  const [trDate, setTrDate] = useState('');
-  const [trTime, setTrTime] = useState('');
-  const [trSpeaker, setTrSpeaker] = useState('');
-  const [trLink, setTrLink] = useState('');
-  const [trAudience, setTrAudience] = useState<string[]>([]);
+  const [trDate, setTrDate] = useState('2026-08-15');
+  const [trTime, setTrTime] = useState('10:00 AM - 12:00 PM');
+  const [trSpeaker, setTrSpeaker] = useState('Dr. Agnes Kalibata (Director, AgroGrow)');
+  const [trLink, setTrLink] = useState('https://zoom.us/j/elevata-training-live');
+  const [trAudience, setTrAudience] = useState<string[]>(['Agriculture', 'Low Readiness SMEs']);
 
   // Selected Opportunity for detailed view/analytics
   const [selectedOppId, setSelectedOppId] = useState<string>('opp-1');
@@ -88,80 +222,108 @@ export default function OpportunityPublisher() {
   }, [opportunities, selectedOppId]);
 
   // Sector list helper
-  const availableSectors = ['Retail', 'Agriculture', 'Logistics', 'Technology'];
-
-  // Document checklist helper
-  const documentOptions = ['Business License', 'Tax Clearance Certificate', 'Audited Financial Statements', 'Cooperative Certificate', 'National ID', 'Proof of Address'];
+  const availableSectors = ['Retail', 'Agriculture', 'Logistics', 'Technology', 'Manufacturing', 'Hospitality', 'Services'];
 
   // Categories helper
   const categories = ['All', 'Loan', 'Grant', 'Savings Product', 'Investment', 'Training', 'Insurance', 'Business Advisory'];
 
-  // Handle Sector Checkbox Change
-  const handleSectorChange = (sector: string) => {
-    setNewOppSectors(prev =>
-      prev.includes(sector) ? prev.filter(s => s !== sector) : [...prev, sector]
-    );
-  };
+  // Stepper helper
+  const stepsList = [
+    { num: 1, name: 'Select Type' },
+    { num: 2, name: 'Basic Info' },
+    { num: 3, name: 'Product Details' },
+    { num: 4, name: 'Profile Rules' },
+    { num: 5, name: 'Financial Rules' },
+    { num: 6, name: 'Documents' },
+    { num: 7, name: 'Readiness' },
+    { num: 8, name: 'Application' },
+    { num: 9, name: 'AI Weights' },
+    { num: 10, name: 'AI Preview' }
+  ];
 
-  // Handle Document Checklist Change
-  const handleDocChange = (doc: string) => {
-    setNewOppRequiredDocs(prev =>
-      prev.includes(doc) ? prev.filter(d => d !== doc) : [...prev, doc]
-    );
-  };
-
-  // Handle publish form submit steps
+  // Handle step navigations
   const handleNextStep = () => {
     if (publishStep === 1) {
-      if (!newOppTitle || !newOppDeadline || !newOppMaxFunding) {
-        triggerToast('Please fill in title, deadline, and maximum funding.', 'info');
-        return;
-      }
       setPublishStep(2);
     } else if (publishStep === 2) {
-      // Transition to AI Matching Step 3
+      if (!oppName || !oppDeadline) {
+        triggerToast('Please fill in opportunity name and deadline date.', 'info');
+        return;
+      }
       setPublishStep(3);
+    } else if (publishStep === 3) {
+      setPublishStep(4);
+    } else if (publishStep === 4) {
+      setPublishStep(5);
+    } else if (publishStep === 5) {
+      setPublishStep(6);
+    } else if (publishStep === 6) {
+      setPublishStep(7);
+    } else if (publishStep === 7) {
+      setPublishStep(8);
+    } else if (publishStep === 8) {
+      setPublishStep(9);
+    } else if (publishStep === 9) {
+      setPublishStep(10);
       setMatchingAnimation(true);
       setTimeout(() => {
         setMatchingAnimation(false);
-      }, 2500);
+      }, 2000);
     }
   };
 
+  // Handle final opportunity publication
   const handlePublishSubmit = () => {
-    // Actually publish
+    let fundingVal = 'Flexible';
+    if (oppType === 'loan') {
+      fundingVal = `${formatRWF(parseInt(loanMaxAmt) || 0)}`;
+    } else if (oppType === 'grant') {
+      fundingVal = `${formatRWF(parseInt(grantAmt) || 0)}`;
+    }
+
+    const docsList = Object.keys(docRequirements).filter(doc => docRequirements[doc] === 'Required');
+
     publishOpportunity({
-      title: newOppTitle,
-      institution: 'Elevata Finance Core',
-      category: newOppCategory,
-      description: newOppDescription,
-      benefits: newOppBenefits,
-      deadline: newOppDeadline,
-      maxFunding: formatRWF(parseInt(newOppMaxFunding) || 0),
-      sectors: newOppSectors.length > 0 ? newOppSectors : ['Retail', 'Agriculture', 'Technology'],
-      minAge: newOppMinAge,
-      minRevenue: newOppMinRevenue,
-      minHealthScore: newOppMinHealthScore,
-      minReadinessScore: newOppMinReadiness,
-      registrationRequired: newOppRegRequired,
-      taxCompliance: newOppTaxRequired,
-      collateralRequired: newOppCollateralRequired,
-      requiredDocs: newOppRequiredDocs
+      title: oppName,
+      institution: oppProvider,
+      category: oppCategory,
+      description: oppDesc || `${oppCategory} opportunity targeting growing local ventures.`,
+      benefits: oppType === 'loan'
+        ? `${loanRate}% Interest, ${loanTerm} months term, grace period of ${loanGrace} months.`
+        : oppType === 'grant'
+        ? `100% equity-free funding. Expected impact: ${grantImpact}`
+        : 'Automated terms and capacity scaling benefits.',
+      deadline: oppDeadline,
+      maxFunding: fundingVal,
+      sectors: oppSectors,
+      minAge: eligMinAge,
+      minRevenue: finMinAnnualRev,
+      minHealthScore: finMinHealth,
+      minReadinessScore: finMinReadiness,
+      registrationRequired: eligSoleProp || eligCompany,
+      taxCompliance: readinessTaxCompliance,
+      collateralRequired: loanCollateralReq,
+      requiredDocs: docsList
     });
 
-    triggerToast(`"${newOppTitle}" published successfully! AI matched 3 eligible SMEs.`);
+    triggerToast(`"${oppName}" published successfully! AI matches simulated and active.`);
     setIsPublishModalOpen(false);
     
-    // Reset Form
-    setNewOppTitle('');
-    setNewOppCategory('Loan');
-    setNewOppDescription('');
-    setNewOppBenefits('');
-    setNewOppDeadline('');
-    setNewOppMaxFunding('');
-    setNewOppSectors([]);
-    setNewOppRequiredDocs([]);
+    // Reset Form states
+    setOppName('');
+    setOppDesc('');
     setPublishStep(1);
+  };
+
+  // Action: Create Training from Gap Analysis
+  const handleCreateTrainingFromGap = (missingRequirement: string, count: number) => {
+    setTrTitle(`Masterclass: Preparing ${missingRequirement} for Financing`);
+    setTrDescription(`A specialized capacity building workshop scheduled for the ${count} SMEs lacking completed ${missingRequirement.toLowerCase()} files to qualify for the ${selectedOpp.title} program.`);
+    setTrDate('2026-08-22');
+    setTrTime('09:00 AM - 11:30 AM');
+    setTrSpeaker('Dr. Agnes Kalibata (Director, AgroGrow)');
+    setTrAudience(['Low Readiness SMEs', ...selectedOpp.sectors]);
+    setIsTrainingModalOpen(true);
   };
 
   // Handle Virtual Training Submission
@@ -175,20 +337,15 @@ export default function OpportunityPublisher() {
       title: trTitle,
       description: trDescription,
       date: trDate,
-      time: trTime || '10:00 AM',
+      time: trTime,
       speaker: trSpeaker,
       meetingLink: trLink,
-      targetAudience: trAudience.length > 0 ? trAudience : ['All SMEs']
+      targetAudience: trAudience
     });
-    triggerToast(`Virtual Training "${trTitle}" created successfully.`);
+    triggerToast(`Virtual Training session scheduled for targeting gap.`);
     setIsTrainingModalOpen(false);
     setTrTitle('');
     setTrDescription('');
-    setTrDate('');
-    setTrTime('');
-    setTrSpeaker('');
-    setTrLink('');
-    setTrAudience([]);
   };
 
   // KPI Calculations
@@ -196,34 +353,32 @@ export default function OpportunityPublisher() {
   const totalApplications = applications.length;
   const activeTrainingsCount = trainings.length;
 
-  // AI Matching lists for selected Opportunity
+  // Real-time matches computation for selected Opportunity
   const matchedSMEs = useMemo(() => {
     if (!selectedOpp) return [];
     return smes.map(sme => {
-      // Calculate suitability rating
-      let score = 0;
+      let score = 30; // base score
       let missing: string[] = [];
 
       // Check Sector match
       const sectorMatch = selectedOpp.sectors.includes(sme.sector);
-      if (sectorMatch) score += 30;
+      if (sectorMatch) score += 20;
       else missing.push('Sector Mismatch');
 
-      // Check Revenue match (Marie's Kigali Fresh Mart has approx 5.8M monthly)
-      const annualRevenue = sme.monthlyData.reduce((sum, d) => sum + d.revenue, 0) * 2; // extrapolate
+      // Check Revenue match
+      const annualRevenue = sme.monthlyData.reduce((sum, d) => sum + d.revenue, 0) * 2;
       const revenueMatch = annualRevenue >= selectedOpp.minRevenue;
       if (revenueMatch) score += 20;
       else missing.push('Insufficient Revenue');
 
       // Check health score match
       const healthMatch = sme.healthScore >= selectedOpp.minHealthScore;
-      if (healthMatch) score += 25;
+      if (healthMatch) score += 15;
       else missing.push('Lower Business Health Score');
 
       // Check readiness score
-      // Sme 1 has 82 health, etc.
-      const readinessMatch = sme.healthScore + 3 >= selectedOpp.minReadinessScore;
-      if (readinessMatch) score += 25;
+      const readinessMatch = sme.healthScore + 2 >= selectedOpp.minReadinessScore;
+      if (readinessMatch) score += 15;
       else missing.push('Lower Loan Readiness Score');
 
       const finalMatchPercent = Math.min(100, score);
@@ -258,12 +413,14 @@ export default function OpportunityPublisher() {
     ];
   }, []);
 
-  const missingRequirementData = [
-    { name: 'Tax Clearance Certificate', value: 45 },
-    { name: 'Audited Financials', value: 30 },
-    { name: 'Collateral Registration', value: 15 },
-    { name: 'Business Plan details', value: 10 }
-  ];
+  const missingRequirementData = useMemo(() => {
+    return [
+      { name: 'Financial Statements', count: 312 },
+      { name: 'Business Plan', count: 187 },
+      { name: 'Tax Clearance', count: 142 },
+      { name: 'Minimum Revenue', count: 96 }
+    ];
+  }, []);
 
   const filteredOpportunities = useMemo(() => {
     return opportunities.filter(opp => {
@@ -433,7 +590,7 @@ export default function OpportunityPublisher() {
                   <h3 className="text-xs font-bold text-slate-900 line-clamp-1">{opp.title}</h3>
                   <p className="text-[10px] text-slate-400 mt-0.5">by {opp.institution}</p>
                   
-                  <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 leading-relaxed">
+                  <p className="text-[11px] text-slate-500 mt-2 line-clamp-2 leading-relaxed font-sans">
                     {opp.description}
                   </p>
                 </div>
@@ -597,7 +754,7 @@ export default function OpportunityPublisher() {
                     </td>
                     <td className="px-5 py-3.5 text-slate-500 font-medium">{sme.sector}</td>
                     <td className="px-5 py-3.5 font-mono font-bold text-slate-800">
-                      {sme.healthScore + 3}%
+                      {sme.healthScore + 2}%
                     </td>
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-2">
@@ -623,7 +780,7 @@ export default function OpportunityPublisher() {
                     <td className="px-5 py-3.5">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded border text-[9px] font-bold uppercase ${
                         sme.status === 'Highly Qualified'
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
+                           ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
                           : sme.status === 'Needs Minor Improvements'
                           ? 'bg-amber-50 text-amber-700 border-amber-100'
                           : 'bg-rose-50 text-rose-700 border-rose-100'
@@ -708,14 +865,20 @@ export default function OpportunityPublisher() {
           <Card className="bg-white border border-slate-200 rounded-lg shadow-sm">
             <CardContent className="p-4 flex flex-col justify-between h-full">
               <div>
-                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Most Common Missing Requirements</h4>
+                <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-3">Why are SMEs not qualifying? (Eligibility Gap)</h4>
                 <div className="space-y-2.5">
                   {missingRequirementData.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded-lg border border-slate-100">
-                      <span className="text-slate-700 font-medium">{item.name}</span>
-                      <span className="bg-rose-50 text-rose-700 font-mono font-bold px-2 py-0.5 rounded text-[10px] border border-rose-100">
-                        {item.value}% of fails
-                      </span>
+                    <div key={idx} className="flex items-center justify-between text-xs p-2 bg-slate-50 rounded-lg border border-slate-150">
+                      <div>
+                        <span className="text-slate-800 font-bold block">{item.name}</span>
+                        <span className="text-[9px] text-slate-400 font-medium">{item.count} matching SMEs missing this</span>
+                      </div>
+                      <button
+                        onClick={() => handleCreateTrainingFromGap(item.name, item.count)}
+                        className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-extrabold px-2.5 py-1 rounded text-[9.5px] border border-emerald-100 transition shrink-0"
+                      >
+                        Create Training
+                      </button>
                     </div>
                   ))}
                 </div>
@@ -733,7 +896,11 @@ export default function OpportunityPublisher() {
             <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Schedule interactive capacity sessions to increase SME credit worthiness.</p>
           </div>
           <button
-            onClick={() => setIsTrainingModalOpen(true)}
+            onClick={() => {
+              setTrTitle('');
+              setTrDescription('');
+              setIsTrainingModalOpen(true);
+            }}
             className="px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 rounded-md text-xs font-semibold text-slate-700 transition"
           >
             Create Training Session
@@ -779,8 +946,8 @@ export default function OpportunityPublisher() {
           {/* AI Training Impact & Auto Participant recommendation */}
           <Card className="bg-slate-50 border border-slate-200 rounded-lg shadow-sm">
             <CardContent className="p-4 space-y-4">
-              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+              <h4 className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 font-heading">
+                <Sparkles className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
                 AI Capacity Impact
               </h4>
               <p className="text-[10px] text-slate-500 leading-relaxed font-sans">
@@ -811,282 +978,620 @@ export default function OpportunityPublisher() {
         </div>
       </div>
 
-      {/* PUBLISH OPPORTUNITY STEPPER MODAL */}
+      {/* DYNAMIC 10-STEP PUBLISH OPPORTUNITY STEPS MODAL */}
       {isPublishModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-lg shadow-2xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-150">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            
             {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+            <div className="px-5 py-4 border-b border-slate-150 bg-slate-55 flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-bold text-slate-950 font-heading">Publish Financial Opportunity</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">SME Credit Institution Portal</p>
+                <h3 className="text-sm font-extrabold text-slate-900 uppercase font-heading flex items-center gap-1.5">
+                  <Landmark className="w-4 h-4 text-emerald-600" />
+                  Opportunity Publisher Portal
+                </h3>
+                <p className="text-[10px] text-gray-400 mt-0.5">SME Credit &amp; Financing Facility Deployment</p>
               </div>
               <button
                 onClick={() => setIsPublishModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 font-bold text-sm"
+                className="p-1 text-slate-400 hover:text-slate-650 font-mono font-bold text-xs"
               >
                 ✕
               </button>
             </div>
 
-            {/* Stepper Steps Indicators */}
-            <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-100 flex justify-between items-center text-[10px] text-slate-500 font-medium">
-              <span className={publishStep >= 1 ? 'text-emerald-700 font-bold' : ''}>1. Basic Info</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-              <span className={publishStep >= 2 ? 'text-emerald-700 font-bold' : ''}>2. Eligibility rules</span>
-              <ChevronRight className="w-3.5 h-3.5" />
-              <span className={publishStep >= 3 ? 'text-emerald-700 font-bold' : ''}>3. AI Match analysis</span>
+            {/* Stepper Steps Indicators Scrollable */}
+            <div className="px-4 py-3 bg-slate-50 border-b border-slate-150 flex items-center gap-1.5 overflow-x-auto text-[9.5px] text-slate-400 font-bold select-none whitespace-nowrap scrollbar-thin">
+              {stepsList.map((step) => (
+                <div key={step.num} className="flex items-center gap-1 shrink-0">
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] ${
+                    publishStep === step.num
+                      ? 'bg-emerald-600 text-white font-extrabold'
+                      : publishStep > step.num
+                      ? 'bg-emerald-100 text-emerald-700 font-bold'
+                      : 'bg-slate-100 text-slate-400 font-medium'
+                  }`}>
+                    {step.num}
+                  </span>
+                  <span className={publishStep === step.num ? 'text-emerald-700 font-extrabold' : ''}>
+                    {step.name}
+                  </span>
+                  {step.num < 10 && <ChevronRight className="w-3 h-3 text-slate-300" />}
+                </div>
+              ))}
             </div>
 
-            {/* Content */}
-            <div className="p-5 max-h-[380px] overflow-y-auto">
+            {/* Content Scroll Area */}
+            <div className="p-6 overflow-y-auto flex-1 text-xs space-y-4">
               
-              {/* STEP 1: Basic Information */}
+              {/* STEP 1: Select Opportunity Type */}
               {publishStep === 1 && (
-                <div className="space-y-3">
+                <div className="space-y-4">
+                  <div className="text-center pb-2">
+                    <h4 className="text-sm font-bold text-slate-800 font-heading">What would you like to publish?</h4>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Select a category to load the customized requirements schema.</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {[
+                      { type: 'loan', label: 'Loan / Financing', emoji: '💰', cat: 'Loan' },
+                      { type: 'grant', label: 'Grant Funding', emoji: '🎁', cat: 'Grant' },
+                      { type: 'fintech', label: 'Digital Payment', emoji: '📱', cat: 'Payment Solution' },
+                      { type: 'insurance', label: 'Insurance Product', emoji: '🛡️', cat: 'Insurance' },
+                      { type: 'training', label: 'Training session', emoji: '🎓', cat: 'Training' },
+                      { type: 'guarantee', label: 'Financing Support', emoji: '🤝', cat: 'Business Advisory' }
+                    ].map((opt) => (
+                      <button
+                        key={opt.type}
+                        type="button"
+                        onClick={() => {
+                          setOppType(opt.type as any);
+                          setOppCategory(opt.cat);
+                          setPublishStep(2);
+                        }}
+                        className={`p-4 border rounded-xl flex flex-col items-center justify-center text-center gap-2 transition hover:border-emerald-500 hover:bg-slate-50/50 ${
+                          oppType === opt.type
+                            ? 'border-emerald-500 bg-emerald-50/20 text-emerald-800 ring-1 ring-emerald-500/20'
+                            : 'border-slate-200 text-slate-700 bg-white'
+                        }`}
+                      >
+                        <span className="text-2xl">{opt.emoji}</span>
+                        <strong className="text-[10.5px] font-bold block">{opt.label}</strong>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 2: Basic Opportunity Information */}
+              {publishStep === 2 && (
+                <div className="space-y-3.5">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Opportunity Title</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Opportunity Name</label>
                     <input
                       type="text"
-                      placeholder="e.g. Agribusiness Expansion Loan"
-                      value={newOppTitle}
-                      onChange={e => setNewOppTitle(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
+                      placeholder="e.g. SME Working Capital Facility"
+                      value={oppName}
+                      onChange={e => setOppName(e.target.value)}
+                      className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-slate-50/30"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Category</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Provider Institution</label>
+                      <input
+                        type="text"
+                        value={oppProvider}
+                        onChange={e => setOppProvider(e.target.value)}
+                        className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-slate-50/30"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Target Stage</label>
                       <select
-                        value={newOppCategory}
-                        onChange={e => setNewOppCategory(e.target.value)}
-                        className="w-full border border-slate-200 bg-white rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
+                        value={oppStage}
+                        onChange={e => setOppStage(e.target.value)}
+                        className="w-full border border-slate-250 bg-white rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
                       >
-                        {categories.filter(c => c !== 'All').map(c => (
-                          <option key={c} value={c}>{c}</option>
-                        ))}
+                        <option value="Idea / Pre-revenue">Idea / Pre-revenue</option>
+                        <option value="Startup">Startup</option>
+                        <option value="Early-stage">Early-stage</option>
+                        <option value="Growth">Growth</option>
+                        <option value="Established">Established</option>
                       </select>
                     </div>
+                  </div>
 
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Target Sectors</label>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {availableSectors.map(s => {
+                        const exists = oppSectors.includes(s);
+                        return (
+                          <button
+                            key={s}
+                            type="button"
+                            onClick={() => setOppSectors(prev => exists ? prev.filter(x => x !== s) : [...prev, s])}
+                            className={`px-3 py-1 rounded-md text-[10px] font-bold border transition ${
+                              exists ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-250 text-slate-500'
+                            }`}
+                          >
+                            {s}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Max Funding Amount</label>
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Target Location</label>
                       <input
-                        type="number"
-                        placeholder="e.g. 15000000"
-                        value={newOppMaxFunding}
-                        onChange={e => setNewOppMaxFunding(e.target.value)}
-                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                        type="text"
+                        value={oppLocation}
+                        onChange={e => setOppLocation(e.target.value)}
+                        className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-slate-50/30"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Application Deadline</label>
+                      <input
+                        type="date"
+                        value={oppDeadline}
+                        onChange={e => setOppDeadline(e.target.value)}
+                        className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-slate-50/30 font-mono"
                       />
                     </div>
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Description</label>
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Short Description</label>
                     <textarea
-                      placeholder="Enter description..."
-                      rows={3}
-                      value={newOppDescription}
-                      onChange={e => setNewOppDescription(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Key Benefits</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 10% interest rate, 2 weeks grace period"
-                      value={newOppBenefits}
-                      onChange={e => setNewOppBenefits(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Application Deadline</label>
-                    <input
-                      type="date"
-                      value={newOppDeadline}
-                      onChange={e => setNewOppDeadline(e.target.value)}
-                      className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                      placeholder="e.g. Working capital financing for growing retail and trading businesses."
+                      rows={2}
+                      value={oppDesc}
+                      onChange={e => setOppDesc(e.target.value)}
+                      className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-slate-50/30 leading-relaxed"
                     />
                   </div>
                 </div>
               )}
 
-              {/* STEP 2: Eligibility Requirements */}
-              {publishStep === 2 && (
-                <div className="space-y-3">
-                  <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Target Sectors</label>
-                    <div className="flex flex-wrap gap-2 pt-1">
-                      {availableSectors.map(s => (
-                        <button
-                          key={s}
-                          type="button"
-                          onClick={() => handleSectorChange(s)}
-                          className={`px-3 py-1 text-xs font-semibold rounded-md border transition ${
-                            newOppSectors.includes(s)
-                              ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
-                              : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                          }`}
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Min Monthly Sales (FRW)</label>
-                      <input
-                        type="number"
-                        value={newOppMinRevenue}
-                        onChange={e => setNewOppMinRevenue(parseInt(e.target.value) || 0)}
-                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Min Business Age (Years)</label>
-                      <input
-                        type="number"
-                        value={newOppMinAge}
-                        onChange={e => setNewOppMinAge(parseInt(e.target.value) || 0)}
-                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Min Business Health Score</label>
-                      <input
-                        type="number"
-                        value={newOppMinHealthScore}
-                        onChange={e => setNewOppMinHealthScore(parseInt(e.target.value) || 0)}
-                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 font-mono"
-                      />
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Min Loan Readiness Score</label>
-                      <input
-                        type="number"
-                        value={newOppMinReadiness}
-                        onChange={e => setNewOppMinReadiness(parseInt(e.target.value) || 0)}
-                        className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 font-mono"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-2.5 pt-2">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newOppRegRequired}
-                        onChange={e => setNewOppRegRequired(e.target.checked)}
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span className="text-[10px] text-slate-600 font-semibold uppercase">Registration Required</span>
-                    </label>
-
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newOppTaxRequired}
-                        onChange={e => setNewOppTaxRequired(e.target.checked)}
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span className="text-[10px] text-slate-600 font-semibold uppercase">Tax Compliant</span>
-                    </label>
-
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={newOppCollateralRequired}
-                        onChange={e => setNewOppCollateralRequired(e.target.checked)}
-                        className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                      />
-                      <span className="text-[10px] text-slate-600 font-semibold uppercase">Collateral Req.</span>
-                    </label>
-                  </div>
-
-                  <div className="space-y-1 pt-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Required Documents</label>
-                    <div className="grid grid-cols-2 gap-2 pt-1">
-                      {documentOptions.map(doc => (
-                        <label key={doc} className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-600">
-                          <input
-                            type="checkbox"
-                            checked={newOppRequiredDocs.includes(doc)}
-                            onChange={() => handleDocChange(doc)}
-                            className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                          />
-                          <span>{doc}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* STEP 3: AI Matching Results */}
+              {/* STEP 3: Specific Product Details (Based on Type) */}
               {publishStep === 3 && (
-                <div className="space-y-4 py-4 text-center">
-                  {matchingAnimation ? (
-                    <div className="space-y-4 py-8">
-                      <div className="relative w-16 h-16 mx-auto">
-                        <Loader2 className="w-16 h-16 text-emerald-500 animate-spin absolute" />
-                        <Sparkles className="w-6 h-6 text-emerald-600 absolute top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 animate-pulse" />
-                      </div>
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-bold text-slate-900 font-heading">AI is matching eligible businesses...</h4>
-                        <p className="text-[10px] text-slate-400">Parsing transaction ledgers and health scores across sectors</p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      <div className="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-full flex items-center justify-center mx-auto border border-emerald-100">
-                        <Check className="w-6 h-6" />
-                      </div>
+                <div className="space-y-4">
+                  {oppType === 'loan' && (
+                    <div className="space-y-3">
+                      <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">💰 Financing Parameters</span>
                       
-                      <div className="space-y-1">
-                        <h4 className="text-xs font-bold text-slate-900">Matching Complete!</h4>
-                        <p className="text-[10px] text-slate-500">
-                          We found <strong className="text-emerald-600 font-bold">4 matching businesses</strong> satisfying your eligibility criteria in Elevata network.
-                        </p>
-                      </div>
-
-                      <div className="p-3 bg-slate-50 rounded-lg text-left space-y-2 border border-slate-100">
-                        <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">AI Match Breakdown</span>
-                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                          <div className="p-2 bg-white rounded border border-slate-200/80">
-                            <span className="block font-bold text-emerald-600">2</span>
-                            <span className="text-[9px] text-slate-400 uppercase font-semibold">Highly Qualified</span>
-                          </div>
-                          <div className="p-2 bg-white rounded border border-slate-200/80">
-                            <span className="block font-bold text-amber-600">1</span>
-                            <span className="text-[9px] text-slate-400 uppercase font-semibold">Minor Fixes</span>
-                          </div>
-                          <div className="p-2 bg-white rounded border border-slate-200/80">
-                            <span className="block font-bold text-rose-600">1</span>
-                            <span className="text-[9px] text-slate-400 uppercase font-semibold">Needs Prep</span>
-                          </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Financing Type</label>
+                          <select value={loanType} onChange={e => setLoanType(e.target.value)} className="w-full border border-slate-250 bg-white rounded-lg p-2.5 text-xs focus:outline-none">
+                            <option value="Working Capital">Working Capital</option>
+                            <option value="Asset Finance">Asset Finance</option>
+                            <option value="Expansion">Expansion Facility</option>
+                            <option value="Agriculture Finance">Agriculture Finance</option>
+                            <option value="Trade Finance">Trade Finance</option>
+                          </select>
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Purpose of Financing</label>
+                          <select value={loanPurpose} onChange={e => setLoanPurpose(e.target.value)} className="w-full border border-slate-250 bg-white rounded-lg p-2.5 text-xs focus:outline-none">
+                            <option value="Inventory">Purchase Inventory</option>
+                            <option value="Equipment">Acquire Machinery</option>
+                            <option value="Technology">Technology Upgrade</option>
+                            <option value="Working Capital">General Operating Capital</option>
+                          </select>
                         </div>
                       </div>
 
-                      <p className="text-[10px] text-slate-400 italic">
-                        Once submitted, this program will appear in the Opportunity Hub for matching businesses instantly.
-                      </p>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Principal (FRW)</label>
+                          <input type="number" value={loanMinAmt} onChange={e => setLoanMinAmt(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Max Principal (FRW)</label>
+                          <input type="number" value={loanMaxAmt} onChange={e => setLoanMaxAmt(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Interest Rate (% p.a.)</label>
+                          <input type="number" step="0.1" value={loanRate} onChange={e => setLoanRate(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Period (Months)</label>
+                          <input type="number" value={loanTerm} onChange={e => setLoanTerm(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Grace Period (m)</label>
+                          <input type="number" value={loanGrace} onChange={e => setLoanGrace(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3.5">
+                        <div className="flex justify-between items-center text-xs">
+                          <label className="text-slate-650 font-bold uppercase text-[9.5px]">Collateral Required?</label>
+                          <input type="checkbox" checked={loanCollateralReq} onChange={e => setLoanCollateralReq(e.target.checked)} className="rounded border-slate-300 text-emerald-600" />
+                        </div>
+                        {loanCollateralReq && (
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase block">Collateral Type description</label>
+                            <input type="text" value={loanCollateralType} onChange={e => setLoanCollateralType(e.target.value)} className="w-full border border-slate-200 bg-white rounded p-1.5 text-xs focus:outline-none" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {oppType === 'grant' && (
+                    <div className="space-y-3">
+                      <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">🎁 Grant Details</span>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Grant Amount (FRW)</label>
+                        <input type="number" value={grantAmt} onChange={e => setGrantAmt(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Grant Duration (Months)</label>
+                          <input type="number" value={grantDuration} onChange={e => setGrantDuration(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Expected Impact Goal</label>
+                          <input type="text" value={grantImpact} onChange={e => setGrantImpact(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none" />
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                        <div className="flex justify-between items-center text-xs">
+                          <label className="text-slate-650 font-bold uppercase text-[9.5px]">Co-funding / Matching Contribution Required?</label>
+                          <input type="checkbox" checked={grantCoFundingReq} onChange={e => setGrantCoFundingReq(e.target.checked)} className="rounded border-slate-300 text-emerald-600" />
+                        </div>
+                        {grantCoFundingReq && (
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-slate-400 uppercase block">Percentage of Co-funding required (%)</label>
+                            <input type="number" value={grantCoFundingPct} onChange={e => setGrantCoFundingPct(e.target.value)} className="w-full border border-slate-200 bg-white rounded p-1.5 text-xs focus:outline-none" />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {oppType === 'fintech' && (
+                    <div className="space-y-3">
+                      <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">📱 Digital Solution Parameters</span>
+                      
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Product Type</label>
+                        <select value={fintechType} onChange={e => setFintechType(e.target.value)} className="w-full border border-slate-250 bg-white rounded-lg p-2.5 text-xs focus:outline-none">
+                          <option value="POS Payments">POS Merchants terminal</option>
+                          <option value="Mobile Banking SDK">Mobile Banking SDK</option>
+                          <option value="Internet Banking">Internet Banking Portal</option>
+                          <option value="Invoicing Integrations">Tax Invoicing Bridge</option>
+                        </select>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Monthly Maintenance Fee (FRW)</label>
+                          <input type="number" value={fintechFee} onChange={e => setFintechFee(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                        </div>
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Transaction Fee rate</label>
+                          <input type="text" value={fintechTxFee} onChange={e => setFintechTxFee(e.target.value)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {oppType !== 'loan' && oppType !== 'grant' && oppType !== 'fintech' && (
+                    <div className="p-8 text-center text-gray-400">
+                      <Info className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                      <span>Custom opportunity selected. Proceed to profile rules settings.</span>
                     </div>
                   )}
                 </div>
               )}
+
+              {/* STEP 4: Eligibility Criteria (Business Profile Builder) */}
+              {publishStep === 4 && (
+                <div className="space-y-4">
+                  <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">🏢 Eligible Business Profile</span>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Business Legal Structure</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      {[
+                        { label: 'Sole Proprietorship', val: eligSoleProp, set: setEligSoleProp },
+                        { label: 'Registered Company', val: eligCompany, set: setEligCompany },
+                        { label: 'Cooperative (SACCO)', val: eligCooperative, set: setEligCooperative },
+                        { label: 'Startup Incubator', val: eligStartup, set: setEligStartup }
+                      ].map((typeItem, i) => (
+                        <label key={i} className="flex items-center gap-2 p-2 bg-slate-50 border border-slate-200 rounded-lg cursor-pointer">
+                          <input type="checkbox" checked={typeItem.val} onChange={e => typeItem.set(e.target.checked)} className="rounded text-emerald-600" />
+                          <span className="text-[10px] text-slate-700 font-semibold">{typeItem.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Operating Age (Years)</label>
+                      <input type="number" min="0" value={eligMinAge} onChange={e => setEligMinAge(parseInt(e.target.value) || 0)} className="w-full border border-slate-255 rounded-lg p-2.5 text-xs focus:outline-none" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Employee Count</label>
+                      <input type="number" min="0" value={eligMinEmployees} onChange={e => setEligMinEmployees(parseInt(e.target.value) || 0)} className="w-full border border-slate-255 rounded-lg p-2.5 text-xs focus:outline-none" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Geographical Scope (Districts)</label>
+                    <div className="flex flex-wrap gap-1.5 pt-1">
+                      {['Kigali', 'Nyarugenge', 'Gasabo', 'Kicukiro', 'Northern Province', 'Western Province', 'Eastern Province'].map(loc => {
+                        const exists = eligLocations.includes(loc);
+                        return (
+                          <button
+                            key={loc}
+                            type="button"
+                            onClick={() => setEligLocations(prev => exists ? prev.filter(x => x !== loc) : [...prev, loc])}
+                            className={`px-2.5 py-1 rounded-md text-[10px] font-bold border transition ${
+                              exists ? 'bg-emerald-50 border-emerald-300 text-emerald-700' : 'bg-white border-slate-250 text-slate-500'
+                            }`}
+                          >
+                            {loc}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 5: Financial Eligibility Builder */}
+              {publishStep === 5 && (
+                <div className="space-y-3.5">
+                  <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">📈 Financial Requirements Threshold</span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Monthly turnover (FRW)</label>
+                      <input type="number" value={finMinMonthlyRev} onChange={e => setFinMinMonthlyRev(parseInt(e.target.value) || 0)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Annual turnover (FRW)</label>
+                      <input type="number" value={finMinAnnualRev} onChange={e => setFinMinAnnualRev(parseInt(e.target.value) || 0)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Loan Readiness Score (%)</label>
+                      <input type="number" max="100" value={finMinReadiness} onChange={e => setFinMinReadiness(parseInt(e.target.value) || 0)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Min Business Health Score (%)</label>
+                      <input type="number" max="100" value={finMinHealth} onChange={e => setFinMinHealth(parseInt(e.target.value) || 0)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Max Debt-to-Revenue Ratio (%)</label>
+                      <input type="number" value={finMaxDebtToRevenue} onChange={e => setFinMaxDebtToRevenue(parseInt(e.target.value) || 0)} className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:outline-none font-mono" />
+                    </div>
+                    <div className="flex items-center gap-2 pt-4">
+                      <input type="checkbox" checked={finStatementsReq} onChange={e => setFinStatementsReq(e.target.checked)} className="rounded border-slate-350 text-emerald-600" />
+                      <label className="text-[10px] font-bold text-slate-500 uppercase cursor-pointer">Tax Audit Statements Required</label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 6: Documentation Requirements */}
+              {publishStep === 6 && (
+                <div className="space-y-3">
+                  <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">📁 Required Documents Checklist</span>
+                  <p className="text-[9px] text-slate-400 block mb-2">Define dossier guidelines for matching businesses.</p>
+
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                    {Object.keys(docRequirements).map((doc) => (
+                      <div key={doc} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-150 rounded-lg text-xs gap-3">
+                        <strong className="text-slate-800 font-bold text-[10.5px] truncate">{doc}</strong>
+                        
+                        <div className="flex gap-2 shrink-0">
+                          {['Required', 'Optional', 'N/A'].map((lvl) => (
+                            <button
+                              key={lvl}
+                              type="button"
+                              onClick={() => setDocRequirements(prev => ({ ...prev, [doc]: lvl as any }))}
+                              className={`px-2.5 py-0.5 rounded text-[9px] font-extrabold uppercase border transition ${
+                                docRequirements[doc] === lvl
+                                  ? 'bg-slate-800 text-white border-slate-900'
+                                  : 'bg-white text-slate-450 border-slate-200 hover:bg-slate-100'
+                              }`}
+                            >
+                              {lvl}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 7: Readiness Requirements */}
+              {publishStep === 7 && (
+                <div className="space-y-3.5">
+                  <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">🛡️ Platforms Verification Criteria</span>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase block">Financial Records history</label>
+                      <select value={readinessMinRecords} onChange={e => setReadinessMinRecords(e.target.value)} className="w-full border border-slate-250 bg-white rounded-lg p-2.5 text-xs focus:outline-none">
+                        <option value="None">No minimum duration</option>
+                        <option value="3 months">At least 3 months</option>
+                        <option value="6 months">At least 6 months</option>
+                        <option value="12 months">At least 12 months</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase block">Digital Transaction Volume</label>
+                      <select value={readinessMinDigitalActivity} onChange={e => setReadinessMinDigitalActivity(e.target.value)} className="w-full border border-slate-250 bg-white rounded-lg p-2.5 text-xs focus:outline-none">
+                        <option value="None">No minimum activity</option>
+                        <option value="3 months">Active for 3 months</option>
+                        <option value="6 months">Active for 6 months</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-3">
+                    <div className="flex justify-between items-center text-xs">
+                      <label className="text-slate-650 font-bold uppercase text-[9.5px]">Detailed Business Plan dossier?</label>
+                      <input type="checkbox" checked={readinessPlanReq} onChange={e => setReadinessPlanReq(e.target.checked)} className="rounded border-slate-300 text-emerald-600" />
+                    </div>
+                    <div className="flex justify-between items-center text-xs">
+                      <label className="text-slate-650 font-bold uppercase text-[9.5px]">Verified Tax Compliance status?</label>
+                      <input type="checkbox" checked={readinessTaxCompliance} onChange={e => setReadinessTaxCompliance(e.target.checked)} className="rounded border-slate-300 text-emerald-600" />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 8: Application Process Definition */}
+              {publishStep === 8 && (
+                <div className="space-y-3.5">
+                  <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">🤝 Submission Workspace Workflow</span>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Primary application method</label>
+                    <select value={appMethod} onChange={e => setAppMethod(e.target.value)} className="w-full border border-slate-250 bg-white rounded-lg p-2.5 text-xs focus:outline-none font-bold">
+                      <option value="Apply directly through Elevata">Apply directly through Elevata API Engine</option>
+                      <option value="External application link">External Funding Portal Link</option>
+                      <option value="Contact institution">Contact Credit Officer</option>
+                      <option value="Visit branch">Visit Local Bank Branch</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase block">Configured milestones workflow</label>
+                    <div className="space-y-1.5">
+                      {appSteps.map((stepTxt, idx) => (
+                        <div key={idx} className="flex items-center gap-2.5 p-2 bg-slate-50 border border-slate-150 rounded text-xs font-mono">
+                          <span className="text-emerald-600">✓</span>
+                          <span>{stepTxt}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 9: AI Matching Configuration Weights */}
+              {publishStep === 9 && (
+                <div className="space-y-3">
+                  <span className="font-bold text-slate-800 block border-b pb-1 text-[11px] uppercase tracking-wider">⚙️ AI Underwriting Weights</span>
+                  <p className="text-[9px] text-slate-400 block mb-2">Adjust significance weights to optimize continuous background matches.</p>
+
+                  <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1">
+                    {Object.keys(weights).map((factor) => (
+                      <div key={factor} className="flex justify-between items-center p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs gap-3">
+                        <span className="font-bold text-slate-800">{factor}</span>
+                        
+                        <div className="flex gap-1.5 shrink-0">
+                          {['Required', 'Important', 'Preferred'].map((wLvl) => (
+                            <button
+                              key={wLvl}
+                              type="button"
+                              onClick={() => setWeights(prev => ({ ...prev, [factor]: wLvl as any }))}
+                              className={`px-2 py-0.5 rounded text-[8.5px] font-bold border transition ${
+                                weights[factor] === wLvl
+                                  ? 'bg-emerald-600 text-white border-emerald-700'
+                                  : 'bg-white text-slate-450 border-slate-250 hover:bg-slate-100'
+                              }`}
+                            >
+                              {wLvl}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 10: AI Match Preview & Suitability Simulator */}
+              {publishStep === 10 && (
+                <div className="space-y-4">
+                  {matchingAnimation ? (
+                    <div className="text-center py-12 space-y-4">
+                      <Loader2 className="w-10 h-10 text-emerald-500 animate-spin mx-auto" />
+                      <div className="space-y-1">
+                        <strong className="text-xs font-bold text-slate-800 block font-heading">Matching active SME dossiers...</strong>
+                        <span className="text-[10px] text-slate-450 block">Evaluating credit risk indices &amp; bookkeeping history</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5">
+                      <div className="flex items-center gap-1 bg-emerald-50 border border-emerald-100 p-2.5 rounded-lg text-[10.5px] text-emerald-800 leading-snug">
+                        <Sparkles className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span>AI Match engine analyzed all active databases. Find suitability preview dossiers below:</span>
+                      </div>
+
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-1">
+                        {simulatedMatches.map((match, idx) => (
+                          <div key={idx} className="p-3.5 border border-slate-200 rounded-xl space-y-3 bg-slate-50/50">
+                            <div className="flex justify-between items-center border-b pb-2 border-slate-150">
+                              <div>
+                                <strong className="text-slate-850 font-extrabold text-[11px] block">{match.name}</strong>
+                                <span className="text-[9px] text-slate-400 block">{match.sector} sector</span>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] font-bold text-emerald-600 font-mono block">{match.matchPercent}% Match</span>
+                                <span className={`text-[8.5px] font-bold uppercase ${
+                                  match.status === 'Highly Qualified' ? 'text-emerald-700' : match.status.includes('Minor') ? 'text-amber-600' : 'text-rose-600'
+                                }`}>{match.status}</span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[9.5px]">
+                              {match.checks.map((chk, i) => (
+                                <div key={i} className="flex items-center gap-1 text-slate-650">
+                                  <span>{chk.pass ? '✅' : '❌'}</span>
+                                  <span className={chk.pass ? 'text-slate-700 font-medium' : 'text-rose-600 font-bold'}>{chk.label}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-150 flex flex-col gap-1 text-[9.5px]">
+                              <div>
+                                <span className="text-gray-400 block">Missing: <strong className="text-slate-800 font-bold font-mono">{match.missing.join(', ') || 'None'}</strong></span>
+                              </div>
+                              <div>
+                                <span className="text-gray-400 block">Action recommendation: <strong className="text-emerald-600 font-bold">{match.action}</strong></span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
             </div>
 
             {/* Footer Buttons */}
-            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-150 flex justify-between items-center shrink-0">
               <button
                 type="button"
                 onClick={() => {
@@ -1101,10 +1606,10 @@ export default function OpportunityPublisher() {
               <button
                 type="button"
                 disabled={matchingAnimation}
-                onClick={publishStep === 3 ? handlePublishSubmit : handleNextStep}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                onClick={publishStep === 10 ? handlePublishSubmit : handleNextStep}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition border-none"
               >
-                {publishStep === 3 ? 'Publish Opportunity' : 'Next Step'}
+                {publishStep === 10 ? 'Publish Opportunity' : 'Next Step'}
               </button>
             </div>
           </div>
@@ -1114,11 +1619,11 @@ export default function OpportunityPublisher() {
       {/* CREATE TRAINING MODAL */}
       {isTrainingModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleTrainingSubmit} className="bg-white border border-slate-200 rounded-lg shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
+          <form onSubmit={handleTrainingSubmit} className="bg-white border border-slate-200 rounded-xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150">
             <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
               <div>
-                <h3 className="text-sm font-bold text-slate-950 font-heading">Schedule Virtual Training</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5">Automated capacity integration for SMEs</p>
+                <h3 className="text-sm font-bold text-slate-955 font-heading">Schedule Virtual Capacity Session</h3>
+                <p className="text-[10px] text-slate-450 mt-0.5 font-mono">Addressing SME eligibility matching gaps</p>
               </div>
               <button
                 type="button"
@@ -1129,26 +1634,28 @@ export default function OpportunityPublisher() {
               </button>
             </div>
 
-            <div className="p-5 space-y-3">
+            <div className="p-5 space-y-3.5 text-xs">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Training Title</label>
                 <input
                   type="text"
-                  placeholder="e.g. Financial Recordkeeping Masterclass"
+                  placeholder="e.g. Masterclass: Preparing Tax Clearance & Financials"
                   value={trTitle}
                   onChange={e => setTrTitle(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
+                  className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  required
                 />
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Description</label>
-                <textarea
-                  placeholder="Enter session abstract..."
-                  rows={2}
-                  value={trDescription}
-                  onChange={e => setTrDescription(e.target.value)}
-                  className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Speaker / Host</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Dr. Agnes Kalibata"
+                  value={trSpeaker}
+                  onChange={e => setTrSpeaker(e.target.value)}
+                  className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                  required
                 />
               </div>
 
@@ -1159,66 +1666,47 @@ export default function OpportunityPublisher() {
                     type="date"
                     value={trDate}
                     onChange={e => setTrDate(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                    className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none font-mono"
+                    required
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Time</label>
                   <input
                     type="text"
-                    placeholder="e.g. 10:00 AM - 12:00 PM"
                     value={trTime}
                     onChange={e => setTrTime(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Speaker / Host</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Jean Paul Habimana"
-                    value={trSpeaker}
-                    onChange={e => setTrSpeaker(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Meeting Link (Zoom / Teams)</label>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={trLink}
-                    onChange={e => setTrLink(e.target.value)}
-                    className="w-full border border-slate-200 rounded-lg p-2 text-xs focus:outline-none focus:border-emerald-500 font-mono"
+                    className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                    required
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Target Audience</label>
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {['Agriculture', 'Retail', 'Women', 'Youth', 'Low Readiness SMEs', 'High Growth SMEs'].map(aud => (
-                    <button
-                      key={aud}
-                      type="button"
-                      onClick={() => setTrAudience(prev => prev.includes(aud) ? prev.filter(a => a !== aud) : [...prev, aud])}
-                      className={`px-2.5 py-1 text-[10px] font-bold rounded-md border transition ${
-                        trAudience.includes(aud)
-                          ? 'bg-emerald-50 border-emerald-500 text-emerald-700'
-                          : 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50'
-                      }`}
-                    >
-                      {aud}
-                    </button>
-                  ))}
-                </div>
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Meeting Link</label>
+                <input
+                  type="text"
+                  value={trLink}
+                  onChange={e => setTrLink(e.target.value)}
+                  className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none font-mono"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">Description Abstract</label>
+                <textarea
+                  placeholder="Describe workshop goals..."
+                  rows={3}
+                  value={trDescription}
+                  onChange={e => setTrDescription(e.target.value)}
+                  className="w-full border border-slate-250 rounded-lg p-2.5 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none leading-relaxed"
+                  required
+                />
               </div>
             </div>
 
-            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2">
+            <div className="px-5 py-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-2 shrink-0">
               <button
                 type="button"
                 onClick={() => setIsTrainingModalOpen(false)}
@@ -1228,7 +1716,7 @@ export default function OpportunityPublisher() {
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-semibold shadow-sm transition border-none"
               >
                 Schedule Session
               </button>
