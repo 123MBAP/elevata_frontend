@@ -12,12 +12,10 @@ import {
   ShoppingBag,
   FileBarChart,
   Cpu,
-  Lightbulb,
   Target,
   Sparkles,
   FileText
 } from 'lucide-react';
-import path from 'path';
 
 interface SidebarProps {
   isOpen: boolean;

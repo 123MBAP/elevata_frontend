@@ -20,13 +20,7 @@ import {
 } from 'recharts';
 import {
   BrainCircuit,
-  Landmark,
-  TrendingUp,
-  AlertTriangle,
   ArrowRight,
-  CheckCircle,
-  HelpCircle,
-  FileText,
   BadgePercent,
   Sparkles,
   PieChart as PieIcon
@@ -598,7 +592,7 @@ export default function LoanEngine() {
                             outerRadius={70}
                             paddingAngle={4}
                             dataKey="value"
-                            label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                            label={({ name, percent }) => `${name}: ${((percent || 0) * 100).toFixed(0)}%`}
                             style={{ fontSize: 9, fontWeight: 'bold' }}
                           >
                             {loanUsageData.map((_, index) => (

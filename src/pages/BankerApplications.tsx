@@ -1,9 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useApp, Application } from '../context/AppContext';
-import { formatRWF } from '../lib/mockData';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Button } from '../assets/components/ui/button';
-import { Input } from '../assets/components/ui/input';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
@@ -16,12 +14,11 @@ import {
   ClipboardList,
   AlertCircle,
   Check,
-  Send,
   Sparkles
 } from 'lucide-react';
 
 export default function BankerApplications() {
-  const { applications, updateApplicationStatus, smes } = useApp();
+  const { applications, updateApplicationStatus } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');

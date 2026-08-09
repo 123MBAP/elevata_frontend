@@ -6,7 +6,6 @@ import { Button } from '../assets/components/ui/button';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Input } from '../assets/components/ui/input';
 import {
-  FileBarChart,
   Plus,
   Trash2,
   Search,
