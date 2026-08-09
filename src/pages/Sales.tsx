@@ -22,14 +22,35 @@ export default function Sales() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
-  const [showAddForm, setShowAddForm] = useState(false);
 
-  const [newSale, setNewSale] = useState({
-    product: '',
-    quantity: 0,
-    price: 0,
-    customer: ''
-  });
+  const [customer, setCustomer] = useState('');
+  const [items, setItems] = useState([
+    { id: '1', product: '', price: 0, quantity: 0 },
+    { id: '2', product: '', price: 0, quantity: 0 }
+  ]);
+
+  const handleAddItem = () => {
+    setItems(prev => [
+      ...prev,
+      { id: Date.now().toString(), product: '', price: 0, quantity: 0 }
+    ]);
+  };
+
+  const handleDeleteRow = (id: string) => {
+    if (items.length <= 1) return;
+    setItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleItemChange = (id: string, field: string, value: any) => {
+    setItems(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
+  };
+
+  const overallTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -42,24 +63,28 @@ export default function Sales() {
 
   const handleRecordSale = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newSale.product || newSale.quantity <= 0 || newSale.price <= 0 || !newSale.customer) return;
+    if (!customer) return;
 
-    addSale(
-      activeSme.id,
-      newSale.product,
-      newSale.quantity,
-      newSale.price,
-      newSale.customer
-    );
+    // Filter out rows that are empty
+    const validItems = items.filter(item => item.product && item.price > 0 && item.quantity > 0);
+    if (validItems.length === 0) return;
+
+    validItems.forEach(item => {
+      addSale(
+        activeSme.id,
+        item.product,
+        item.quantity,
+        item.price,
+        customer
+      );
+    });
 
     // Reset Form
-    setNewSale({
-      product: '',
-      quantity: 0,
-      price: 0,
-      customer: ''
-    });
-    setShowAddForm(false);
+    setCustomer('');
+    setItems([
+      { id: '1', product: '', price: 0, quantity: 0 },
+      { id: '2', product: '', price: 0, quantity: 0 }
+    ]);
   };
 
   const salesList = activeSme.sales || [];
@@ -85,16 +110,9 @@ export default function Sales() {
         <div>
           <h2 className="text-xl font-bold text-slate-805 font-heading">Sales Transactions Ledger</h2>
           <p className="text-xs text-gray-500 mt-0.5">
-            Log invoice sales, record buyer profiles, and update cash accounts for <span className="text-emerald-650 font-bold">{activeSme.name}</span>.
+            Log invoice sales, record buyer profiles, and update cash accounts for <span className="text-emerald-655 font-bold">{activeSme.name}</span>.
           </p>
         </div>
-        <Button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center space-x-1.5 h-10"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-xs font-bold">Record Customer Invoice</span>
-        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -153,81 +171,130 @@ export default function Sales() {
       </div>
 
       {/* Add Sale Form */}
-      {showAddForm && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-          <Card className="bg-white border border-gray-100 shadow-md">
-            <CardContent className="p-6">
-              <h3 className="text-sm font-bold text-slate-850 mb-4 pb-2 border-b border-gray-100">
-                Log New Sales Invoice
-              </h3>
-              <form onSubmit={handleRecordSale} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 text-xs">
-                <div>
-                  <label className="block text-gray-500 font-semibold mb-1">Select Product / SKU</label>
-                  <select
-                    value={newSale.product}
-                    onChange={(e) => {
-                      const selectedItem = inventoryList.find(i => i.name === e.target.value);
-                      setNewSale(prev => ({
-                        ...prev,
-                        product: e.target.value,
-                        price: selectedItem ? selectedItem.unitPrice : 0
-                      }));
-                    }}
-                    className="w-full px-3 py-2 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-white text-slate-700 h-9"
-                    required
-                  >
-                    <option value="">Select a product...</option>
-                    {inventoryList.map(item => (
-                      <option key={item.id} value={item.name}>
-                        {item.name} ({formatRWF(item.unitPrice)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-gray-500 font-semibold mb-1">Quantity</label>
-                  <Input
-                    type="number"
-                    value={newSale.quantity || ''}
-                    onChange={(e) => setNewSale(prev => ({ ...prev, quantity: Math.max(0, Number(e.target.value)) }))}
-                    placeholder="e.g. 5"
-                    className="border-gray-200 h-9"
-                    required
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-500 font-semibold mb-1">Unit Price (RWF)</label>
-                  <Input
-                    type="number"
-                    value={newSale.price || ''}
-                    onChange={(e) => setNewSale(prev => ({ ...prev, price: Math.max(0, Number(e.target.value)) }))}
-                    placeholder="e.g. 28000"
-                    className="border-gray-200 h-9"
-                    required
-                    min="1"
-                  />
-                </div>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+        <Card className="bg-white border border-gray-100 shadow-md">
+          <CardContent className="p-6">
+            <h3 className="text-sm font-bold text-slate-850 mb-4 pb-2 border-b border-gray-100">
+              Log New Sales Invoice (Batch Transactions)
+            </h3>
+            <form onSubmit={handleRecordSale} className="space-y-4 text-xs">
+              {/* Invoice Header details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-500 font-semibold mb-1">Customer / Cooperative</label>
                   <Input
-                    value={newSale.customer}
-                    onChange={(e) => setNewSale(prev => ({ ...prev, customer: e.target.value }))}
+                    value={customer}
+                    onChange={(e) => setCustomer(e.target.value)}
                     placeholder="e.g. Nyarugenge Bakery"
                     className="border-gray-200 h-9"
                     required
                   />
                 </div>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-9 font-bold text-xs shadow">
+              </div>
+
+              {/* Line Items Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border-y border-gray-100 text-left">
+                  <thead>
+                    <tr className="bg-slate-50 text-gray-500 font-bold border-b border-gray-150">
+                      <th className="py-2.5 px-3 text-[10px] w-12 text-center uppercase tracking-wider font-semibold">No.</th>
+                      <th className="py-2.5 px-3 text-[10px] uppercase tracking-wider font-semibold">Product Description</th>
+                      <th className="py-2.5 px-3 text-[10px] w-36 uppercase tracking-wider font-semibold">Unit Price (RWF)</th>
+                      <th className="py-2.5 px-3 text-[10px] w-28 uppercase tracking-wider font-semibold">Quantity</th>
+                      <th className="py-2.5 px-3 text-[10px] w-36 uppercase tracking-wider font-semibold">Total (RWF)</th>
+                      <th className="py-2.5 px-3 text-[10px] w-16 text-center uppercase tracking-wider font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {items.map((item, index) => (
+                      <tr key={item.id} className="hover:bg-slate-50/40">
+                        <td className="py-2 px-3 text-center font-mono font-bold text-gray-400">{index + 1}</td>
+                        <td className="py-2 px-2">
+                          <select
+                            value={item.product}
+                            onChange={(e) => {
+                              const selectedItem = inventoryList.find(i => i.name === e.target.value);
+                              handleItemChange(item.id, 'product', e.target.value);
+                              handleItemChange(item.id, 'price', selectedItem ? selectedItem.unitPrice : 0);
+                            }}
+                            className="w-full px-2 py-1.5 border border-gray-200 rounded-lg text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none bg-white text-slate-700 h-8"
+                            required
+                          >
+                            <option value="">Select a product...</option>
+                            {inventoryList.map(inventoryItem => (
+                              <option key={inventoryItem.id} value={inventoryItem.name}>
+                                {inventoryItem.name} ({formatRWF(inventoryItem.unitPrice)})
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="py-2 px-2">
+                          <Input
+                            type="number"
+                            value={item.price || ''}
+                            onChange={(e) => handleItemChange(item.id, 'price', Math.max(0, Number(e.target.value)))}
+                            placeholder="Price"
+                            className="border-gray-200 h-8 text-xs font-mono w-full"
+                            required
+                            min="1"
+                          />
+                        </td>
+                        <td className="py-2 px-2">
+                          <Input
+                            type="number"
+                            value={item.quantity || ''}
+                            onChange={(e) => handleItemChange(item.id, 'quantity', Math.max(0, Number(e.target.value)))}
+                            placeholder="Qty"
+                            className="border-gray-200 h-8 text-xs font-mono w-full"
+                            required
+                            min="1"
+                          />
+                        </td>
+                        <td className="py-2 px-3 font-mono font-bold text-slate-700 align-middle">
+                          {formatRWF(item.price * item.quantity)}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRow(item.id)}
+                            disabled={items.length <= 1}
+                            className="p-1 text-gray-400 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-gray-400 rounded transition"
+                            title="Delete Line"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer Control Panel */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 gap-3">
+                <Button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center space-x-1.5 h-8 px-3 font-bold text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Item</span>
+                </Button>
+                
+                <div className="flex items-center justify-between sm:justify-end gap-6">
+                  <div className="text-right">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Overall Invoice Total</span>
+                    <span className="text-base font-bold text-emerald-600 font-mono">{formatRWF(overallTotal)}</span>
+                  </div>
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 px-5 font-bold text-xs shadow">
                     Record & Credit Accounts
                   </Button>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Search and Filters */}
       <Card className="bg-white border border-gray-200 shadow-sm">

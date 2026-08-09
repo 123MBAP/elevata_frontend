@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import finovatrai_logo from '../images/fin_logo.png';
+import ElevataLogo from '../images/elevata_logo.png';
 
 const Navigationbar: React.FC = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -16,8 +16,8 @@ const Navigationbar: React.FC = () => {
                 <div className="flex justify-between items-center h-16">
                     {/* Logo and brand name */}
                     <div className="flex items-center">
-                        <img src={finovatrai_logo} alt="FinovatrAI Logo" className="h-10 md:h-12" />
-                        <h1 className="ml-3 text-xl font-bold text-black">FinovatrAI</h1>
+                        <img src={ElevataLogo} alt="FinovatrAI Logo" className="h-10 md:h-12" />
+                        <h1 className="ml-3 text-xl font-bold text-black">Elevata</h1>
                     </div>
 
                     {/* Desktop Navigation */}

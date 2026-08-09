@@ -38,6 +38,14 @@ export interface Sale {
   status: 'Completed' | 'Processing' | 'Cancelled';
 }
 
+export interface Expense {
+  id: number;
+  description: string;
+  category: string;
+  amount: number;
+  date: string;
+}
+
 export interface SmeProfile {
   id: string;
   name: string;
@@ -55,6 +63,7 @@ export interface SmeProfile {
   riskAlerts: { id: string; type: 'warning' | 'info' | 'danger'; text: string }[];
   monthlyData: MonthlyFinancial[];
   sales: Sale[];
+  expenses: Expense[];
 }
 
 export const mockSmes: SmeProfile[] = [
@@ -100,6 +109,11 @@ export const mockSmes: SmeProfile[] = [
       { id: 1, product: 'Premium Basmati Rice (25kg)', quantity: 3, price: 28000, total: 84000, date: 'Jun 22, 2026', customer: 'Akagera Canteen', status: 'Completed' },
       { id: 2, product: 'White Sugar (50kg)', quantity: 2, price: 48000, total: 96000, date: 'Jun 21, 2026', customer: 'Kimironko Bakers', status: 'Completed' },
       { id: 3, product: 'Refined Cooking Oil (5L)', quantity: 5, price: 12000, total: 60000, date: 'Jun 18, 2026', customer: 'David Bizimana', status: 'Completed' }
+    ],
+    expenses: [
+      { id: 101, description: 'Store Rent - June', category: 'Rent', amount: 350000, date: 'Jun 05, 2026' },
+      { id: 102, description: 'Electricity Utility Bill', category: 'Utilities', amount: 45000, date: 'Jun 12, 2026' },
+      { id: 103, description: 'Water Utility Bill', category: 'Utilities', amount: 15000, date: 'Jun 12, 2026' }
     ]
   },
   {
@@ -142,6 +156,10 @@ export const mockSmes: SmeProfile[] = [
     sales: [
       { id: 4, product: 'Processed Maize Flour (25kg bags)', quantity: 80, price: 14500, total: 1160000, date: 'Jun 22, 2026', customer: 'WFP Supply Rwanda', status: 'Completed' },
       { id: 5, product: 'Processed Maize Flour (25kg bags)', quantity: 40, price: 14500, total: 580000, date: 'Jun 20, 2026', customer: 'Kigali Food Distributors', status: 'Completed' }
+    ],
+    expenses: [
+      { id: 201, description: 'Milling Machinery Repairing', category: 'Repairs', amount: 120000, date: 'Jun 10, 2026' },
+      { id: 202, description: 'Factory Space Rent', category: 'Rent', amount: 800000, date: 'Jun 05, 2026' }
     ]
   },
   {
@@ -185,6 +203,11 @@ export const mockSmes: SmeProfile[] = [
     sales: [
       { id: 6, product: 'Replacement Truck Tires', quantity: 2, price: 180000, total: 360000, date: 'Jun 22, 2026', customer: 'AgroExport Ltd', status: 'Completed' },
       { id: 7, product: 'Spare Fan Belts', quantity: 1, price: 15000, total: 15000, date: 'Jun 19, 2026', customer: 'Kigali Transit Cooperative', status: 'Completed' }
+    ],
+    expenses: [
+      { id: 301, description: 'Logistics Van Maintenance', category: 'Repairs', amount: 150000, date: 'Jun 08, 2026' },
+      { id: 302, description: 'Office Electricity Bill', category: 'Utilities', amount: 65000, date: 'Jun 12, 2026' },
+      { id: 303, description: 'HQ Office Rent', category: 'Rent', amount: 450000, date: 'Jun 05, 2026' }
     ]
   },
   {
@@ -226,6 +249,10 @@ export const mockSmes: SmeProfile[] = [
     sales: [
       { id: 8, product: 'Dual Band WiFi Routers', quantity: 5, price: 75000, total: 375000, date: 'Jun 22, 2026', customer: 'Kigali Tech Hub', status: 'Completed' },
       { id: 9, product: 'Smart Home Hub Panels', quantity: 2, price: 150000, total: 300000, date: 'Jun 15, 2026', customer: 'BPR Bank HQ', status: 'Completed' }
+    ],
+    expenses: [
+      { id: 401, description: 'High-speed Fiber Uplink Utility', category: 'Utilities', amount: 200000, date: 'Jun 02, 2026' },
+      { id: 402, description: 'Office Space Rent', category: 'Rent', amount: 500000, date: 'Jun 05, 2026' }
     ]
   }
 ];

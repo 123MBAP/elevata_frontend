@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../../context/AppContext';
-import logo from '../images/elevata.jpeg';
+import { useAuth } from '../../context/AuthContext';
+import logo from '../images/elevata_logo.png';
 import {
   LayoutDashboard,
   BrainCircuit,
@@ -11,8 +12,12 @@ import {
   ShoppingBag,
   FileBarChart,
   Cpu,
-  Lightbulb
+  Lightbulb,
+  Target,
+  Sparkles,
+  FileText
 } from 'lucide-react';
+import path from 'path';
 
 interface SidebarProps {
   isOpen: boolean;
@@ -22,6 +27,7 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const { activeSme, resetAll } = useApp();
+  const { user } = useAuth();
 
   // Close sidebar on Escape key
   useEffect(() => {
@@ -52,17 +58,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { path: '/', label: 'SME Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { path: '/inventory', label: 'Inventory Catalog', icon: <Package className="w-4 h-4" /> },
     { path: '/sales', label: 'Record Sales', icon: <ShoppingBag className="w-4 h-4" /> },
+    { path: '/expenses', label: 'Expenses', icon: <FileBarChart className="w-4 h-4" /> },
+    { path: '/opportunity-hub', label: 'Opportunity Hub', icon: <Target className="w-4 h-4" /> },
+    { path: '/loan-workspace', label: 'Loan Decision Workspace', icon: <BrainCircuit className="w-4 h-4" /> },
     { path: '/reports', label: 'Financial Reports', icon: <FileBarChart className="w-4 h-4" /> }
   ];
 
   const aiLinks = [
-    { path: '/advisor', label: 'Loan Decision Workspace', icon: <BrainCircuit className="w-4 h-4" /> },
+   // { path: '/advisor', label: 'Loan Decision Workspace', icon: <BrainCircuit className="w-4 h-4" /> },
     { path: '/tech-advisor', label: 'Tech Upgrade Advisor', icon: <Cpu className="w-4 h-4" /> },
-    { path: '/business-advisor', label: 'Startup Planner', icon: <Lightbulb className="w-4 h-4" /> }
+    // { path: '/business-advisor', label: 'Startup Planner', icon: <Lightbulb className="w-4 h-4" /> }
   ];
 
   const bankerLinks = [
-    { path: '/banker', label: 'Bank Officer Panel', icon: <Building2 className="w-4 h-4" /> }
+    { path: '/banker', label: 'Bank Officer Panel', icon: <Building2 className="w-4 h-4" /> },
+    { path: '/banker/publisher', label: 'Opportunity Publisher', icon: <Sparkles className="w-4 h-4" /> },
+    { path: '/banker/applications', label: 'Applications', icon: <FileText className="w-4 h-4" /> },
+    { path: '/banker/monitoring', label: 'SMEs Monitoring', icon: <LayoutDashboard className="w-4 h-4" /> }
   ];
 
   return (
@@ -72,7 +84,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         {/* Logo Section */}
         <div className="p-5 border-b border-gray-200 bg-white">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
+            <div className="w-12 h-12 flex items-center justify-center">
               <img src={logo} alt="Elevata Logo" className="w-4.5 h-4.5" />
             </div>
             <div>
@@ -119,21 +131,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {/* Banker Segment */}
-          <div>
-            <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">Credit Institution</h3>
-            <div className="space-y-1">
-              {bankerLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
-                >
-                  <span>{link.icon}</span>
-                  <span>{link.label}</span>
-                </Link>
-              ))}
+          {(user?.role === 'ADMIN' || user?.role === 'FINANCIAL_INSTITUTION') && (
+            <div>
+              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">Credit Institution</h3>
+              <div className="space-y-1">
+                {bankerLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
+                  >
+                    <span>{link.icon}</span>
+                    <span>{link.label}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </nav>
 
         {/* Sidebar Info & Reset */}
@@ -237,22 +251,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
 
             {/* Banker Segment */}
-            <div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">Credit Institution</h3>
-              <div className="space-y-1">
-                {bankerLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
-                    onClick={onClose}
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
+            {(user?.role === 'ADMIN' || user?.role === 'FINANCIAL_INSTITUTION') && (
+              <div>
+                <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">Credit Institution</h3>
+                <div className="space-y-1">
+                  {bankerLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
+                      onClick={onClose}
+                    >
+                      <span>{link.icon}</span>
+                      <span>{link.label}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </nav>
 
           {/* Mobile Footer */}

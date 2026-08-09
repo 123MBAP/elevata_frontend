@@ -22,20 +22,41 @@ export default function Inventory() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All');
-  const [showAddForm, setShowAddForm] = useState(false);
   
-  const [newProduct, setNewProduct] = useState({
-    name: '',
-    category: '',
-    quantity: 0,
-    price: 0,
-    supplier: ''
-  });
+  const [supplier, setSupplier] = useState('');
+  const [category, setCategory] = useState('');
+  const [items, setItems] = useState([
+    { id: '1', name: '', price: 0, quantity: 0 },
+    { id: '2', name: '', price: 0, quantity: 0 }
+  ]);
+
+  const handleAddItem = () => {
+    setItems(prev => [
+      ...prev,
+      { id: Date.now().toString(), name: '', price: 0, quantity: 0 }
+    ]);
+  };
+
+  const handleDeleteRow = (id: string) => {
+    if (items.length <= 1) return;
+    setItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleItemChange = (id: string, field: string, value: any) => {
+    setItems(prev => prev.map(item => {
+      if (item.id === id) {
+        return { ...item, [field]: value };
+      }
+      return item;
+    }));
+  };
+
+  const overallTotal = items.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'In Stock': return 'bg-emerald-50 text-emerald-700 border border-emerald-100';
-      case 'Low Stock': return 'bg-amber-50 text-amber-700 border border-amber-100';
+      case 'Low Stock': return 'bg-amber-50 text-amber-700 border border-emerald-100';
       case 'Out of Stock': return 'bg-rose-50 text-rose-700 border border-rose-100';
       case 'Overstock': return 'bg-slate-50 text-slate-700 border border-slate-200';
       default: return 'bg-gray-50 text-gray-700 border border-gray-200';
@@ -44,26 +65,30 @@ export default function Inventory() {
 
   const handleAddProduct = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newProduct.name || newProduct.quantity <= 0 || newProduct.price <= 0 || !newProduct.supplier) return;
+    if (!supplier) return;
 
-    addInventoryItem(
-      activeSme.id,
-      newProduct.name,
-      newProduct.category || 'General',
-      newProduct.quantity,
-      newProduct.price,
-      newProduct.supplier
-    );
+    // Filter out rows that are empty
+    const validItems = items.filter(item => item.name && item.price > 0 && item.quantity > 0);
+    if (validItems.length === 0) return;
+
+    validItems.forEach(item => {
+      addInventoryItem(
+        activeSme.id,
+        item.name,
+        category || 'General',
+        item.quantity,
+        item.price,
+        supplier
+      );
+    });
 
     // Reset form
-    setNewProduct({
-      name: '',
-      category: '',
-      quantity: 0,
-      price: 0,
-      supplier: ''
-    });
-    setShowAddForm(false);
+    setSupplier('');
+    setCategory('');
+    setItems([
+      { id: '1', name: '', price: 0, quantity: 0 },
+      { id: '2', name: '', price: 0, quantity: 0 }
+    ]);
   };
 
   const filteredItems = activeSme.inventoryItems.filter(item => {
@@ -89,13 +114,6 @@ export default function Inventory() {
             Monitor stock levels, reorder alerts, and track stock value for <span className="text-emerald-600 font-bold">{activeSme.name}</span>.
           </p>
         </div>
-        <Button
-          onClick={() => setShowAddForm(!showAddForm)}
-          className="bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center space-x-1.5 h-10"
-        >
-          <Plus className="w-4 h-4" />
-          <span className="text-xs font-bold">Add Inventory Item</span>
-        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -164,77 +182,129 @@ export default function Inventory() {
       </div>
 
       {/* Add Product Form */}
-      {showAddForm && (
-        <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-          <Card className="bg-white border border-gray-100 shadow-md">
-            <CardContent className="p-6">
-              <h3 className="text-sm font-bold text-slate-850 mb-4 pb-2 border-b border-gray-100">
-                Register New Stock SKU
-              </h3>
-              <form onSubmit={handleAddProduct} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4 text-xs">
-                <div>
-                  <label className="block text-gray-500 font-semibold mb-1">Product Description</label>
-                  <Input
-                    value={newProduct.name}
-                    onChange={(e) => setNewProduct(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="e.g. Basmati Rice (25kg)"
-                    className="border-gray-200 h-9"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-500 font-semibold mb-1">Category</label>
-                  <Input
-                    value={newProduct.category}
-                    onChange={(e) => setNewProduct(prev => ({ ...prev, category: e.target.value }))}
-                    placeholder="e.g. Foodstuff / Spares"
-                    className="border-gray-200 h-9"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-500 font-semibold mb-1">Quantity Stocked</label>
-                  <Input
-                    type="number"
-                    value={newProduct.quantity || ''}
-                    onChange={(e) => setNewProduct(prev => ({ ...prev, quantity: Math.max(0, Number(e.target.value)) }))}
-                    placeholder="e.g. 50"
-                    className="border-gray-200 h-9"
-                    required
-                    min="1"
-                  />
-                </div>
-                <div>
-                  <label className="block text-gray-500 font-semibold mb-1">Unit Cost (FRW)</label>
-                  <Input
-                    type="number"
-                    value={newProduct.price || ''}
-                    onChange={(e) => setNewProduct(prev => ({ ...prev, price: Math.max(0, Number(e.target.value)) }))}
-                    placeholder="e.g. 25000"
-                    className="border-gray-200 h-9"
-                    required
-                    min="1"
-                  />
-                </div>
+      <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+        <Card className="bg-white border border-gray-100 shadow-md">
+          <CardContent className="p-6">
+            <h3 className="text-sm font-bold text-slate-850 mb-4 pb-2 border-b border-gray-100">
+              Register New Stock Invoice (Batch Intake)
+            </h3>
+            <form onSubmit={handleAddProduct} className="space-y-4 text-xs">
+              {/* Invoice Header details */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-gray-500 font-semibold mb-1">Supplier Corp</label>
                   <Input
-                    value={newProduct.supplier}
-                    onChange={(e) => setNewProduct(prev => ({ ...prev, supplier: e.target.value }))}
+                    value={supplier}
+                    onChange={(e) => setSupplier(e.target.value)}
                     placeholder="e.g. Kigali Wholesale Ltd"
                     className="border-gray-200 h-9"
                     required
                   />
                 </div>
-                <div className="flex items-end">
-                  <Button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-9 font-bold text-xs shadow">
-                    Create Stock SKU
+                <div>
+                  <label className="block text-gray-500 font-semibold mb-1">Category (Applies to Batch)</label>
+                  <Input
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    placeholder="e.g. Foodstuff / Spares"
+                    className="border-gray-200 h-9"
+                  />
+                </div>
+              </div>
+
+              {/* Line Items Table */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse border-y border-gray-100 text-left">
+                  <thead>
+                    <tr className="bg-slate-50 text-gray-500 font-bold border-b border-gray-150">
+                      <th className="py-2.5 px-3 text-[10px] w-12 text-center uppercase tracking-wider font-semibold">No.</th>
+                      <th className="py-2.5 px-3 text-[10px] uppercase tracking-wider font-semibold">Product Description</th>
+                      <th className="py-2.5 px-3 text-[10px] w-36 uppercase tracking-wider font-semibold">Unit Cost (FRW)</th>
+                      <th className="py-2.5 px-3 text-[10px] w-28 uppercase tracking-wider font-semibold">Quantity</th>
+                      <th className="py-2.5 px-3 text-[10px] w-36 uppercase tracking-wider font-semibold">Total (FRW)</th>
+                      <th className="py-2.5 px-3 text-[10px] w-16 text-center uppercase tracking-wider font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-50">
+                    {items.map((item, index) => (
+                      <tr key={item.id} className="hover:bg-slate-50/40">
+                        <td className="py-2 px-3 text-center font-mono font-bold text-gray-400">{index + 1}</td>
+                        <td className="py-2 px-2">
+                          <Input
+                            value={item.name}
+                            onChange={(e) => handleItemChange(item.id, 'name', e.target.value)}
+                            placeholder="e.g. Basmati Rice (25kg)"
+                            className="border-gray-200 h-8 text-xs w-full"
+                            required
+                          />
+                        </td>
+                        <td className="py-2 px-2">
+                          <Input
+                            type="number"
+                            value={item.price || ''}
+                            onChange={(e) => handleItemChange(item.id, 'price', Math.max(0, Number(e.target.value)))}
+                            placeholder="Unit cost"
+                            className="border-gray-200 h-8 text-xs font-mono w-full"
+                            required
+                            min="1"
+                          />
+                        </td>
+                        <td className="py-2 px-2">
+                          <Input
+                            type="number"
+                            value={item.quantity || ''}
+                            onChange={(e) => handleItemChange(item.id, 'quantity', Math.max(0, Number(e.target.value)))}
+                            placeholder="Qty"
+                            className="border-gray-200 h-8 text-xs font-mono w-full"
+                            required
+                            min="1"
+                          />
+                        </td>
+                        <td className="py-2 px-3 font-mono font-bold text-slate-700 align-middle">
+                          {formatRWF(item.price * item.quantity)}
+                        </td>
+                        <td className="py-2 px-3 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteRow(item.id)}
+                            disabled={items.length <= 1}
+                            className="p-1 text-gray-400 hover:text-rose-600 disabled:opacity-30 disabled:hover:text-gray-400 rounded transition"
+                            title="Delete Line"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Table Footer Control Panel */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-2 gap-3">
+                <Button
+                  type="button"
+                  onClick={handleAddItem}
+                  className="bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center justify-center space-x-1.5 h-8 px-3 font-bold text-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Item</span>
+                </Button>
+                
+                <div className="flex items-center justify-between sm:justify-end gap-6">
+                  <div className="text-right">
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider block">Overall Invoice Total</span>
+                    <span className="text-base font-bold text-emerald-600 font-mono">{formatRWF(overallTotal)}</span>
+                  </div>
+                  <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700 text-white h-9 px-5 font-bold text-xs shadow">
+                    Record 
                   </Button>
                 </div>
-              </form>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Controls: Search and Filter */}
       <Card className="bg-white border border-gray-100 shadow-sm">

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useAuth } from '../../context/AuthContext';
 import { useLocation } from 'react-router-dom';
-import { Bell, Search, Sparkles, Building, ChevronDown, Check } from 'lucide-react';
+import { Bell, Search, Sparkles, Building, ChevronDown, Check, LogOut } from 'lucide-react';
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -9,9 +10,11 @@ interface HeaderProps {
 
 export default function Header({ onMenuClick }: HeaderProps) {
   const { smes, selectedSmeId, setSelectedSmeId, activeSme } = useApp();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSmeDropdown, setShowSmeDropdown] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
 
   // Determine current role based on path
   const isBankerPath = location.pathname === '/banker';
@@ -80,7 +83,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
             ? 'bg-slate-50 text-slate-700 border-slate-200'
             : 'bg-emerald-50 text-emerald-700 border-emerald-100'
         }`}>
-          {isBankerPath ? 'Bank Credit Officer' : 'SME Business Owner'}
+          {user?.role === 'ADMIN' ? 'Elevata Admin' : 'SME Business Owner'}
         </span>
 
         {/* Search Input (desktop) */}
@@ -144,15 +147,50 @@ export default function Header({ onMenuClick }: HeaderProps) {
         {/* Divider */}
         <div className="h-5 w-px bg-gray-200 hidden sm:block"></div>
 
-        {/* Mini profile snippet */}
-        <div className="flex items-center space-x-2">
-          <div className="w-7 h-7 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center">
-            {activeSme.ownerName.split(' ').map(n => n[0]).join('')}
-          </div>
-          <div className="text-left hidden md:block">
-            <span className="text-[11px] font-bold text-slate-800 block leading-tight">{activeSme.ownerName}</span>
-            <span className="text-[9px] text-gray-400 block leading-none">{activeSme.email}</span>
-          </div>
+        {/* User Profile Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+            className="flex items-center space-x-2 focus:outline-none hover:bg-slate-50 p-1.5 rounded-lg transition"
+          >
+            <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-xs flex items-center justify-center shadow-inner">
+              {user?.role === 'ADMIN'
+                ? 'AD'
+                : (user?.business?.ownerName || 'BO').split(' ').map((n) => n[0]).slice(0, 2).join('')}
+            </div>
+            <div className="text-left hidden md:block">
+              <span className="text-[11px] font-bold text-slate-800 block leading-tight">
+                {user?.role === 'ADMIN' ? 'Administrator' : (user?.business?.ownerName || 'Business Owner')}
+              </span>
+              <span className="text-[9px] text-gray-400 block leading-none">{user?.email}</span>
+            </div>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-400 hidden md:block" />
+          </button>
+
+          {showProfileDropdown && (
+            <>
+              <div className="fixed inset-0 z-45" onClick={() => setShowProfileDropdown(false)} />
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 py-1.5 z-50 animate-in fade-in-50 slide-in-from-top-1 duration-150">
+                <div className="px-3 py-2 border-b border-gray-100 text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                  Session Controls
+                </div>
+                <div className="px-3 py-2 text-xs text-slate-700">
+                  <span className="block font-bold">Role:</span>
+                  <span className="text-emerald-600 font-semibold">{user?.role}</span>
+                </div>
+                <button
+                  onClick={async () => {
+                    setShowProfileDropdown(false);
+                    await logout();
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left text-red-600 hover:bg-red-50 transition border-t border-gray-100 mt-1"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Sign Out
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </header>

@@ -16,9 +16,9 @@ export default function MainLayout() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col md:ml-64 w-full">
+      <div className="flex-1 flex flex-col md:ml-64 w-full min-w-0">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-3 md:p-6 w-full">
+        <main className="flex-1 overflow-y-auto p-3 md:p-6 w-full min-w-0">
           <Outlet />
         </main>
       </div>
