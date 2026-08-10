@@ -64,6 +64,7 @@ export interface SmeProfile {
   monthlyData: MonthlyFinancial[];
   sales: Sale[];
   expenses: Expense[];
+  age: number;
 }
 
 export const mockSmes: SmeProfile[] = [
@@ -114,7 +115,8 @@ export const mockSmes: SmeProfile[] = [
       { id: 101, description: 'Store Rent - June', category: 'Rent', amount: 350000, date: 'Jun 05, 2026' },
       { id: 102, description: 'Electricity Utility Bill', category: 'Utilities', amount: 45000, date: 'Jun 12, 2026' },
       { id: 103, description: 'Water Utility Bill', category: 'Utilities', amount: 15000, date: 'Jun 12, 2026' }
-    ]
+    ],
+    age: 3
   },
   {
     id: 'sme-2',
@@ -160,7 +162,8 @@ export const mockSmes: SmeProfile[] = [
     expenses: [
       { id: 201, description: 'Milling Machinery Repairing', category: 'Repairs', amount: 120000, date: 'Jun 10, 2026' },
       { id: 202, description: 'Factory Space Rent', category: 'Rent', amount: 800000, date: 'Jun 05, 2026' }
-    ]
+    ],
+    age: 4
   },
   {
     id: 'sme-3',
@@ -208,7 +211,8 @@ export const mockSmes: SmeProfile[] = [
       { id: 301, description: 'Logistics Van Maintenance', category: 'Repairs', amount: 150000, date: 'Jun 08, 2026' },
       { id: 302, description: 'Office Electricity Bill', category: 'Utilities', amount: 65000, date: 'Jun 12, 2026' },
       { id: 303, description: 'HQ Office Rent', category: 'Rent', amount: 450000, date: 'Jun 05, 2026' }
-    ]
+    ],
+    age: 1
   },
   {
     id: 'sme-4',
@@ -253,7 +257,8 @@ export const mockSmes: SmeProfile[] = [
     expenses: [
       { id: 401, description: 'High-speed Fiber Uplink Utility', category: 'Utilities', amount: 200000, date: 'Jun 02, 2026' },
       { id: 402, description: 'Office Space Rent', category: 'Rent', amount: 500000, date: 'Jun 05, 2026' }
-    ]
+    ],
+    age: 5
   }
 ];
 

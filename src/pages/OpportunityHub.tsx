@@ -5,7 +5,6 @@ import {
   Sparkles,
   Search,
   CheckCircle,
-  XCircle,
   Send,
   Video,
   Award,
@@ -13,7 +12,12 @@ import {
   FileText,
   Bookmark,
   Bell,
-  UploadCloud
+  UploadCloud,
+  Sprout,
+  Coins,
+  Calendar,
+  MapPin,
+  TrendingUp
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 
@@ -748,152 +752,376 @@ export default function OpportunityHub() {
           </div>
         )}
       </div>
+      {selectedOpp && (() => {
+        const activeSmeLocation = activeSme.id === 'sme-2' ? 'Northern Province' : activeSme.id === 'sme-4' ? 'Western Province' : 'Kigali';
+        const activeSmeAnnualRevenue = activeSme.monthlyData.reduce((sum, item) => sum + item.revenue, 0) * 2;
+        const activeSmeMonthlyRevenue = activeSme.monthlyData[activeSme.monthlyData.length - 1]?.revenue || 0;
+        const minMonthly = selectedOpp.minMonthlyRevenue || Math.round(selectedOpp.minRevenue / 12);
 
-      {/* OPPORTUNITY DETAILS INTERACTIVE MODAL */}
-      {selectedOpp && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-lg shadow-2xl w-full max-w-4xl h-[560px] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-150">
-            {/* Left 60%: Opportunity details & checklist */}
-            <div className="flex-1 p-5 overflow-y-auto space-y-4 border-r border-slate-100">
-              <div className="flex justify-between items-start">
-                <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded uppercase">
-                  {selectedOpp.category}
-                </span>
-                
-                <button
-                  onClick={() => setSelectedOppId(null)}
-                  className="text-slate-400 hover:text-slate-600 text-sm font-bold md:hidden"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-bold text-slate-950 font-heading">{selectedOpp.title}</h3>
-                <p className="text-[10px] text-slate-400">Published by {selectedOpp.institution} · Deadline: {selectedOpp.deadline}</p>
-              </div>
-
-              <div className="space-y-1">
-                <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Overview</h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-sans">{selectedOpp.description}</p>
-              </div>
-
-              <div className="space-y-1">
-                <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Benefits</h4>
-                <p className="text-xs text-slate-600 leading-relaxed font-sans">{selectedOpp.benefits}</p>
-              </div>
-
-              {/* Dynamic Eligibility Checklists */}
-              <div className="space-y-2 pt-2 border-t border-slate-100">
-                <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Eligibility Checklist Match</h4>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                  {[
-                    { label: `Target Sector matches (${activeSme.sector})`, met: selectedOpp.sectors.includes(activeSme.sector) },
-                    { label: `Monthly Sales threshold (${formatRWF(selectedOpp.minRevenue)})`, met: (activeSme.monthlyData[activeSme.monthlyData.length-1]?.revenue || 0) >= selectedOpp.minRevenue },
-                    { label: `Min Business Age (${selectedOpp.minAge} Years)`, met: true },
-                    { label: `Tax Compliant registration status`, met: true },
-                    { label: `Business Health rating (Min ${selectedOpp.minHealthScore})`, met: activeSme.healthScore >= selectedOpp.minHealthScore },
-                    { label: `Loan Readiness metric (Min ${selectedOpp.minReadinessScore}%)`, met: calculatedReadiness >= selectedOpp.minReadinessScore }
-                  ].map((rule, idx) => (
-                    <div key={idx} className="flex items-center gap-1.5 p-2 bg-slate-50 rounded border border-slate-100">
-                      {rule.met ? (
-                        <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-rose-500 shrink-0" />
-                      )}
-                      <span className="text-[10px] text-slate-600 font-medium leading-tight">{rule.label}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Required Documents checklist */}
-              <div className="space-y-2 pt-1">
-                <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-wider">Required Documentation checklist</h4>
-                <div className="flex flex-wrap gap-2 text-xs">
-                  {selectedOpp.requiredDocs.map((doc, i) => (
-                    <span key={i} className="px-2.5 py-1 bg-white border border-slate-200 rounded-md text-[10px] font-medium text-slate-600 flex items-center gap-1.5">
-                      <FileText className="w-3.5 h-3.5 text-slate-400" />
-                      {doc}
+        return (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
+            <div className="bg-white border border-slate-200 rounded-lg shadow-2xl w-full max-w-4xl h-[560px] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-150">
+              <div className="flex-1 p-5 overflow-y-auto space-y-4 border-r border-slate-100">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded uppercase">
+                      {selectedOpp.category}
                     </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Right 40%: AI Assistant Panel */}
-            <div className="w-full md:w-80 bg-slate-50/50 p-5 flex flex-col justify-between h-full">
-              <div className="flex-1 flex flex-col justify-between h-[90%] overflow-hidden">
-                <div className="pb-3 border-b border-slate-200 flex justify-between items-center">
-                  <div className="flex items-center gap-1.5">
-                    <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
-                    <div>
-                      <h4 className="text-[11px] font-bold text-slate-900 font-heading">Ask AI Assistant</h4>
-                      <p className="text-[8px] text-slate-400 font-sans uppercase">Elevata advisor online</p>
-                    </div>
+                    {selectedOpp.category === 'Loan' && (
+                      <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+                        <Coins className="w-3 h-3 text-indigo-600" />
+                        Financing
+                      </span>
+                    )}
+                    {selectedOpp.sectors.includes('Agriculture') && (
+                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded uppercase flex items-center gap-1">
+                        <Sprout className="w-3 h-3 text-emerald-600" />
+                        Agrisolutions
+                      </span>
+                    )}
                   </div>
                   
                   <button
                     onClick={() => setSelectedOppId(null)}
-                    className="text-slate-400 hover:text-slate-600 font-bold text-sm hidden md:block"
+                    className="text-slate-400 hover:text-slate-655 text-sm font-bold md:hidden"
                   >
                     ✕
                   </button>
                 </div>
 
-                {/* Chat conversation area */}
-                <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 text-xs">
-                  {chatHistory.map((msg, i) => (
-                    <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      <div className={`p-2.5 rounded-lg max-w-[85%] leading-relaxed ${
-                        msg.sender === 'user' ? 'bg-slate-950 text-white font-medium' : 'bg-white border border-slate-200 text-slate-700'
-                      }`}>
-                        {msg.text}
-                      </div>
-                    </div>
-                  ))}
-                  {isTyping && (
-                    <div className="flex justify-start">
-                      <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 font-sans">
-                        AI Assistant is typing...
-                      </div>
-                    </div>
-                  )}
+                <div>
+                  <h3 className="text-sm font-bold text-slate-955 font-heading">{selectedOpp.title}</h3>
+                  <p className="text-[10px] text-slate-400">Published by {selectedOpp.institution} · Deadline: {selectedOpp.deadline}</p>
                 </div>
 
-                {/* Input query box */}
-                <form onSubmit={handleSendMessage} className="flex gap-2 pt-2 border-t border-slate-200">
-                  <input
-                    type="text"
-                    placeholder="Ask about collateral, interest rates..."
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    className="flex-1 border border-slate-200 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-slate-400 bg-white"
-                  />
-                  <button
-                    type="submit"
-                    className="p-2 bg-slate-950 hover:bg-slate-900 text-white rounded-lg shadow-sm transition"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                  </button>
-                </form>
+                {selectedOpp.sectors.includes('Agriculture') && (
+                  <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
+                    <div className="h-10 w-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
+                      <Sprout className="w-5 h-5 text-emerald-600" />
+                    </div>
+                    <div className="space-y-0.5">
+                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest block font-sans">Agribusiness / Agrisolutions Program</span>
+                      <p className="text-xs text-slate-650 leading-relaxed font-sans font-medium">
+                        Specialized support, inventory logistics, or equity-free grants designed for agricultural cooperatives and local farming supply chains.
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {selectedOpp.category === 'Loan' && (
+                  <div className="bg-gradient-to-r from-indigo-500/10 via-blue-500/5 to-transparent border border-indigo-500/20 rounded-xl p-4 space-y-3 shadow-sm">
+                    <div className="flex items-center gap-3.5">
+                      <div className="h-10 w-10 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30">
+                        <Coins className="w-5 h-5 text-indigo-600" />
+                      </div>
+                      <div className="space-y-0.5">
+                        <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest block font-sans">Financing Terms &amp; Cost Breakdown</span>
+                        <p className="text-xs text-slate-650 leading-relaxed font-sans font-medium">
+                          Detailed cost of borrowing based on your digital ledger transactions.
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-2 border-t border-indigo-500/10">
+                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
+                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Interest Rate</span>
+                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
+                          {selectedOpp.loanRate ? `${selectedOpp.loanRate}% p.a. fixed` : '12% p.a. fixed'}
+                        </span>
+                      </div>
+                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
+                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Repayment Term</span>
+                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
+                          {selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : '24 Months'}
+                        </span>
+                      </div>
+                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
+                        <span className="text-slate-400 block text-[8px] tracking-wider uppercase font-semibold">Grace Period</span>
+                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
+                          {selectedOpp.loanGrace ? `${selectedOpp.loanGrace} Months` : '3 Months'}
+                        </span>
+                      </div>
+                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
+                        <span className="text-slate-400 block text-[8px] tracking-wider uppercase font-semibold">Collateral type</span>
+                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5 truncate" title={selectedOpp.collateralRequired ? (selectedOpp.collateralType || 'Asset Registration') : 'No Land Collateral'}>
+                          {selectedOpp.collateralRequired ? (selectedOpp.collateralType || 'Asset Registration') : 'No Land Collateral'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Overview</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed font-sans">{selectedOpp.description}</p>
+                </div>
+
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Benefits</h4>
+                  <p className="text-xs text-slate-600 leading-relaxed font-sans">{selectedOpp.benefits}</p>
+                </div>
+
+                <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Published Requirements Summary</h4>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-[8px] uppercase tracking-wider font-bold">Min Turnover</span>
+                      </div>
+                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate" title={`${formatRWF(minMonthly)}/mo`}>
+                        {formatRWF(minMonthly)}/mo
+                      </strong>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <Coins className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-[8px] uppercase tracking-wider font-bold">Max Funding</span>
+                      </div>
+                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate">
+                        {selectedOpp.maxFunding}
+                      </strong>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <Calendar className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-[8px] uppercase tracking-wider font-bold">Operating Age</span>
+                      </div>
+                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate">
+                        {selectedOpp.minAge === 0 ? 'Any Age' : `${selectedOpp.minAge}+ Year${selectedOpp.minAge > 1 ? 's' : ''}`}
+                      </strong>
+                    </div>
+                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                      <div className="flex items-center gap-1.5 text-slate-400">
+                        <MapPin className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-[8px] uppercase tracking-wider font-bold">Target Districts</span>
+                      </div>
+                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate" title={selectedOpp.eligLocations?.join(', ') || 'All districts'}>
+                        {selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'All districts'}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Dynamic SME Eligibility Match</h4>
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                    <table className="w-full text-left text-xs font-sans border-collapse bg-white">
+                      <thead>
+                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[9px] tracking-wider">
+                          <th className="px-4 py-2">Requirement</th>
+                          <th className="px-4 py-2">Criteria Threshold</th>
+                          <th className="px-4 py-2">Your Business Profile</th>
+                          <th className="px-4 py-2 text-right">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-150">
+                        {[
+                          {
+                            name: 'Target Sector',
+                            req: selectedOpp.sectors.join(', '),
+                            val: activeSme.sector,
+                            met: selectedOpp.sectors.includes(activeSme.sector)
+                          },
+                          {
+                            name: 'Min Monthly Turnover',
+                            req: formatRWF(minMonthly),
+                            val: formatRWF(activeSmeMonthlyRevenue),
+                            met: activeSmeMonthlyRevenue >= minMonthly
+                          },
+                          {
+                            name: 'Min Annual Turnover',
+                            req: formatRWF(selectedOpp.minRevenue),
+                            val: formatRWF(activeSmeAnnualRevenue),
+                            met: activeSmeAnnualRevenue >= selectedOpp.minRevenue
+                          },
+                          {
+                            name: 'Business Age',
+                            req: selectedOpp.minAge === 0 ? 'Any' : `${selectedOpp.minAge}+ Years`,
+                            val: `${activeSme.age || 3} Years`,
+                            met: (activeSme.age || 3) >= selectedOpp.minAge
+                          },
+                          {
+                            name: 'Business Health Score',
+                            req: `Min ${selectedOpp.minHealthScore}%`,
+                            val: `${activeSme.healthScore}%`,
+                            met: activeSme.healthScore >= selectedOpp.minHealthScore
+                          },
+                          {
+                            name: 'Loan Readiness Score',
+                            req: `Min ${selectedOpp.minReadinessScore}%`,
+                            val: `${calculatedReadiness}%`,
+                            met: calculatedReadiness >= selectedOpp.minReadinessScore
+                          },
+                          {
+                            name: 'Geographical Scope',
+                            req: selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'All districts',
+                            val: activeSmeLocation,
+                            met: !selectedOpp.eligLocations || selectedOpp.eligLocations.length === 0 || selectedOpp.eligLocations.includes(activeSmeLocation)
+                          }
+                        ].map((chk, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
+                            <td className="px-4 py-2.5 font-semibold text-slate-800 text-[10.5px]">{chk.name}</td>
+                            <td className="px-4 py-2.5 text-slate-650 font-mono text-[10px]">{chk.req}</td>
+                            <td className="px-4 py-2.5 text-slate-600 font-mono text-[10px]">{chk.val}</td>
+                            <td className="px-4 py-2.5 text-right">
+                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
+                                chk.met 
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-150' 
+                                  : 'bg-rose-50 text-rose-700 border-rose-150'
+                              }`}>
+                                {chk.met ? 'Met' : 'Not Met'}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Required Documentation Checklist</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                    {selectedOpp.requiredDocs.map((doc, i) => {
+                      const isTax = doc.toLowerCase().includes('tax') || doc.toLowerCase().includes('compliance') || doc.toLowerCase().includes('rra');
+                      const isFinancial = doc.toLowerCase().includes('financial') || doc.toLowerCase().includes('ledger') || doc.toLowerCase().includes('statements');
+                      const isLicense = doc.toLowerCase().includes('license') || doc.toLowerCase().includes('address') || doc.toLowerCase().includes('profile');
+                      
+                      let isUploaded = false;
+                      let action = null;
+                      let label = "";
+
+                      if (isTax) {
+                        isUploaded = taxClearanceUploaded;
+                        action = () => {
+                          setTaxClearanceUploaded(true);
+                          triggerToast('Tax Clearance Certificate uploaded. Compliance score increased to 100%!');
+                        };
+                        label = "Upload Tax Certificate";
+                      } else if (isFinancial) {
+                        isUploaded = auditedStatementsUploaded;
+                        action = () => {
+                          setAuditedStatementsUploaded(true);
+                          triggerToast('Financial statements uploaded successfully. Documentation score updated.');
+                        };
+                        label = "Upload Financials";
+                      } else if (isLicense) {
+                        isUploaded = profileCompleted;
+                        action = () => {
+                          setProfileCompleted(true);
+                          triggerToast('Business profile completed. Readiness index improved.');
+                        };
+                        label = "Complete License Info";
+                      } else {
+                        isUploaded = false;
+                        action = () => {
+                          triggerToast(`"${doc}" uploaded successfully!`);
+                        };
+                        label = "Upload Document";
+                      }
+
+                      return (
+                        <div key={i} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center gap-3">
+                          <div className="flex items-center gap-2 text-[10.5px] font-semibold text-slate-750 truncate max-w-[65%]">
+                            <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                            <span title={doc} className="truncate">{doc}</span>
+                          </div>
+                          {isUploaded ? (
+                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-150 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider font-sans shrink-0">
+                              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                              Uploaded
+                            </span>
+                          ) : (
+                            <button
+                              onClick={action}
+                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-bold px-2.5 py-1 rounded-md shadow-sm transition border-none shrink-0"
+                            >
+                              {label}
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
               </div>
 
-              <div className="pt-4 border-t border-slate-200 mt-4">
-                <button
-                  onClick={() => {
-                    handleApply(selectedOpp.id, selectedOpp.title);
-                    setSelectedOppId(null);
-                  }}
-                  className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-md transition"
-                >
-                  Apply Now
-                </button>
+              {/* Right 40%: AI Assistant Panel */}
+              <div className="w-full md:w-80 bg-slate-50/50 p-5 flex flex-col justify-between h-full">
+                <div className="flex-1 flex flex-col justify-between h-[90%] overflow-hidden">
+                  <div className="pb-3 border-b border-slate-200 flex justify-between items-center">
+                    <div className="flex items-center gap-1.5">
+                      <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
+                      <div>
+                        <h4 className="text-[11px] font-bold text-slate-900 font-heading">Ask AI Assistant</h4>
+                        <p className="text-[8px] text-slate-400 font-sans uppercase">Elevata advisor online</p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => setSelectedOppId(null)}
+                      className="text-slate-400 hover:text-slate-655 font-bold text-sm hidden md:block"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Chat conversation area */}
+                  <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 text-xs">
+                    {chatHistory.map((msg, i) => (
+                      <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`p-2.5 rounded-lg max-w-[85%] leading-relaxed ${
+                          msg.sender === 'user' ? 'bg-slate-950 text-white font-medium' : 'bg-white border border-slate-200 text-slate-700'
+                        }`}>
+                          {msg.text}
+                        </div>
+                      </div>
+                    ))}
+                    {isTyping && (
+                      <div className="flex justify-start">
+                        <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 font-sans">
+                          AI Assistant is typing...
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Input query box */}
+                  <form onSubmit={handleSendMessage} className="flex gap-2 pt-2 border-t border-slate-200">
+                    <input
+                      type="text"
+                      placeholder="Ask about collateral, interest rates..."
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      className="flex-1 border border-slate-250 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-slate-400 bg-white"
+                    />
+                    <button
+                      type="submit"
+                      className="p-2 bg-slate-950 hover:bg-slate-900 text-white rounded-lg shadow-sm transition"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </button>
+                  </form>
+                </div>
+
+                <div className="pt-4 border-t border-slate-200 mt-4">
+                  <button
+                    onClick={() => {
+                      handleApply(selectedOpp.id, selectedOpp.title);
+                      setSelectedOppId(null);
+                    }}
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-md transition"
+                  >
+                    Apply Now
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* VIRTUAL WEBINAR POPUP DIALOG (FULL SCREEN ZOOM STYLE) */}
       {activeLiveTraining && (

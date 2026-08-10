@@ -24,6 +24,20 @@ export interface Opportunity {
   applicationsCount: number;
   status: 'Active' | 'Closed';
   createdAt: string;
+  
+  // Extended fields published by publisher
+  minMonthlyRevenue?: number;
+  maxDebtToRevenue?: number;
+  collateralType?: string;
+  eligLocations?: string[];
+  loanRate?: number;
+  loanTerm?: number;
+  loanGrace?: number;
+  grantCoFundingReq?: boolean;
+  grantCoFundingPct?: number;
+  grantDuration?: number;
+  appMethod?: string;
+  appSteps?: string[];
 }
 
 export interface Application {
@@ -124,7 +138,22 @@ const initialOpportunities: Opportunity[] = [
     saved: 28,
     applicationsCount: 3,
     status: 'Active',
-    createdAt: '2026-08-01'
+    createdAt: '2026-08-01',
+    minMonthlyRevenue: 3000000,
+    maxDebtToRevenue: 35,
+    eligLocations: ['Kigali', 'Northern Province'],
+    loanRate: 12,
+    loanTerm: 24,
+    loanGrace: 3,
+    collateralType: 'Asset Registration',
+    appMethod: 'Apply directly through Elevata',
+    appSteps: [
+      '1. Check eligibility profile',
+      '2. Complete application dossier',
+      '3. Upload required documents',
+      '4. Automated AI risk review',
+      '5. Bank officer interview & disburse'
+    ]
   },
   {
     id: 'opp-2',
@@ -148,7 +177,19 @@ const initialOpportunities: Opportunity[] = [
     saved: 65,
     applicationsCount: 1,
     status: 'Active',
-    createdAt: '2026-08-03'
+    createdAt: '2026-08-03',
+    minMonthlyRevenue: 1500000,
+    eligLocations: ['Northern Province', 'Western Province', 'Eastern Province'],
+    grantCoFundingReq: true,
+    grantCoFundingPct: 20,
+    grantDuration: 12,
+    appMethod: 'Apply directly through Elevata',
+    appSteps: [
+      '1. Check eligibility profile',
+      '2. Complete application dossier',
+      '3. Upload required documents',
+      '4. Ministry evaluation & grant disburse'
+    ]
   },
   {
     id: 'opp-3',
@@ -172,7 +213,9 @@ const initialOpportunities: Opportunity[] = [
     saved: 12,
     applicationsCount: 0,
     status: 'Active',
-    createdAt: '2026-08-04'
+    createdAt: '2026-08-04',
+    minMonthlyRevenue: 200000,
+    appMethod: 'Apply directly through Elevata'
   },
   {
     id: 'opp-4',
@@ -196,7 +239,10 @@ const initialOpportunities: Opportunity[] = [
     saved: 41,
     applicationsCount: 2,
     status: 'Active',
-    createdAt: '2026-08-02'
+    createdAt: '2026-08-02',
+    minMonthlyRevenue: 2500000,
+    eligLocations: ['Kigali'],
+    appMethod: 'Apply directly through Elevata'
   }
 ];
 

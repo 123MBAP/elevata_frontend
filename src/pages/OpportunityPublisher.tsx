@@ -303,7 +303,21 @@ export default function OpportunityPublisher() {
       registrationRequired: eligSoleProp || eligCompany,
       taxCompliance: readinessTaxCompliance,
       collateralRequired: loanCollateralReq,
-      requiredDocs: docsList
+      requiredDocs: docsList,
+      
+      // Extended fields
+      minMonthlyRevenue: finMinMonthlyRev,
+      maxDebtToRevenue: finMaxDebtToRevenue,
+      collateralType: loanCollateralReq ? loanCollateralType : undefined,
+      eligLocations: eligLocations,
+      loanRate: oppType === 'loan' ? parseFloat(loanRate) : undefined,
+      loanTerm: oppType === 'loan' ? parseInt(loanTerm) : undefined,
+      loanGrace: oppType === 'loan' ? parseInt(loanGrace) : undefined,
+      grantCoFundingReq: oppType === 'grant' ? grantCoFundingReq : undefined,
+      grantCoFundingPct: oppType === 'grant' && grantCoFundingReq ? parseFloat(grantCoFundingPct) : undefined,
+      grantDuration: oppType === 'grant' ? parseInt(grantDuration) : undefined,
+      appMethod: appMethod,
+      appSteps: appSteps
     });
 
     triggerToast(`"${oppName}" published successfully! AI matches simulated and active.`);
