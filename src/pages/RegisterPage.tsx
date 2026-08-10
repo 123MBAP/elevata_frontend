@@ -397,8 +397,12 @@ export default function RegisterPage() {
         };
       }
 
-      await register(submitData);
-      navigate('/');
+      const registeredUser = await register(submitData);
+      if (registeredUser?.role === 'FINANCIAL_INSTITUTION') {
+        navigate('/banker');
+      } else {
+        navigate('/');
+      }
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please check your data.');
     } finally {

@@ -44,8 +44,8 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (registrationData: any) => Promise<void>;
+  login: (email: string, password: string) => Promise<User>;
+  register: (registrationData: any) => Promise<User>;
   logout: () => Promise<void>;
 }
 
@@ -107,7 +107,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('elevata_access_token', res.data.token);
         localStorage.setItem('elevata_refresh_token', res.data.refreshToken);
         setUser(res.data.user);
+        return res.data.user;
       }
+      throw new Error('Invalid login response from server');
     } catch (error) {
       handleClearAuth();
       throw error;
@@ -128,7 +130,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         localStorage.setItem('elevata_access_token', res.data.token);
         localStorage.setItem('elevata_refresh_token', res.data.refreshToken);
         setUser(res.data.user);
+        return res.data.user;
       }
+      throw new Error('Invalid registration response from server');
     } catch (error) {
       handleClearAuth();
       throw error;

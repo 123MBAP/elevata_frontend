@@ -1,3 +1,6 @@
+import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { formatRWF } from '../lib/mockData';
 import {
@@ -24,6 +27,15 @@ import {
 import { Card, CardContent } from '../assets/components/ui/card';
 
 export default function SmeDashboard() {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user?.role === 'FINANCIAL_INSTITUTION') {
+      navigate('/banker', { replace: true });
+    }
+  }, [user, navigate]);
+
   const { activeSme, scenarios, resetAll } = useApp();
 
   let healthScore        = activeSme.healthScore;
