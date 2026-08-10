@@ -339,17 +339,22 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // Validate Coordinates
-    const lat = parseFloat(formData.latitude);
-    const lon = parseFloat(formData.longitude);
+    let lat = 0;
+    let lon = 0;
 
-    if (isNaN(lat) || lat < -90 || lat > 90) {
-      setError('Latitude must be a valid number between -90 and 90.');
-      return;
-    }
-    if (isNaN(lon) || lon < -180 || lon > 180) {
-      setError('Longitude must be a valid number between -180 and 180.');
-      return;
+    // Validate Coordinates only for SMEs
+    if (formData.registrationType === 'SME') {
+      lat = parseFloat(formData.latitude);
+      lon = parseFloat(formData.longitude);
+
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        setError('Latitude must be a valid number between -90 and 90.');
+        return;
+      }
+      if (isNaN(lon) || lon < -180 || lon > 180) {
+        setError('Longitude must be a valid number between -180 and 180.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -388,15 +393,7 @@ export default function RegisterPage() {
           category: rawSubmitData.category,
           operatingScope: rawSubmitData.operatingScope,
           licenseNumber: rawSubmitData.licenseNumber,
-          website: rawSubmitData.website || undefined,
-          province: rawSubmitData.province,
-          district: rawSubmitData.district,
-          sector: rawSubmitData.sector,
-          cell: rawSubmitData.cell,
-          village: rawSubmitData.village,
-          knownPlace: rawSubmitData.knownPlace,
-          latitude: lat,
-          longitude: lon
+          website: rawSubmitData.website || undefined
         };
       }
 
