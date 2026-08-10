@@ -326,6 +326,17 @@ export default function OpportunityPublisher() {
     setIsTrainingModalOpen(true);
   };
 
+  // Action: Create Training for Specific Opportunity
+  const handleCreateTrainingForOpp = (opp: typeof opportunities[0]) => {
+    setTrTitle(`Capacity Building: Qualifying for ${opp.title}`);
+    setTrDescription(`A specialized training program organized by ${opp.institution} to guide SMEs on eligibility requirements, credit compliance checks, and document compilation to successfully unlock financing under the "${opp.title}" opportunity.`);
+    setTrDate('2026-08-25');
+    setTrTime('10:00 AM - 12:30 PM');
+    setTrSpeaker('Bank Credit Officer & Elevata Consultants');
+    setTrAudience(['Low Readiness SMEs', ...opp.sectors]);
+    setIsTrainingModalOpen(true);
+  };
+
   // Handle Virtual Training Submission
   const handleTrainingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -624,6 +635,33 @@ export default function OpportunityPublisher() {
                       </span>
                     </div>
                   </div>
+
+                  <div className="flex items-center gap-2 pt-2 border-t border-slate-50 mt-1">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedOppId(opp.id);
+                        handleCreateTrainingForOpp(opp);
+                      }}
+                      className="flex-1 py-1.5 px-2 bg-slate-100 hover:bg-slate-200 text-[10px] font-bold text-slate-700 rounded-md transition text-center"
+                    >
+                      🎓 Schedule Training
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedOppId(opp.id);
+                        setTimeout(() => {
+                          document.getElementById('eligible-table')?.scrollIntoView({ behavior: 'smooth' });
+                        }, 50);
+                      }}
+                      className="flex-1 py-1.5 px-2 bg-emerald-600 hover:bg-emerald-700 text-[10px] font-bold text-white rounded-md transition text-center border-none"
+                    >
+                      🎯 Match SMEs
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}
@@ -742,6 +780,7 @@ export default function OpportunityPublisher() {
                   <th className="px-5 py-3">Business Health</th>
                   <th className="px-5 py-3">Revenue Trend</th>
                   <th className="px-5 py-3">AI Fit status</th>
+                  <th className="px-5 py-3">Match Details / Gaps</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
               </thead>
@@ -787,6 +826,17 @@ export default function OpportunityPublisher() {
                       }`}>
                         {sme.status}
                       </span>
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {sme.missing.length === 0 ? (
+                        <span className="text-[10px] text-emerald-600 font-bold">100% Match: Met all criteria</span>
+                      ) : (
+                        <div className="text-[10px] text-slate-500 space-y-0.5">
+                          <span className="font-mono text-slate-450 block truncate max-w-[170px]" title={sme.missing.join(', ')}>
+                            {sme.missing.join(', ')}
+                          </span>
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 text-right">
                       <button
