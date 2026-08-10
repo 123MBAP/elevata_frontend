@@ -153,30 +153,32 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Sidebar Info & Reset */}
-        <div className="p-4 border-t border-gray-200 space-y-3">
-          {/* Active SME Overview Widget */}
-          <div className="p-3 bg-slate-50 border border-gray-200 rounded-xl space-y-2">
-            <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-wider">
-              <span>Active Subject</span>
-              <span className={`w-2 h-2 rounded-full ${
-                activeSme.healthScore >= 80 ? 'bg-emerald-500' : activeSme.healthScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
-              }`} />
+        {user?.role !== 'FINANCIAL_INSTITUTION' && (
+          <div className="p-4 border-t border-gray-200 space-y-3">
+            {/* Active SME Overview Widget */}
+            <div className="p-3 bg-slate-50 border border-gray-200 rounded-xl space-y-2">
+              <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+                <span>Active Subject</span>
+                <span className={`w-2 h-2 rounded-full ${
+                  activeSme.healthScore >= 80 ? 'bg-emerald-500' : activeSme.healthScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
+                }`} />
+              </div>
+              <div>
+                <span className="text-xs font-bold text-slate-900 block leading-tight">{activeSme.name}</span>
+                <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">{activeSme.sector} • Score: {activeSme.healthScore}</span>
+              </div>
             </div>
-            <div>
-              <span className="text-xs font-bold text-slate-900 block leading-tight">{activeSme.name}</span>
-              <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">{activeSme.sector} • Score: {activeSme.healthScore}</span>
-            </div>
-          </div>
 
-          {/* Reset button */}
-          <button
-            onClick={resetAll}
-            className="flex items-center justify-center space-x-2 w-full py-2 bg-white hover:bg-slate-50 border border-gray-200 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition duration-150"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Reset Simulations</span>
-          </button>
-        </div>
+            {/* Reset button */}
+            <button
+              onClick={resetAll}
+              className="flex items-center justify-center space-x-2 w-full py-2 bg-white hover:bg-slate-50 border border-gray-200 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition duration-150"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Reset Simulations</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* Mobile Sidebar Overlay */}
@@ -278,18 +280,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </nav>
 
           {/* Mobile Footer */}
-          <div className="p-4 border-t border-gray-200 space-y-3 bg-slate-50">
-            <button
-              onClick={() => {
-                resetAll();
-                onClose();
-              }}
-              className="flex items-center justify-center space-x-2 w-full py-2 bg-white hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-gray-200 transition"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Reset Simulations</span>
-            </button>
-          </div>
+          {user?.role !== 'FINANCIAL_INSTITUTION' && (
+            <div className="p-4 border-t border-gray-200 space-y-3 bg-slate-50">
+              <button
+                onClick={() => {
+                  resetAll();
+                  onClose();
+                }}
+                className="flex items-center justify-center space-x-2 w-full py-2 bg-white hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-gray-200 transition"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reset Simulations</span>
+              </button>
+            </div>
+          )}
         </aside>
       </div>
     </>
