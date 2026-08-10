@@ -112,21 +112,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </div>
 
           {/* AI Segment */}
-          <div>
-            <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">Advisory & Planning</h3>
-            <div className="space-y-1">
-              {aiLinks.map((link) => (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
-                >
-                  <span>{link.icon}</span>
-                  <span>{link.label}</span>
-                </Link>
-              ))}
+          {user?.role !== 'FINANCIAL_INSTITUTION' && (
+            <div>
+              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">Advisory & Planning</h3>
+              <div className="space-y-1">
+                {aiLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
+                  >
+                    <span>{link.icon}</span>
+                    <span>{link.label}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Banker Segment */}
           {(user?.role === 'ADMIN' || user?.role === 'FINANCIAL_INSTITUTION') && (
@@ -231,22 +233,24 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
 
             {/* AI Segment */}
-            <div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">Advisory & Planning</h3>
-              <div className="space-y-1">
-                {aiLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
-                    onClick={onClose}
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
+            {user?.role !== 'FINANCIAL_INSTITUTION' && (
+              <div>
+                <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">Advisory & Planning</h3>
+                <div className="space-y-1">
+                  {aiLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
+                      onClick={onClose}
+                    >
+                      <span>{link.icon}</span>
+                      <span>{link.label}</span>
+                    </Link>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Banker Segment */}
             {(user?.role === 'ADMIN' || user?.role === 'FINANCIAL_INSTITUTION') && (
