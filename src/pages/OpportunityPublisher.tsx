@@ -981,7 +981,7 @@ export default function OpportunityPublisher() {
       {/* DYNAMIC 10-STEP PUBLISH OPPORTUNITY STEPS MODAL */}
       {isPublishModalOpen && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
             
             {/* Header */}
             <div className="px-5 py-4 border-b border-slate-150 bg-slate-55 flex justify-between items-center">
@@ -1036,7 +1036,7 @@ export default function OpportunityPublisher() {
                     {[
                       { type: 'loan', label: 'Loan / Financing', emoji: '💰', cat: 'Loan' },
                       { type: 'grant', label: 'Grant Funding', emoji: '🎁', cat: 'Grant' },
-                      { type: 'fintech', label: 'Digital Payment', emoji: '📱', cat: 'Payment Solution' },
+                      { type: 'fintech', label: 'Digital Solutions', emoji: '📱', cat: 'Digital Solution' },
                       { type: 'insurance', label: 'Insurance Product', emoji: '🛡️', cat: 'Insurance' },
                       { type: 'training', label: 'Training session', emoji: '🎓', cat: 'Training' },
                       { type: 'guarantee', label: 'Financing Support', emoji: '🤝', cat: 'Business Advisory' }
