@@ -1,5 +1,5 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 
 /**
@@ -7,7 +7,8 @@ import { useAuth } from '../../context/AuthContext';
  * Displays a premium loading animation if the authentication status is resolving.
  */
 export const PrivateRoute: React.FC = () => {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -20,7 +21,22 @@ export const PrivateRoute: React.FC = () => {
     );
   }
 
-  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const isPilotApproved = user?.isPilotApproved || user?.role === 'ADMIN';
+  const isRestrictedPath = location.pathname === '/pilot-restricted';
+
+  if (!isPilotApproved && !isRestrictedPath) {
+    return <Navigate to="/pilot-restricted" replace />;
+  }
+
+  if (isPilotApproved && isRestrictedPath) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Outlet />;
 };
 
 interface RoleRouteProps {

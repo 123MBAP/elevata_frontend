@@ -22,10 +22,16 @@ export default function LoginPage() {
 
     try {
       const loggedUser = await login(email, password);
-      if (loggedUser?.role === 'FINANCIAL_INSTITUTION') {
-        navigate('/banker');
-      } else {
+      if (loggedUser?.role === 'ADMIN') {
         navigate('/');
+      } else if (loggedUser?.isPilotApproved) {
+        if (loggedUser?.role === 'FINANCIAL_INSTITUTION') {
+          navigate('/banker');
+        } else {
+          navigate('/');
+        }
+      } else {
+        navigate('/pilot-restricted');
       }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');

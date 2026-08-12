@@ -13,6 +13,7 @@ import TechAdvisor from './pages/TechAdvisor';
 import BusinessStartAdvisor from './pages/BusinessStartAdvisor';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
+import PilotRestrictedPage from './pages/PilotRestrictedPage';
 import SmeMonitoring from './pages/SmeMonitoring';
 import OpportunityPublisher from './pages/OpportunityPublisher';
 import OpportunityHub from './pages/OpportunityHub';
@@ -32,6 +33,7 @@ function App() {
 
             {/* Protected application layout */}
             <Route element={<PrivateRoute />}>
+              <Route path="/pilot-restricted" element={<PilotRestrictedPage />} />
               <Route path="/" element={<MainLayout />}>
                 <Route index element={<SmeDashboard />} />
                 <Route path="opportunity-hub" element={<OpportunityHub />} />

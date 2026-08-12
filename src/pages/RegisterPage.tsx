@@ -398,10 +398,16 @@ export default function RegisterPage() {
       }
 
       const registeredUser = await register(submitData);
-      if (registeredUser?.role === 'FINANCIAL_INSTITUTION') {
-        navigate('/banker');
-      } else {
+      if (registeredUser?.role === 'ADMIN') {
         navigate('/');
+      } else if (registeredUser?.isPilotApproved) {
+        if (registeredUser?.role === 'FINANCIAL_INSTITUTION') {
+          navigate('/banker');
+        } else {
+          navigate('/');
+        }
+      } else {
+        navigate('/pilot-restricted');
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please check your data.');
