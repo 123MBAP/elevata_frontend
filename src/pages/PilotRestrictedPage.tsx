@@ -1,8 +1,7 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { LogOut, Mail, Lock } from 'lucide-react';
+import { LogOut, Mail } from 'lucide-react';
 import logo from '../assets/images/elevata_logo.png';
 
 export default function PilotRestrictedPage() {

@@ -14,6 +14,7 @@ import BusinessStartAdvisor from './pages/BusinessStartAdvisor';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import PilotRestrictedPage from './pages/PilotRestrictedPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import SmeMonitoring from './pages/SmeMonitoring';
 import OpportunityPublisher from './pages/OpportunityPublisher';
 import OpportunityHub from './pages/OpportunityHub';
@@ -30,6 +31,7 @@ function App() {
             {/* Public authentication screens */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
             {/* Protected application layout */}
             <Route element={<PrivateRoute />}>
