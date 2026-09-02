@@ -41,7 +41,7 @@ export default function PilotRestrictedPage() {
         {/* Message Content */}
         <div className="mt-6 text-center space-y-5">
           <h2 className="text-[1.25rem] font-extrabold tracking-[-0.02em] text-[#101828]">
-            12-Month Pilot Registration
+            12-Month Pilot Testing
           </h2>
 
           <div className="h-px bg-[#e2e8f0]" />
