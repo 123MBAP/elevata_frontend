@@ -3,6 +3,7 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import Header from "../Header";
 import Sidebar from "../SideBar";
+import ElevataBotWidget from "../AI/ElevataBotWidget";
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -22,6 +23,9 @@ export default function MainLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Global AI Chat Widget */}
+      <ElevataBotWidget />
     </div>
   );
 }

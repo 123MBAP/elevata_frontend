@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useApp } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { formatRWF } from '../lib/mockData';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Button } from '../assets/components/ui/button';
@@ -23,7 +24,17 @@ import {
   ArrowRight,
   BadgePercent,
   Sparkles,
-  PieChart as PieIcon
+  PieChart as PieIcon,
+  ShieldAlert,
+  Clock,
+  Calendar,
+  Lock,
+  Unlock,
+  Info,
+  Database,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle2
 } from 'lucide-react';
 
 interface LoanRecommendation {
@@ -55,7 +66,48 @@ interface RepaymentSchedule {
 }
 
 export default function LoanEngine() {
+  const { user } = useAuth();
   const { activeSme } = useApp();
+
+  // Sandbox simulation preview mode & notice
+  const [allowSandboxPreview, setAllowSandboxPreview] = useState(false);
+  const [lockedAttemptNotice, setLockedAttemptNotice] = useState(false);
+
+  // Retrieve user registered date & compute platform tenure (operational patterns timeline)
+  const registrationDate = useMemo(() => {
+    if (user?.createdAt) return new Date(user.createdAt);
+    if (user?.business && (user.business as any).createdAt) return new Date((user.business as any).createdAt);
+    const stored = localStorage.getItem('elevata_user_registered_at');
+    if (stored) return new Date(stored);
+    // Fallback: recent registration timestamp (August 20, 2026) to reflect newly joined business
+    return new Date('2026-08-20T08:00:00.000Z');
+  }, [user]);
+
+  const tenureMetrics = useMemo(() => {
+    const now = new Date();
+    const diffMs = Math.max(0, now.getTime() - registrationDate.getTime());
+    const activeDays = Math.max(1, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+    const requiredDays = 90; // 3 months required
+    const isUnderThreeMonths = activeDays < requiredDays;
+    const remainingDays = Math.max(0, requiredDays - activeDays);
+    const progressPercent = Math.min(100, Math.round((activeDays / requiredDays) * 100));
+
+    const formattedRegDate = registrationDate.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric'
+    });
+
+    return {
+      registrationDate,
+      formattedRegDate,
+      activeDays,
+      requiredDays,
+      isUnderThreeMonths,
+      remainingDays,
+      progressPercent
+    };
+  }, [registrationDate]);
 
   // Selected option & calculations states
   const [selectedLoan, setSelectedLoan] = useState<LoanRecommendation | null>(null);
@@ -71,6 +123,12 @@ export default function LoanEngine() {
     e.preventDefault();
     if (customAmount <= 0) return;
 
+    if (tenureMetrics.isUnderThreeMonths && !allowSandboxPreview) {
+      setLockedAttemptNotice(true);
+      return;
+    }
+
+    setLockedAttemptNotice(false);
     const customLoan: LoanRecommendation = {
       amount: customAmount,
       term: customTerm,
@@ -183,6 +241,12 @@ export default function LoanEngine() {
 
   // Generate repayment schedule
   const calculateLoanPlan = (loan: LoanRecommendation) => {
+    if (tenureMetrics.isUnderThreeMonths && !allowSandboxPreview) {
+      setLockedAttemptNotice(true);
+      return;
+    }
+    setLockedAttemptNotice(false);
+
     const P = loan.amount;
     const r = 8.5 / 100 / 12; // 8.5% average APR
     const n = loan.term;
@@ -340,6 +404,135 @@ export default function LoanEngine() {
         </div>
       </div>
 
+      {/* 3-MONTH OPERATIONAL TENURE FLAG ALERT BANNER */}
+      {tenureMetrics.isUnderThreeMonths && (
+        <div className="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-rose-500/5 border-2 border-amber-500/30 rounded-2xl p-5 shadow-sm space-y-4">
+          {/* Top Bar with Badge and Status */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-200/60">
+            <div className="flex items-start sm:items-center gap-3">
+              <div className="p-2.5 bg-amber-500 text-white rounded-xl shadow-sm shrink-0 mt-0.5 sm:mt-0">
+                <ShieldAlert className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="px-2.5 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-black uppercase tracking-wider rounded-md">
+                    Operational Pattern Requirement
+                  </span>
+                  <span className="text-[10px] text-amber-800 font-bold font-mono">
+                    {tenureMetrics.activeDays} / {tenureMetrics.requiredDays} Days Logged
+                  </span>
+                </div>
+                <h3 className="text-sm font-extrabold text-slate-900 font-heading mt-1">
+                  Minimum 3-Month Operational History Required for AI Loan Underwriting
+                </h3>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[10px] font-bold text-amber-900 bg-amber-100/90 px-3 py-1.5 rounded-lg border border-amber-300 flex items-center gap-1.5 font-mono shadow-2xs">
+                <Clock className="w-3.5 h-3.5 text-amber-700" />
+                {tenureMetrics.remainingDays} Days to Live Simulation
+              </span>
+            </div>
+          </div>
+
+          {/* Explanatory Refined Message */}
+          <div className="text-xs text-slate-700 leading-relaxed font-sans space-y-2">
+            <p>
+              Elevata's AI Underwriting Engine simulates loan facilities, affordability ceilings, and repayment schedules based on <strong>verified operational transaction patterns</strong>. Because your business registered on <strong>{tenureMetrics.formattedRegDate}</strong> ({tenureMetrics.activeDays} days active on platform), the system is actively collecting and analyzing your business cash flow velocity, sales seasonality, and inventory turnover before opening live credit underwriting.
+            </p>
+          </div>
+
+          {/* Maturation Progress Bar & Key Stats */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-1">
+            <div className="p-3 bg-white/85 border border-amber-200/80 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <Calendar className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-[9px] uppercase tracking-wider font-bold text-slate-500">Registered Date</span>
+              </div>
+              <strong className="text-slate-900 block text-xs font-mono font-bold">
+                {tenureMetrics.formattedRegDate}
+              </strong>
+            </div>
+
+            <div className="p-3 bg-white/85 border border-amber-200/80 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <Clock className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-[9px] uppercase tracking-wider font-bold text-slate-500">System Activity</span>
+              </div>
+              <strong className="text-slate-900 block text-xs font-mono font-bold">
+                {tenureMetrics.activeDays} Days Active
+              </strong>
+            </div>
+
+            <div className="p-3 bg-white/85 border border-amber-200/80 rounded-xl space-y-1">
+              <div className="flex items-center gap-1.5 text-slate-400">
+                <Database className="w-3.5 h-3.5 text-amber-600" />
+                <span className="text-[9px] uppercase tracking-wider font-bold text-slate-500">Required Milestone</span>
+              </div>
+              <strong className="text-slate-900 block text-xs font-mono font-bold">
+                90 Days (3 Months)
+              </strong>
+            </div>
+
+            <div className="p-3 bg-white/85 border border-amber-200/80 rounded-xl space-y-1">
+              <div className="flex items-center justify-between text-[9px] font-bold text-slate-500">
+                <span className="uppercase tracking-wider">Pattern Maturity</span>
+                <span className="text-amber-800 font-mono font-extrabold">{tenureMetrics.progressPercent}%</span>
+              </div>
+              <div className="w-full bg-amber-100 h-2 rounded-full overflow-hidden mt-1">
+                <div
+                  className="bg-gradient-to-r from-amber-500 to-emerald-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${tenureMetrics.progressPercent}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Actionable Recommendations to build data & Sandbox Preview option */}
+          <div className="p-3.5 bg-amber-50/70 border border-amber-200/90 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 text-amber-950">
+              <Info className="w-4 h-4 text-amber-600 shrink-0" />
+              <span className="text-[11px] leading-snug">
+                <strong>How to unlock underwriting:</strong> Continue recording daily POS sales, inventory receipts, and expense invoices to feed the credit assessment algorithm.
+              </span>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-lg border border-amber-300 text-amber-900 text-[10.5px] font-bold shrink-0 hover:bg-amber-50 transition shadow-2xs">
+              <input
+                type="checkbox"
+                checked={allowSandboxPreview}
+                onChange={(e) => {
+                  setAllowSandboxPreview(e.target.checked);
+                  setLockedAttemptNotice(false);
+                }}
+                className="rounded text-emerald-600 focus:ring-emerald-500"
+              />
+              <span>{allowSandboxPreview ? '✓ Sandbox Demo Mode Active' : 'Enable Sandbox Simulation Preview'}</span>
+            </label>
+          </div>
+
+          {/* Inline Locked Attempt Warning */}
+          {lockedAttemptNotice && (
+            <div className="p-3 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs flex items-center justify-between animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>
+                  <strong>Simulation Locked:</strong> Real credit underwriting requires 3 months (90 days) of operational pattern data. Enable <em>"Sandbox Simulation Preview"</em> above to test simulations with demo parameters.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAllowSandboxPreview(true)}
+                className="px-2.5 py-1 bg-rose-600 text-white rounded-md text-[10px] font-bold hover:bg-rose-700 transition shrink-0 ml-2"
+              >
+                Enable Sandbox Mode
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Business Financial Summary */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -418,14 +611,36 @@ export default function LoanEngine() {
 
           {/* Interactive Custom Simulator Widget Card */}
           <Card className="bg-white border-2 border-emerald-500/20 shadow-md rounded-2xl overflow-hidden text-slate-800 mt-6">
-            <div className="p-5 border-b border-emerald-100 bg-emerald-50/40 flex items-center gap-3">
-              <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
-                <BrainCircuit className="w-5 h-5" />
+            <div className="p-5 border-b border-emerald-100 bg-emerald-50/40 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-100 text-emerald-600 rounded-lg">
+                  <BrainCircuit className="w-5 h-5" />
+                </div>
+                <div>
+                  <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block">Interactive simulation</span>
+                  <h3 className="text-sm font-bold text-slate-800 font-heading">Custom Loan Calculator</h3>
+                </div>
               </div>
-              <div>
-                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest block">Interactive simulation</span>
-                <h3 className="text-sm font-bold text-slate-800 font-heading">Custom Loan Calculator</h3>
-              </div>
+
+              {tenureMetrics.isUnderThreeMonths && (
+                <span className={`px-2.5 py-1 rounded-md text-[9.5px] font-bold flex items-center gap-1 border ${
+                  allowSandboxPreview
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : 'bg-amber-50 text-amber-800 border-amber-200'
+                }`}>
+                  {allowSandboxPreview ? (
+                    <>
+                      <Unlock className="w-3 h-3 text-emerald-600" />
+                      <span>Sandbox Preview Active</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-3 h-3 text-amber-600" />
+                      <span>Live Underwriting Locked</span>
+                    </>
+                  )}
+                </span>
+              )}
             </div>
 
             <CardContent className="p-6">
@@ -476,9 +691,20 @@ export default function LoanEngine() {
                 <div className="md:col-span-3 pt-2 md:pt-4">
                   <Button
                     type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs h-10 uppercase tracking-wider rounded-xl shadow-[0_4px_14px_rgba(16,185,129,0.18)] transition duration-200 border-none"
+                    className={`w-full font-extrabold text-xs h-10 uppercase tracking-wider rounded-xl transition duration-200 border-none flex items-center justify-center gap-1.5 ${
+                      tenureMetrics.isUnderThreeMonths && !allowSandboxPreview
+                        ? 'bg-amber-600 hover:bg-amber-700 text-white shadow-[0_4px_14px_rgba(217,119,6,0.18)]'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-[0_4px_14px_rgba(16,185,129,0.18)]'
+                    }`}
                   >
-                    Simulate Plan
+                    {tenureMetrics.isUnderThreeMonths && !allowSandboxPreview ? (
+                      <>
+                        <Lock className="w-3.5 h-3.5" />
+                        <span>Locked (3m Req)</span>
+                      </>
+                    ) : (
+                      <span>{allowSandboxPreview ? 'Simulate (Sandbox)' : 'Simulate Plan'}</span>
+                    )}
                   </Button>
                 </div>
 
@@ -489,15 +715,22 @@ export default function LoanEngine() {
 
         {/* AI Recommendations Column */}
         <div className="space-y-4">
-          <div className="flex items-center gap-1.5 px-1">
-            <Sparkles className="w-4.5 h-4.5 text-emerald-500 animate-pulse" />
-            <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">AI Matched Suggestions</h4>
+          <div className="flex items-center justify-between px-1">
+            <div className="flex items-center gap-1.5">
+              <Sparkles className="w-4.5 h-4.5 text-emerald-500 animate-pulse" />
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">AI Matched Suggestions</h4>
+            </div>
+            {tenureMetrics.isUnderThreeMonths && (
+              <span className="text-[9px] text-amber-700 font-bold font-mono bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                {allowSandboxPreview ? 'Sandbox Active' : 'Maturing Data'}
+              </span>
+            )}
           </div>
 
           {loanRecommendations.map((loan, idx) => (
             <Card
               key={idx}
-              className={`bg-white border hover:shadow transition duration-200 cursor-pointer overflow-hidden ${
+              className={`bg-white border hover:shadow transition duration-200 cursor-pointer overflow-hidden relative ${
                 selectedLoan?.purpose === loan.purpose
                   ? 'border-emerald-500 ring-1 ring-emerald-500/10 bg-emerald-50/5'
                   : 'border-gray-200'
@@ -523,9 +756,16 @@ export default function LoanEngine() {
                   {loan.reason}
                 </p>
 
-                <div className="flex items-center justify-between text-[10px] text-emerald-600 font-bold pt-2 border-t border-gray-50">
-                  <span>Analyze Loan Terms</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                <div className="flex items-center justify-between text-[10px] font-bold pt-2 border-t border-gray-50">
+                  {tenureMetrics.isUnderThreeMonths && !allowSandboxPreview ? (
+                    <span className="text-amber-700 flex items-center gap-1">
+                      <Lock className="w-3 h-3 text-amber-600" />
+                      <span>Unlocks after 90 days pattern</span>
+                    </span>
+                  ) : (
+                    <span className="text-emerald-600">Analyze Loan Terms</span>
+                  )}
+                  <ArrowRight className="w-3.5 h-3.5 text-emerald-600" />
                 </div>
               </CardContent>
             </Card>
@@ -546,9 +786,18 @@ export default function LoanEngine() {
             {/* Overview & Allocation */}
             <Card className="bg-white border border-slate-200 shadow-lg overflow-hidden">
               <div className="p-5 border-b border-gray-150 flex justify-between items-center bg-slate-50">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-900 font-heading">Advisory Simulation: {selectedLoan.purpose}</h3>
-                  <p className="text-[10px] text-gray-400 mt-0.5">Custom analysis computed at 8.5% p.a. average APR</p>
+                <div className="flex items-center gap-2.5">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-bold text-slate-900 font-heading">Advisory Simulation: {selectedLoan.purpose}</h3>
+                      {tenureMetrics.isUnderThreeMonths && allowSandboxPreview && (
+                        <span className="px-2 py-0.5 bg-amber-100 text-amber-900 border border-amber-300 text-[9px] font-black uppercase rounded-md">
+                          Sandbox Preview
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-gray-400 mt-0.5">Custom analysis computed at 8.5% p.a. average APR</p>
+                  </div>
                 </div>
                 <button
                   onClick={() => setShowDetails(false)}

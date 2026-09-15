@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -6,10 +6,10 @@ import {
   Compass,
   ArrowLeft,
   ArrowRight,
-  CheckCircle,
   AlertCircle,
   Briefcase,
   ShieldCheck,
+  CheckCircle,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -69,8 +69,8 @@ const RWANDA_ADDRESSES: Record<string, Record<string, Record<string, Record<stri
   'Southern Province': {
     Huye: {
       Ngoma: {
-        Butare: ['Butare I', 'Butare II'],
-        Matyazo: ['Matyazo I']
+        Matyazo: ['Matyazo I', 'Matyazo II'],
+        Ngoma: ['Ngoma I', 'Ngoma II']
       }
     }
   },
@@ -84,7 +84,7 @@ const RWANDA_ADDRESSES: Record<string, Record<string, Record<string, Record<stri
   }
 };
 
-const BUSINESS_TYPES = [
+const DEFAULT_BUSINESS_TYPES = [
   'Retail Shop',
   'Wholesale',
   'Restaurant',
@@ -129,62 +129,38 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
+  // Dynamic business categories from DB
+  const [businessTypes, setBusinessTypes] = useState<string[]>(DEFAULT_BUSINESS_TYPES);
+
+  useEffect(() => {
+    async function loadCategories() {
+      try {
+        const res = await apiRequest('/categories');
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const names = res.data.map((c: any) => c.businessType || c.cat_name).filter(Boolean);
+          if (names.length > 0) {
+            setBusinessTypes(names);
+          }
+        }
+      } catch (e) {
+        // Fallback to default categories silently
+      }
+    }
+    loadCategories();
+  }, []);
+
   // Wizard Step State
   const [step, setStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [verificationLoading, setVerificationLoading] = useState(false);
 
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Email verification states
-  const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
-  const [verifyingCode, setVerifyingCode] = useState(false);
-  const [showVerificationInput, setShowVerificationInput] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-
-  const handleSendVerificationCode = async () => {
-    if (!formData.email) {
-      setError('Please enter your email address first.');
-      return;
-    }
-    setError(null);
-    setSendingCode(true);
-    try {
-      await apiRequest('/auth/send-verification-code', {
-        method: 'POST',
-        body: JSON.stringify({ email: formData.email })
-      });
-      setShowVerificationInput(true);
-    } catch (err: any) {
-      setError(err.message || 'Failed to send verification code.');
-    } finally {
-      setSendingCode(false);
-    }
-  };
-
-  const handleVerifyCode = async () => {
-    if (verificationCode.length !== 6) {
-      setError('Please enter a valid 6-digit verification code.');
-      return;
-    }
-    setError(null);
-    setVerifyingCode(true);
-    try {
-      await apiRequest('/auth/verify-code', {
-        method: 'POST',
-        body: JSON.stringify({ email: formData.email, code: verificationCode })
-      });
-      setIsEmailVerified(true);
-      setShowVerificationInput(false);
-    } catch (err: any) {
-      setError(err.message || 'Verification failed. Please check the code.');
-    } finally {
-      setVerifyingCode(false);
-    }
-  };
 
   // Form Fields State
   const [formData, setFormData] = useState({
@@ -216,9 +192,9 @@ export default function RegisterPage() {
     village: '',
     knownPlace: '',
 
-    // Step 4: Geolocation
-    latitude: '',
-    longitude: ''
+    // Step 4: Geolocation (Default Kigali Center coordinates)
+    latitude: '-1.944100',
+    longitude: '30.061900'
   });
 
   const totalSteps = formData.registrationType === 'SME' ? 4 : 2;
@@ -227,6 +203,12 @@ export default function RegisterPage() {
     const { name, value } = e.target;
     setFormData((prev) => {
       const updated = { ...prev, [name]: value };
+
+      if (name === 'email') {
+        setEmailVerified(false);
+        setVerificationSent(false);
+        setVerificationCode('');
+      }
 
       // Cascading reset logic for address selection
       if (name === 'province') {
@@ -249,10 +231,48 @@ export default function RegisterPage() {
     });
   };
 
-  // Browser Geolocation query handler
+  const handleSendVerificationCode = async () => {
+    setError(null);
+    setVerificationLoading(true);
+
+    try {
+      await apiRequest('/auth/send-verification-code', {
+        method: 'POST',
+        body: JSON.stringify({ email: formData.email })
+      });
+      setVerificationSent(true);
+    } catch (err: any) {
+      setError(err.message || 'Unable to send the verification code.');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  const handleVerifyEmail = async () => {
+    setError(null);
+    setVerificationLoading(true);
+
+    try {
+      await apiRequest('/auth/verify-code', {
+        method: 'POST',
+        body: JSON.stringify({ email: formData.email, code: verificationCode })
+      });
+      setEmailVerified(true);
+    } catch (err: any) {
+      setError(err.message || 'Invalid verification code.');
+    } finally {
+      setVerificationLoading(false);
+    }
+  };
+
+  // Browser Geolocation query handler - silently falls back to defaults without showing errors
   const handleLocateMe = () => {
     if (!navigator.geolocation) {
-      setError('Geolocation is not supported by your browser.');
+      setFormData((prev) => ({
+        ...prev,
+        latitude: '-1.944100',
+        longitude: '30.061900'
+      }));
       return;
     }
 
@@ -265,27 +285,15 @@ export default function RegisterPage() {
         }));
         setError(null);
       },
-      (err) => {
-        console.error('Geolocation lookup failed:', err);
-        let errorMsg = 'Location lookup failed. Defaulted to Kigali Center; you can edit these values manually.';
-        if (err.code === 1) {
-          errorMsg = 'Location access was denied. Defaulted to Kigali Center; you can edit these values manually.';
-        } else if (err.code === 2) {
-          errorMsg = 'Location is currently unavailable. Defaulted to Kigali Center; you can edit these values manually.';
-        } else if (err.code === 3) {
-          errorMsg = 'Location request timed out. Defaulted to Kigali Center; you can edit these values manually.';
-        }
-
-        // Fall back to Kigali Center coordinates to avoid blocking the user
+      () => {
+        // Silently use default coordinates
         setFormData((prev) => ({
           ...prev,
           latitude: '-1.944100',
           longitude: '30.061900'
         }));
-
-        setError(errorMsg);
       },
-      { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
     );
   };
 
@@ -296,8 +304,8 @@ export default function RegisterPage() {
         setError('Please fill in all credential fields.');
         return;
       }
-      if (!isEmailVerified) {
-        setError('Please verify your email address before proceeding.');
+      if (!emailVerified) {
+        setError('Please verify your email address before continuing.');
         return;
       }
       if (formData.password !== formData.confirmPassword) {
@@ -342,18 +350,16 @@ export default function RegisterPage() {
     let lat = 0;
     let lon = 0;
 
-    // Validate Coordinates only for SMEs
+    // Assign coordinates with default fallback for SMEs
     if (formData.registrationType === 'SME') {
       lat = parseFloat(formData.latitude);
       lon = parseFloat(formData.longitude);
 
       if (isNaN(lat) || lat < -90 || lat > 90) {
-        setError('Latitude must be a valid number between -90 and 90.');
-        return;
+        lat = -1.9441;
       }
       if (isNaN(lon) || lon < -180 || lon > 180) {
-        setError('Longitude must be a valid number between -180 and 180.');
-        return;
+        lon = 30.0619;
       }
     }
 
@@ -399,15 +405,11 @@ export default function RegisterPage() {
 
       const registeredUser = await register(submitData);
       if (registeredUser?.role === 'ADMIN') {
-        navigate('/');
-      } else if (registeredUser?.isPilotApproved) {
-        if (registeredUser?.role === 'FINANCIAL_INSTITUTION') {
-          navigate('/banker');
-        } else {
-          navigate('/');
-        }
+        navigate('/admin/users');
+      } else if (registeredUser?.role === 'FINANCIAL_INSTITUTION') {
+        navigate('/banker');
       } else {
-        navigate('/pilot-restricted');
+        navigate('/');
       }
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please check your data.');
@@ -424,50 +426,52 @@ export default function RegisterPage() {
   const villages = (formData.province && formData.district && formData.sector && formData.cell) ? RWANDA_ADDRESSES[formData.province][formData.district][formData.sector][formData.cell] || [] : [];
 
   return (
-    <div className="relative flex min-h-dvh w-screen items-center justify-center overflow-y-auto bg-[radial-gradient(circle_at_top,_#f7f9fc_0%,_#eef3f9_45%,_#e8eef7_100%)] p-3 font-sans sm:p-4">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.65),rgba(255,255,255,0.1))]" />
+    <div className="relative flex min-h-dvh w-screen items-center justify-center overflow-y-auto bg-[#f3f2f0] p-4 font-sans sm:p-6">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-[480px] rounded-[24px] border border-[#e3eaf4] bg-white px-6 py-7 shadow-[0_24px_60px_rgba(15,23,42,0.08)] sm:px-8 sm:py-8 my-4"
+        transition={{ duration: 0.35, ease: 'easeOut' }}
+        className="my-4 w-full max-w-[460px] rounded-[10px] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.08)] sm:p-8"
       >
         {/* Logo and Brand Name */}
         <div className="flex flex-col items-center text-center">
-          <div className="flex items-center gap-3">
-            <img src={logo} alt="Elevata" className="h-10 w-10 object-contain" />
-            <span className="text-[1.8rem] font-extrabold tracking-[-0.04em] text-[#101828]">
+          <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
+            <img src={logo} alt="Elevata" className="h-9 w-9 object-contain" />
+            <span className="text-[1.65rem] font-black tracking-tight text-[#0a66c2]">
               Elevata
             </span>
-          </div>
+          </Link>
+          <p className="mt-1 text-sm font-normal text-[#5e5e5e]">
+            Make the most of your professional journey
+          </p>
         </div>
 
         {/* Wizard Progress Header */}
-        <div className="mt-6 mb-5">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[0.8rem] font-extrabold uppercase tracking-[0.02em] text-[#0f74e7]">
+        <div className="mt-5 mb-5 border-b border-[#e0e0e0] pb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-[#0a66c2]">
               Step {step} of {totalSteps}
             </span>
             <div className="flex gap-1.5">
               {Array.from({ length: totalSteps }, (_, index) => index + 1).map((i) => (
                 <div
                   key={i}
-                  className={`h-1 w-6 rounded-full transition-all duration-300 ${
-                    i <= step ? 'bg-[#0f74e7] shadow-sm' : 'bg-[#d9e2ef]'
+                  className={`h-1.5 w-6 rounded-full transition-all duration-300 ${
+                    i <= step ? 'bg-[#0a66c2]' : 'bg-[#e0e0e0]'
                   }`}
                 />
               ))}
             </div>
           </div>
-          <h2 className="text-[1.25rem] font-extrabold tracking-[-0.02em] text-[#101828]">
-            {step === 1 && 'Account Security & Role'}
+          <h2 className="text-[1.15rem] font-bold text-[#181818]">
+            {step === 1 && 'Create your account'}
             {step === 2 && (formData.registrationType === 'SME' ? 'Business Profile' : 'Institution Details')}
             {step === 3 && 'Administrative Address'}
             {step === 4 && 'Geolocation Mapping'}
           </h2>
-          <p className="text-[0.9rem] text-[#64748b] mt-1 leading-relaxed">
-            {step === 1 && 'Choose your registration profile type and details.'}
-            {step === 2 && (formData.registrationType === 'SME' ? 'Tell us about your business.' : 'Fill in institution category and regulatory license.')}
+          <p className="text-[13px] text-[#5e5e5e] mt-0.5">
+            {step === 1 && 'Choose your registration profile type and security details.'}
+            {step === 2 && (formData.registrationType === 'SME' ? 'Tell us about your registered business.' : 'Fill in institution category and regulatory license.')}
             {step === 3 && 'Select your local operating headquarters inside Rwanda.'}
             {step === 4 && 'Identify your GPS coordinates to activate the account.'}
           </p>
@@ -477,15 +481,15 @@ export default function RegisterPage() {
         <AnimatePresence>
           {error && (
             <motion.div
-              initial={{ opacity: 0, y: -8 }}
+              initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              className="mb-5 flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+              exit={{ opacity: 0, y: -6 }}
+              className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
             >
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
               <div>
                 <span className="font-semibold">Validation Notice</span>
-                <p className="mt-0.5 text-red-600">{error}</p>
+                <p className="mt-0.5 text-xs text-red-600">{error}</p>
               </div>
             </motion.div>
           )}
@@ -496,45 +500,45 @@ export default function RegisterPage() {
           {step === 1 && (
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
               {/* Role Selection Cards */}
-              <div className="space-y-1.5">
-                <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                  Register as a:
+              <div>
+                <label className="mb-1.5 block text-[14px] font-normal text-[#181818]">
+                  Register as
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   {/* SME Card */}
                   <div
                     onClick={() => setFormData(prev => ({ ...prev, registrationType: 'SME' }))}
-                    className={`cursor-pointer rounded-xl border p-3 text-center transition-all duration-200 ${
+                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${
                       formData.registrationType === 'SME'
-                        ? 'border-[#0f74e7] bg-[#eaf2ff] text-[#0f74e7] shadow-[0_4px_12px_rgba(15,116,231,0.08)]'
-                        : 'border-[#d9e2ef] bg-[#f8fafc] text-[#64748b] hover:border-[#cbd5e1]'
+                        ? 'border-[#0a66c2] bg-[#eaf2ff] text-[#0a66c2]'
+                        : 'border-[#cccccc] bg-white text-[#5e5e5e] hover:border-[#666666]'
                     }`}
                   >
-                    <Briefcase className={`mx-auto h-5 w-5 mb-1.5 transition-colors ${formData.registrationType === 'SME' ? 'text-[#0f74e7]' : 'text-[#64748b]'}`} />
-                    <span className="block text-xs font-bold">SME Owner</span>
-                    <span className="text-[9px] leading-none block mt-1 text-[#64748b]">Receive Personalised Offers & Match Eligibility</span>
+                    <Briefcase className={`mx-auto h-5 w-5 mb-1 transition-colors ${formData.registrationType === 'SME' ? 'text-[#0a66c2]' : 'text-[#5e5e5e]'}`} />
+                    <span className="block text-xs font-bold text-[#181818]">SME Owner</span>
+                    <span className="text-[10px] leading-tight block mt-0.5 text-[#5e5e5e]">Personalised Offers & Eligibility</span>
                   </div>
 
                   {/* Financial Institution Card */}
                   <div
                     onClick={() => setFormData(prev => ({ ...prev, registrationType: 'FINANCIAL_INSTITUTION' }))}
-                    className={`cursor-pointer rounded-xl border p-3 text-center transition-all duration-200 ${
+                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${
                       formData.registrationType === 'FINANCIAL_INSTITUTION'
-                        ? 'border-[#0f74e7] bg-[#eaf2ff] text-[#0f74e7] shadow-[0_4px_12px_rgba(15,116,231,0.08)]'
-                        : 'border-[#d9e2ef] bg-[#f8fafc] text-[#64748b] hover:border-[#cbd5e1]'
+                        ? 'border-[#0a66c2] bg-[#eaf2ff] text-[#0a66c2]'
+                        : 'border-[#cccccc] bg-white text-[#5e5e5e] hover:border-[#666666]'
                     }`}
                   >
-                    <ShieldCheck className={`mx-auto h-5 w-5 mb-1.5 transition-colors ${formData.registrationType === 'FINANCIAL_INSTITUTION' ? 'text-[#0f74e7]' : 'text-[#64748b]'}`} />
-                    <span className="block text-xs font-bold">Financial Institution</span>
-                    <span className="text-[9px] leading-none block mt-1 text-[#64748b]">Publish Financial Products & Eligibility Criteria</span>
+                    <ShieldCheck className={`mx-auto h-5 w-5 mb-1 transition-colors ${formData.registrationType === 'FINANCIAL_INSTITUTION' ? 'text-[#0a66c2]' : 'text-[#5e5e5e]'}`} />
+                    <span className="block text-xs font-bold text-[#181818]">Financial Institution</span>
+                    <span className="text-[10px] leading-tight block mt-0.5 text-[#5e5e5e]">Publish Financial Products</span>
                   </div>
                 </div>
               </div>
 
               {/* Full Name input based on role */}
-              <div className="space-y-1">
-                <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                  {formData.registrationType === 'SME' ? 'Owner Full Name' : 'Representative Full Name'}
+              <div>
+                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  {formData.registrationType === 'SME' ? 'Owner full name' : 'Representative full name'}
                 </label>
                 <input
                   type="text"
@@ -543,77 +547,64 @@ export default function RegisterPage() {
                   value={formData.ownerName}
                   onChange={handleChange}
                   placeholder="Jean Claude"
-                  className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                  className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                  Email Address
+              <div>
+                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  Email address
                 </label>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    disabled={isEmailVerified}
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="office@elevata.com"
-                    className="flex-1 rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] disabled:opacity-60 disabled:cursor-not-allowed"
-                  />
-                  {!isEmailVerified && (
-                    <button
-                      type="button"
-                      onClick={handleSendVerificationCode}
-                      disabled={sendingCode || !formData.email}
-                      className="px-5 py-3 text-sm font-extrabold text-white bg-[#0f74e7] hover:bg-[#0d67cf] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 shadow-[0_8px_16px_rgba(15,116,231,0.12)]"
-                    >
-                      {sendingCode ? 'Sending...' : 'Verify'}
-                    </button>
-                  )}
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange}
+                  placeholder="office@elevata.com"
+                  className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                />
+                <div className="mt-2 flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSendVerificationCode}
+                    disabled={!formData.email || verificationLoading || emailVerified}
+                    className="h-9 rounded-[4px] border border-[#0a66c2] px-3 text-xs font-semibold text-[#0a66c2] transition-colors hover:bg-[#eaf2ff] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {emailVerified ? 'Email verified' : verificationLoading ? 'Sending...' : verificationSent ? 'Resend code' : 'Send verification code'}
+                  </button>
+                  {emailVerified && <CheckCircle className="mt-1.5 h-5 w-5 text-[#057642]" />}
                 </div>
-              </div>
-
-              {showVerificationInput && !isEmailVerified && (
-                <div className="space-y-2 mt-2 p-4 rounded-2xl border border-[#cbd5e1] bg-[#f8fafc]">
-                  <label className="block text-[0.8rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                    Verification Code
-                  </label>
-                  <div className="flex gap-2">
+                {verificationSent && !emailVerified && (
+                  <div className="mt-2 flex gap-2">
                     <input
                       type="text"
-                      placeholder="Enter 6-digit code"
+                      inputMode="numeric"
                       maxLength={6}
                       value={verificationCode}
-                      onChange={(e) => setVerificationCode(e.target.value)}
-                      className="flex-1 rounded-lg border border-[#2f3a4a] bg-white px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                      onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                      placeholder="6-digit code"
+                      aria-label="Email verification code"
+                      className="h-10 min-w-0 flex-1 rounded-[4px] border border-[#666666] px-3 text-sm outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                     />
                     <button
                       type="button"
-                      onClick={handleVerifyCode}
-                      disabled={verifyingCode || verificationCode.length !== 6}
-                      className="px-5 py-3 text-sm font-extrabold text-white bg-[#0f74e7] hover:bg-[#0d67cf] rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0 shadow-[0_8px_16px_rgba(15,116,231,0.12)]"
+                      onClick={handleVerifyEmail}
+                      disabled={verificationCode.length !== 6 || verificationLoading}
+                      className="h-10 rounded-[4px] bg-[#057642] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#045c33] disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {verifyingCode ? 'Verifying...' : 'Confirm'}
+                      Verify
                     </button>
                   </div>
-                  <p className="text-[0.78rem] text-[#64748b]">
-                    We sent a verification code to {formData.email}.
-                  </p>
-                </div>
-              )}
+                )}
+                {verificationSent && !emailVerified && (
+                  <p className="mt-1 text-xs text-[#5e5e5e]">Check your inbox for the 6-digit code.</p>
+                )}
+              </div>
 
-              {isEmailVerified && (
-                <div className="mt-2 flex items-center gap-1.5 text-xs font-bold text-[#15803d] bg-[#f0fdf4] p-2.5 px-3.5 rounded-2xl border border-[#bbf7d0]">
-                  <CheckCircle className="h-4 w-4 shrink-0 text-[#16a34a]" />
-                  Email address verified successfully
-                </div>
-              )}
-
-              <div className="space-y-1">
-                <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                  Phone Number
+              <div>
+                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  Phone number
                 </label>
                 <input
                   type="text"
@@ -622,56 +613,54 @@ export default function RegisterPage() {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="+250781234567"
-                  className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                  className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                 />
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                  Password
+              <div>
+                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  Password (8+ characters)
                 </label>
-                <div className="relative">
+                <div className="relative flex items-center">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    placeholder="••••••••"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-10 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-16 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[#94a3b8] transition-colors hover:text-[#475569]"
+                    className="absolute right-3 text-[14px] font-semibold text-[#0a66c2] transition-colors hover:text-[#004182] hover:underline"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                  Confirm Password
+              <div>
+                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  Confirm password
                 </label>
-                <div className="relative">
+                <div className="relative flex items-center">
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     name="confirmPassword"
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    placeholder="••••••••"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-10 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-16 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[#94a3b8] transition-colors hover:text-[#475569]"
+                    className="absolute right-3 text-[14px] font-semibold text-[#0a66c2] transition-colors hover:text-[#004182] hover:underline"
                     aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                   >
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showConfirmPassword ? 'Hide' : 'Show'}
                   </button>
                 </div>
               </div>
@@ -684,8 +673,8 @@ export default function RegisterPage() {
               {formData.registrationType === 'SME' ? (
                 /* SME FIELDS */
                 <>
-                  <div className="space-y-1">
-                    <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                  <div>
+                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                       Business Name
                     </label>
                     <input
@@ -695,12 +684,12 @@ export default function RegisterPage() {
                       value={formData.businessName}
                       onChange={handleChange}
                       placeholder="Kigali Retail Shop"
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                  <div>
+                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                       Business Category
                     </label>
                     <div className="relative">
@@ -709,14 +698,14 @@ export default function RegisterPage() {
                         required
                         value={formData.businessType}
                         onChange={handleChange}
-                        className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer"
+                        className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
                       >
-                        <option value="" disabled className="text-[#6b7280]">Select Operating Sector</option>
-                        {BUSINESS_TYPES.map((type) => (
-                          <option key={type} value={type} className="text-[#111827] bg-white">{type}</option>
+                        <option value="" disabled className="text-[#8c8c8c]">Select operating category</option>
+                        {businessTypes.map((type) => (
+                          <option key={type} value={type} className="text-[#181818] bg-white">{type}</option>
                         ))}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#475569]">
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#5e5e5e]">
                         <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                           <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                         </svg>
@@ -727,8 +716,8 @@ export default function RegisterPage() {
               ) : (
                 /* FINANCIAL INSTITUTION FIELDS */
                 <>
-                  <div className="space-y-1">
-                    <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                  <div>
+                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                       Institution Name
                     </label>
                     <input
@@ -738,14 +727,13 @@ export default function RegisterPage() {
                       value={formData.institutionName}
                       onChange={handleChange}
                       placeholder="Kigali Development Bank"
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    {/* Category */}
-                    <div className="space-y-1">
-                      <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                    <div>
+                      <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                         Category
                       </label>
                       <div className="relative">
@@ -754,14 +742,14 @@ export default function RegisterPage() {
                           required
                           value={formData.category}
                           onChange={handleChange}
-                          className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-9 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer"
+                          className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
                         >
-                          <option value="" disabled className="text-[#6b7280]">Select...</option>
+                          <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                           {FI_CATEGORIES.map((cat) => (
-                            <option key={cat} value={cat} className="text-[#111827] bg-white">{cat}</option>
+                            <option key={cat} value={cat} className="text-[#181818] bg-white">{cat}</option>
                           ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#475569]">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                           <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                             <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                           </svg>
@@ -769,10 +757,9 @@ export default function RegisterPage() {
                       </div>
                     </div>
 
-                    {/* Operating Scope */}
-                    <div className="space-y-1">
-                      <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
-                        Operating Scope
+                    <div>
+                      <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                        Scope
                       </label>
                       <div className="relative">
                         <select
@@ -780,14 +767,14 @@ export default function RegisterPage() {
                           required
                           value={formData.operatingScope}
                           onChange={handleChange}
-                          className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-9 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer"
+                          className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
                         >
-                          <option value="" disabled className="text-[#6b7280]">Select...</option>
+                          <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                           {FI_SCOPES.map((scope) => (
-                            <option key={scope} value={scope} className="text-[#111827] bg-white">{scope}</option>
+                            <option key={scope} value={scope} className="text-[#181818] bg-white">{scope}</option>
                           ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#475569]">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                           <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                             <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                           </svg>
@@ -796,8 +783,8 @@ export default function RegisterPage() {
                     </div>
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                  <div>
+                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                       Regulatory License Number
                     </label>
                     <input
@@ -807,12 +794,12 @@ export default function RegisterPage() {
                       value={formData.licenseNumber}
                       onChange={handleChange}
                       placeholder="BNR-MFI-902348"
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                     />
                   </div>
 
-                  <div className="space-y-1">
-                    <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                  <div>
+                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                       Official Website URL (Optional)
                     </label>
                     <input
@@ -821,7 +808,7 @@ export default function RegisterPage() {
                       value={formData.website}
                       onChange={handleChange}
                       placeholder="https://www.institution.com"
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                     />
                   </div>
                 </>
@@ -833,9 +820,8 @@ export default function RegisterPage() {
           {step === 3 && (
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
-                {/* Province */}
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     Province
                   </label>
                   <div className="relative">
@@ -844,14 +830,14 @@ export default function RegisterPage() {
                       required
                       value={formData.province}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-9 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
                     >
-                      <option value="" disabled className="text-[#6b7280]">Select...</option>
+                      <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {provinces.map((p) => (
-                        <option key={p} value={p} className="text-[#111827] bg-white">{p}</option>
+                        <option key={p} value={p} className="text-[#181818] bg-white">{p}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#475569]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                       </svg>
@@ -859,9 +845,8 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                {/* District */}
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     District
                   </label>
                   <div className="relative">
@@ -871,14 +856,14 @@ export default function RegisterPage() {
                       disabled={!formData.province}
                       value={formData.district}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-9 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer disabled:opacity-40"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
                     >
-                      <option value="" disabled className="text-[#6b7280]">Select...</option>
+                      <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {districts.map((d) => (
-                        <option key={d} value={d} className="text-[#111827] bg-white">{d}</option>
+                        <option key={d} value={d} className="text-[#181818] bg-white">{d}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#475569]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                       </svg>
@@ -888,9 +873,8 @@ export default function RegisterPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* Sector */}
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     Sector
                   </label>
                   <div className="relative">
@@ -900,14 +884,14 @@ export default function RegisterPage() {
                       disabled={!formData.district}
                       value={formData.sector}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-9 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer disabled:opacity-40"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
                     >
-                      <option value="" disabled className="text-[#6b7280]">Select...</option>
+                      <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {sectors.map((s) => (
-                        <option key={s} value={s} className="text-[#111827] bg-white">{s}</option>
+                        <option key={s} value={s} className="text-[#181818] bg-white">{s}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#475569]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                       </svg>
@@ -915,9 +899,8 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                {/* Cell */}
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     Cell
                   </label>
                   <div className="relative">
@@ -927,14 +910,14 @@ export default function RegisterPage() {
                       disabled={!formData.sector}
                       value={formData.cell}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-9 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer disabled:opacity-40"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
                     >
-                      <option value="" disabled className="text-[#6b7280]">Select...</option>
+                      <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {cells.map((c) => (
-                        <option key={c} value={c} className="text-[#111827] bg-white">{c}</option>
+                        <option key={c} value={c} className="text-[#181818] bg-white">{c}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#475569]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                       </svg>
@@ -944,9 +927,8 @@ export default function RegisterPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                {/* Village */}
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     Village
                   </label>
                   <div className="relative">
@@ -956,14 +938,14 @@ export default function RegisterPage() {
                       disabled={!formData.cell}
                       value={formData.village}
                       onChange={handleChange}
-                      className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-9 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)] appearance-none cursor-pointer disabled:opacity-40"
+                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
                     >
-                      <option value="" disabled className="text-[#6b7280]">Select...</option>
+                      <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {villages.map((v) => (
-                        <option key={v} value={v} className="text-[#111827] bg-white">{v}</option>
+                        <option key={v} value={v} className="text-[#181818] bg-white">{v}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#475569]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
                       </svg>
@@ -971,9 +953,8 @@ export default function RegisterPage() {
                   </div>
                 </div>
 
-                {/* Known Place */}
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     Known Place
                   </label>
                   <input
@@ -982,7 +963,7 @@ export default function RegisterPage() {
                     value={formData.knownPlace}
                     onChange={handleChange}
                     placeholder="e.g. Head Office Suite"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                   />
                 </div>
               </div>
@@ -992,23 +973,23 @@ export default function RegisterPage() {
           {/* STEP 4: Geolocation Mapping */}
           {step === 4 && (
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-              <div className="rounded-2xl border border-[#e3eaf4] bg-[#f8fafc] p-5 text-center">
-                <Compass className="mx-auto h-8 w-8 text-[#0f74e7] animate-pulse mb-3" />
-                <p className="text-sm text-[#64748b] max-w-xs mx-auto mb-4 leading-relaxed font-sans">
+              <div className="rounded-[8px] border border-[#e0e0e0] bg-[#f8fafc] p-4 text-center">
+                <Compass className="mx-auto h-7 w-7 text-[#0a66c2] mb-2" />
+                <p className="text-[13px] text-[#5e5e5e] max-w-xs mx-auto mb-3 leading-relaxed">
                   Elevata location requirements help credit institutions verify SME business nodes and operating ranges.
                 </p>
                 <button
                   type="button"
                   onClick={handleLocateMe}
-                  className="inline-flex h-10 items-center justify-center gap-1.5 px-5 text-sm font-extrabold text-white bg-[#0f74e7] hover:bg-[#0d67cf] rounded-full shadow-[0_8px_20px_rgba(15,116,231,0.2)] transition-colors"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 px-4 text-xs font-bold text-[#0a66c2] border border-[#0a66c2] hover:bg-[#eaf2ff] rounded-full transition-colors"
                 >
                   Retrieve Geolocation Coords
                 </button>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     Latitude
                   </label>
                   <input
@@ -1018,12 +999,12 @@ export default function RegisterPage() {
                     value={formData.latitude}
                     onChange={handleChange}
                     placeholder="-1.944100"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <label className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <div>
+                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
                     Longitude
                   </label>
                   <input
@@ -1033,7 +1014,7 @@ export default function RegisterPage() {
                     value={formData.longitude}
                     onChange={handleChange}
                     placeholder="30.061900"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] px-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
+                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                   />
                 </div>
               </div>
@@ -1041,56 +1022,54 @@ export default function RegisterPage() {
           )}
 
           {/* Action buttons */}
-          <div className="flex gap-3 pt-5 border-t border-[#e2e8f0]">
+          <div className="flex gap-3 pt-3">
             {step > 1 && (
               <button
                 type="button"
                 onClick={handlePrevStep}
                 disabled={loading}
-                className="flex h-11 items-center justify-center gap-1.5 px-5 text-sm font-bold border border-[#d9e2ef] hover:bg-[#f1f5f9] bg-transparent text-[#475569] rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex h-12 items-center justify-center gap-1 px-5 text-[15px] font-semibold border border-[#666666] hover:bg-gray-50 bg-white text-[#181818] rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </button>
             )}
 
             {step < totalSteps ? (
-              <button
+              <motion.button
+                whileTap={{ scale: 0.99 }}
                 type="button"
                 onClick={handleNextStep}
-                className="flex h-11 flex-1 items-center justify-center gap-1.5 py-2 px-5 text-sm font-extrabold text-white bg-[#0f74e7] hover:bg-[#0d67cf] active:bg-[#0c5ebc] rounded-full transition-colors shadow-[0_12px_24px_rgba(15,116,231,0.2)]"
+                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#0a66c2] text-[16px] font-bold text-white transition-colors hover:bg-[#004182]"
               >
-                Continue <ArrowRight className="h-4 w-4" />
-              </button>
+                Next <ArrowRight className="h-4 w-4" />
+              </motion.button>
             ) : (
               <motion.button
-                whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.99 }}
                 type="submit"
                 disabled={loading}
-                className="flex h-11 flex-1 items-center justify-center gap-2 py-2 px-5 text-sm font-extrabold text-white bg-[#0f74e7] hover:bg-[#0d67cf] active:bg-[#0c5ebc] rounded-full transition-colors shadow-[0_12px_24px_rgba(15,116,231,0.2)] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#0a66c2] text-[16px] font-bold text-white transition-colors hover:bg-[#004182] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
                 ) : (
-                  <>
-                    Submit Registration <CheckCircle className="h-4 w-4" />
-                  </>
+                  'Agree & Join'
                 )}
               </motion.button>
             )}
           </div>
         </form>
 
-        <div className="flex items-center gap-4 py-3 text-center text-[#94a3b8]">
-          <span className="h-px flex-1 bg-[#d9e2ef]" />
-          <span className="text-sm font-medium">or</span>
-          <span className="h-px flex-1 bg-[#d9e2ef]" />
+        <div className="relative flex items-center py-3">
+          <div className="flex-grow border-t border-[#e0e0e0]"></div>
+          <span className="mx-4 flex-shrink text-[13px] text-[#717171]">or</span>
+          <div className="flex-grow border-t border-[#e0e0e0]"></div>
         </div>
 
-        <div className="text-center text-[0.98rem] text-[#64748b]">
-          Already registered?{' '}
-          <Link to="/login" className="font-bold text-[#1670d8] hover:underline">
-            Sign In
+        <div className="text-center text-[14px] text-[#5e5e5e]">
+          Already on Elevata?{' '}
+          <Link to="/login" className="font-semibold text-[#0a66c2] hover:underline">
+            Sign in
           </Link>
         </div>
       </motion.div>

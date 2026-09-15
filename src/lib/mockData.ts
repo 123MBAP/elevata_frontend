@@ -6,16 +6,35 @@ export interface MonthlyFinancial {
   outflow: number;
 }
 
+export type MeasurementUnit = 'kgs' | 'meters' | 'm²' | 'l' | 'dozen' | 'pcs' | 'box' | 'bag' | 'tons' | 'packs' | 'pairs';
+
+export interface ProductItem {
+  id: string;
+  name: string;
+  description?: string;
+  unit: string;
+  unitPrice: number;
+  costPrice?: number;
+  stockQuantity: number;
+  reorderLevel?: number;
+  category?: string;
+  status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Overstock';
+  createdAt?: string;
+}
+
 export interface InventoryItem {
   id: string;
   name: string;
   stockLevel: number;
+  unit?: string;
   status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Overstock';
   daysRemaining: number;
   reorderPoint: number;
   unitPrice: number;
+  costPrice?: number;
   category?: string;
   supplier?: string;
+  description?: string;
 }
 
 export interface LoanDetails {
@@ -27,15 +46,27 @@ export interface LoanDetails {
   purpose?: string;
 }
 
+export interface SaleItemSnapshot {
+  id?: string;
+  productId?: string;
+  productName: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
 export interface Sale {
-  id: number;
+  id: string | number;
   product: string;
+  unit?: string;
   quantity: number;
   price: number;
   total: number;
   date: string;
   customer: string;
   status: 'Completed' | 'Processing' | 'Cancelled';
+  items?: SaleItemSnapshot[];
 }
 
 export interface Expense {

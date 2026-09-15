@@ -25,14 +25,14 @@ export const PrivateRoute: React.FC = () => {
     return <Navigate to="/login" replace />;
   }
 
-  const isPilotApproved = user?.isPilotApproved || user?.role === 'ADMIN';
   const isRestrictedPath = location.pathname === '/pilot-restricted';
-
-  if (!isPilotApproved && !isRestrictedPath) {
-    return <Navigate to="/pilot-restricted" replace />;
-  }
-
-  if (isPilotApproved && isRestrictedPath) {
+  if (isRestrictedPath) {
+    if (user?.role === 'ADMIN') {
+      return <Navigate to="/admin/users" replace />;
+    }
+    if (user?.role === 'FINANCIAL_INSTITUTION') {
+      return <Navigate to="/banker" replace />;
+    }
     return <Navigate to="/" replace />;
   }
 

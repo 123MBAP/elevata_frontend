@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { SmeProfile, mockSmes, Sale, InventoryItem, Expense, formatRWF } from '../lib/mockData';
+import { SmeProfile, mockSmes, Sale, InventoryItem, Expense, formatRWF, ProductItem, SaleItemSnapshot, MeasurementUnit } from '../lib/mockData';
+import { apiRequest } from '../lib/api';
 
 export interface Opportunity {
   id: string;
@@ -11,6 +12,7 @@ export interface Opportunity {
   deadline: string;
   maxFunding: string;
   sectors: string[];
+  categoryId?: string;
   minAge: number;
   minRevenue: number;
   minHealthScore: number;
@@ -95,13 +97,46 @@ interface AppContextType {
   rejectLoan: (smeId: string) => void;
   requestFieldVisit: (smeId: string) => void;
   addSale: (smeId: string, product: string, quantity: number, price: number, customer: string) => void;
-  deleteSale: (smeId: string, saleId: number) => void;
+  deleteSale: (smeId: string, saleId: number | string) => void;
   addInventoryItem: (smeId: string, name: string, category: string, quantity: number, price: number, supplier: string) => void;
   deleteInventoryItem: (smeId: string, itemId: string) => void;
   addExpense: (smeId: string, description: string, category: string, amount: number) => void;
   deleteExpense: (smeId: string, expenseId: number) => void;
   resetAll: () => void;
   
+  // Products Master Catalog
+  products: ProductItem[];
+  createProduct: (data: {
+    name: string;
+    description?: string;
+    unit: string;
+    unitPrice: number;
+    costPrice?: number;
+    stockQuantity: number;
+    reorderLevel?: number;
+    category?: string;
+  }) => Promise<ProductItem>;
+  updateProduct: (id: string, data: Partial<ProductItem>) => Promise<ProductItem>;
+  deleteProduct: (id: string) => Promise<void>;
+  recordStockIntake: (supplier: string, items: any[], notes?: string) => Promise<any>;
+  recordSaleTransaction: (payload: {
+    customer: string;
+    customerContact?: string;
+    invoiceNumber?: string;
+    paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'Cancelled';
+    paymentMethod?: string;
+    notes?: string;
+    items: {
+      productId?: string;
+      productName: string;
+      unit: string;
+      quantity: number;
+      unitPrice: number;
+    }[];
+  }) => Promise<any>;
+  refreshProducts: () => Promise<void>;
+  refreshSales: () => Promise<void>;
+
   // Opportunities, applications, and virtual trainings state
   opportunities: Opportunity[];
   applications: Application[];
@@ -387,6 +422,38 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return [];
   });
 
+  // Fetch backend opportunities and merge with mock/cached opportunities
+  useEffect(() => {
+    async function fetchBackendOpportunities() {
+      try {
+        const res = await apiRequest('/opportunities');
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          setOpportunities(prev => {
+            const map = new Map<string, Opportunity>();
+            // Keep all initial/mocked opportunities
+            initialOpportunities.forEach(o => map.set(o.id, o));
+            // Keep local state
+            prev.forEach(o => map.set(o.id, o));
+            // Overlay backend database opportunities
+            res.data.forEach((o: any) => {
+              const existing = map.get(o.id) || {};
+              map.set(o.id, {
+                ...existing,
+                ...o,
+                sectors: Array.isArray(o.sectors) ? o.sectors : (existing.sectors || []),
+                requiredDocs: Array.isArray(o.requiredDocs) ? o.requiredDocs : (existing.requiredDocs || [])
+              });
+            });
+            return Array.from(map.values());
+          });
+        }
+      } catch (err) {
+        // Silently preserve existing mocked data
+      }
+    }
+    fetchBackendOpportunities();
+  }, []);
+
   // Sync to localStorage
   useEffect(() => {
     localStorage.setItem('elevata_opportunities', JSON.stringify(opportunities));
@@ -399,10 +466,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   useEffect(() => {
     localStorage.setItem('elevata_trainings', JSON.stringify(trainings));
   }, [trainings]);
-
-  useEffect(() => {
-    localStorage.setItem('elevata_bookmarked', JSON.stringify(bookmarkedOpportunities));
-  }, [bookmarkedOpportunities]);
 
   const [selectedSmeId, setSelectedSmeId] = useState<string>(() => {
     return localStorage.getItem('elevata_sme_id') || 'sme-1';
@@ -436,6 +499,77 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
     return mockSmes;
   });
+
+  const [products, setProducts] = useState<ProductItem[]>(() => {
+    const saved = localStorage.getItem('elevata_products');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch (e) {}
+    }
+    return [
+      { id: 'prod-1', name: 'Premium Basmati Rice', unit: 'kgs', unitPrice: 28000, costPrice: 24000, stockQuantity: 120, reorderLevel: 25, category: 'Food & Groceries', status: 'In Stock' },
+      { id: 'prod-2', name: 'Refined Cooking Oil', unit: 'l', unitPrice: 12000, costPrice: 9500, stockQuantity: 80, reorderLevel: 20, category: 'Food & Groceries', status: 'In Stock' },
+      { id: 'prod-3', name: 'White Sugar Grade A', unit: 'bag', unitPrice: 48000, costPrice: 42000, stockQuantity: 25, reorderLevel: 10, category: 'Food & Groceries', status: 'In Stock' },
+      { id: 'prod-4', name: 'Dry Local Beans', unit: 'kgs', unitPrice: 1200, costPrice: 900, stockQuantity: 350, reorderLevel: 50, category: 'Agriculture & Produce', status: 'In Stock' },
+      { id: 'prod-5', name: 'Cotton Kitenge Fabric', unit: 'meters', unitPrice: 4500, costPrice: 3200, stockQuantity: 180, reorderLevel: 30, category: 'Textiles & Garments', status: 'In Stock' },
+      { id: 'prod-6', name: 'Ceramic Floor Tiles', unit: 'm²', unitPrice: 9500, costPrice: 7000, stockQuantity: 95, reorderLevel: 20, category: 'Building & Hardware', status: 'In Stock' },
+      { id: 'prod-7', name: 'Fresh Farm Eggs', unit: 'dozen', unitPrice: 2400, costPrice: 1800, stockQuantity: 40, reorderLevel: 15, category: 'Food & Groceries', status: 'In Stock' },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('elevata_products', JSON.stringify(products));
+  }, [products]);
+
+  const refreshProducts = async () => {
+    try {
+      const res = await apiRequest('/inventory/products');
+      if (res && res.success && Array.isArray(res.data?.products) && res.data.products.length > 0) {
+        setProducts(res.data.products);
+      }
+    } catch (err) {
+      // Graceful fallback to local state
+    }
+  };
+
+  const refreshSales = async () => {
+    try {
+      const res = await apiRequest('/sales');
+      if (res && res.success && Array.isArray(res.data?.sales)) {
+        const backendSales: Sale[] = res.data.sales.map((s: any) => ({
+          id: s.id,
+          customer: s.customer,
+          product: s.items && s.items.length > 0 ? s.items[0].productName + (s.items.length > 1 ? ` (+${s.items.length - 1} more)` : '') : 'Sale',
+          unit: s.items && s.items.length > 0 ? s.items[0].unit : 'pcs',
+          quantity: s.items ? s.items.reduce((sum: number, it: any) => sum + it.quantity, 0) : 1,
+          price: s.items && s.items.length > 0 ? s.items[0].unitPrice : s.totalAmount,
+          total: s.totalAmount,
+          date: new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          status: s.paymentStatus || 'Completed',
+          items: s.items || []
+        }));
+
+        setSmes(prev => prev.map(sme => {
+          if (sme.id === selectedSmeId) {
+            return {
+              ...sme,
+              sales: backendSales.length > 0 ? backendSales : sme.sales
+            };
+          }
+          return sme;
+        }));
+      }
+    } catch (err) {
+      // Graceful fallback
+    }
+  };
+
+  useEffect(() => {
+    refreshProducts();
+    refreshSales();
+  }, [selectedSmeId]);
 
   const [scenarios, setScenarios] = useState<Scenarios>({
     salesDrop: false,
@@ -697,6 +831,250 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
+  const createProduct = async (data: {
+    name: string;
+    description?: string;
+    unit: string;
+    unitPrice: number;
+    costPrice?: number;
+    stockQuantity: number;
+    reorderLevel?: number;
+    category?: string;
+  }): Promise<ProductItem> => {
+    const qty = Number(data.stockQuantity) || 0;
+    const reorder = Number(data.reorderLevel) || 5;
+    let status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Overstock' = 'In Stock';
+    if (qty <= 0) status = 'Out of Stock';
+    else if (qty <= reorder) status = 'Low Stock';
+
+    let newProd: ProductItem = {
+      id: `prod-${Date.now()}`,
+      name: data.name,
+      description: data.description,
+      unit: data.unit || 'pcs',
+      unitPrice: Number(data.unitPrice) || 0,
+      costPrice: data.costPrice !== undefined ? Number(data.costPrice) : undefined,
+      stockQuantity: qty,
+      reorderLevel: reorder,
+      category: data.category || 'General Merchandise',
+      status,
+      createdAt: new Date().toISOString()
+    };
+
+    try {
+      const res = await apiRequest('/inventory/products', {
+        method: 'POST',
+        body: JSON.stringify(data)
+      });
+      if (res && res.success && res.data?.product) {
+        newProd = res.data.product;
+      }
+    } catch (err) {
+      console.warn('Backend product creation fallback:', err);
+    }
+
+    setProducts(prev => [newProd, ...prev.filter(p => p.id !== newProd.id)]);
+
+    const matchingInvItem: InventoryItem = {
+      id: newProd.id,
+      name: newProd.name,
+      unit: newProd.unit,
+      stockLevel: newProd.stockQuantity,
+      status: newProd.status,
+      daysRemaining: Math.round(newProd.stockQuantity * 2),
+      reorderPoint: newProd.reorderLevel || 10,
+      unitPrice: newProd.unitPrice,
+      costPrice: newProd.costPrice,
+      category: newProd.category,
+      description: newProd.description
+    };
+
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === selectedSmeId) {
+        return {
+          ...sme,
+          inventoryItems: [matchingInvItem, ...sme.inventoryItems.filter(i => i.id !== matchingInvItem.id)]
+        };
+      }
+      return sme;
+    }));
+
+    return newProd;
+  };
+
+  const updateProduct = async (id: string, data: Partial<ProductItem>): Promise<ProductItem> => {
+    let updatedProd: ProductItem | null = null;
+
+    try {
+      const res = await apiRequest(`/inventory/products/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+      if (res && res.success && res.data?.product) {
+        updatedProd = res.data.product;
+      }
+    } catch (err) {
+      console.warn('Backend product update fallback:', err);
+    }
+
+    setProducts(prev => prev.map(p => {
+      if (p.id === id) {
+        const merged = updatedProd || { ...p, ...data };
+        const qty = merged.stockQuantity !== undefined ? Number(merged.stockQuantity) : p.stockQuantity;
+        const reorder = merged.reorderLevel !== undefined ? Number(merged.reorderLevel) : (p.reorderLevel || 5);
+        let status: 'In Stock' | 'Low Stock' | 'Out of Stock' | 'Overstock' = 'In Stock';
+        if (qty <= 0) status = 'Out of Stock';
+        else if (qty <= reorder) status = 'Low Stock';
+        return { ...merged, status };
+      }
+      return p;
+    }));
+
+    return updatedProd || (products.find(p => p.id === id) as ProductItem);
+  };
+
+  const deleteProduct = async (id: string): Promise<void> => {
+    try {
+      await apiRequest(`/inventory/products/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Backend product delete fallback:', err);
+    }
+
+    setProducts(prev => prev.filter(p => p.id !== id));
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === selectedSmeId) {
+        return {
+          ...sme,
+          inventoryItems: sme.inventoryItems.filter(i => i.id !== id)
+        };
+      }
+      return sme;
+    }));
+  };
+
+  const recordStockIntake = async (supplier: string, items: any[], notes?: string): Promise<any> => {
+    try {
+      const res = await apiRequest('/inventory/stock-intake', {
+        method: 'POST',
+        body: JSON.stringify({ supplier, items, notes })
+      });
+      await refreshProducts();
+      return res;
+    } catch (err) {
+      console.warn('Backend stock intake fallback:', err);
+      items.forEach(it => {
+        if (it.productId) {
+          setProducts(prev => prev.map(p => {
+            if (p.id === it.productId) {
+              const newQty = p.stockQuantity + Number(it.quantity || 0);
+              return { ...p, stockQuantity: newQty };
+            }
+            return p;
+          }));
+        }
+      });
+    }
+  };
+
+  const recordSaleTransaction = async (payload: {
+    customer: string;
+    customerContact?: string;
+    invoiceNumber?: string;
+    paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'Cancelled';
+    paymentMethod?: string;
+    notes?: string;
+    items: {
+      productId?: string;
+      productName: string;
+      unit: string;
+      quantity: number;
+      unitPrice: number;
+    }[];
+  }): Promise<any> => {
+    const totalAmount = payload.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
+    
+    let createdSaleRecord: Sale = {
+      id: `sale-${Date.now()}`,
+      customer: payload.customer,
+      product: payload.items.length > 0 ? payload.items[0].productName + (payload.items.length > 1 ? ` (+${payload.items.length - 1} items)` : '') : 'Sale',
+      unit: payload.items[0]?.unit || 'pcs',
+      quantity: payload.items.reduce((sum, it) => sum + Number(it.quantity), 0),
+      price: payload.items[0]?.unitPrice || 0,
+      total: totalAmount,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: payload.paymentStatus || 'Completed',
+      items: payload.items.map(it => ({
+        productId: it.productId,
+        productName: it.productName,
+        unit: it.unit,
+        quantity: it.quantity,
+        unitPrice: it.unitPrice,
+        total: it.quantity * it.unitPrice
+      }))
+    };
+
+    try {
+      const res = await apiRequest('/sales', {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      });
+      if (res && res.success && res.data?.sale) {
+        const s = res.data.sale;
+        createdSaleRecord = {
+          id: s.id,
+          customer: s.customer,
+          product: s.items && s.items.length > 0 ? s.items[0].productName + (s.items.length > 1 ? ` (+${s.items.length - 1} items)` : '') : 'Sale',
+          unit: s.items && s.items.length > 0 ? s.items[0].unit : 'pcs',
+          quantity: s.items ? s.items.reduce((sum: number, it: any) => sum + it.quantity, 0) : 1,
+          price: s.items && s.items.length > 0 ? s.items[0].unitPrice : s.totalAmount,
+          total: s.totalAmount,
+          date: new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+          status: s.paymentStatus || 'Completed',
+          items: s.items || []
+        };
+      }
+      await refreshProducts();
+    } catch (err) {
+      console.warn('Backend sale recording fallback:', err);
+      payload.items.forEach(it => {
+        if (it.productId) {
+          setProducts(prev => prev.map(p => {
+            if (p.id === it.productId) {
+              const newQty = Math.max(0, p.stockQuantity - Number(it.quantity || 0));
+              return { ...p, stockQuantity: newQty };
+            }
+            return p;
+          }));
+        }
+      });
+    }
+
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === selectedSmeId) {
+        const updatedAlerts = [
+          {
+            id: `alert-sale-${Date.now()}`,
+            type: 'info' as const,
+            text: `Sale recorded: Invoice for ${payload.customer} (${formatRWF(totalAmount)}). Reserves credited.`
+          },
+          ...sme.riskAlerts
+        ];
+
+        return {
+          ...sme,
+          currentBalance: sme.currentBalance + totalAmount,
+          sales: [createdSaleRecord, ...sme.sales],
+          riskAlerts: updatedAlerts
+        };
+      }
+      return sme;
+    }));
+
+    return createdSaleRecord;
+  };
+
   const addExpense = (smeId: string, description: string, category: string, amount: number) => {
     setSmes(prev => prev.map(sme => {
       if (sme.id === smeId) {
@@ -776,8 +1154,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
-  const publishOpportunity = (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => {
-    const newOpp: Opportunity = {
+  const publishOpportunity = async (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => {
+    let createdOpp: Opportunity = {
       ...opp,
       id: `opp-${Date.now()}`,
       views: 0,
@@ -786,7 +1164,25 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       status: 'Active',
       createdAt: new Date().toISOString().split('T')[0]
     };
-    setOpportunities(prev => [newOpp, ...prev]);
+
+    try {
+      const res = await apiRequest('/opportunities', {
+        method: 'POST',
+        body: JSON.stringify(opp)
+      });
+      if (res && res.success && res.data) {
+        createdOpp = {
+          ...createdOpp,
+          ...res.data,
+          sectors: Array.isArray(res.data.sectors) ? res.data.sectors : opp.sectors,
+          requiredDocs: Array.isArray(res.data.requiredDocs) ? res.data.requiredDocs : opp.requiredDocs
+        };
+      }
+    } catch (err) {
+      console.warn('Backend opportunity persistence fallback:', err);
+    }
+
+    setOpportunities(prev => [createdOpp, ...prev.filter(o => o.id !== createdOpp.id)]);
   };
 
   const applyForOpportunity = (oppId: string, smeId: string) => {
@@ -920,6 +1316,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       addExpense,
       deleteExpense,
       resetAll,
+      products,
+      createProduct,
+      updateProduct,
+      deleteProduct,
+      recordStockIntake,
+      recordSaleTransaction,
+      refreshProducts,
+      refreshSales,
       opportunities,
       applications,
       trainings,

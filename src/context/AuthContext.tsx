@@ -7,7 +7,9 @@ export interface User {
   phone: string;
   role: 'ADMIN' | 'BUSINESS' | 'FINANCIAL_INSTITUTION';
   isVerified: boolean;
-  isPilotApproved: boolean;
+  isPilotApproved?: boolean;
+  is_approved?: boolean;
+  createdAt?: string;
   business?: {
     id: string;
     businessName: string;

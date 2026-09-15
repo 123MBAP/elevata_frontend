@@ -196,6 +196,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
                   <span className="text-emerald-600 font-semibold">{user?.role}</span>
                 </div>
                 <button
+                  onClick={() => {
+                    setShowProfileDropdown(false);
+                    window.location.href = '/profile';
+                  }}
+                  className="flex items-center gap-2 w-full px-3 py-2 text-xs text-left text-slate-700 hover:bg-slate-50 transition border-t border-gray-100"
+                >
+                  <Building className="w-3.5 h-3.5 text-blue-600" />
+                  {user?.role === 'FINANCIAL_INSTITUTION' ? 'Institution Profile' : 'Business Profile'}
+                </button>
+                <button
                   onClick={async () => {
                     setShowProfileDropdown(false);
                     await logout();

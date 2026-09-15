@@ -5,16 +5,19 @@ import { useAuth } from '../../context/AuthContext';
 import logo from '../images/elevata_logo.png';
 import {
   LayoutDashboard,
-  BrainCircuit,
   Building2,
   RotateCcw,
   Package,
   ShoppingBag,
   FileBarChart,
-  Cpu,
   Target,
-  Sparkles,
-  FileText
+  FileText,
+  Users,
+  Briefcase,
+  Bot,
+  Layers,
+  Megaphone,
+  Landmark
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -30,7 +33,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   // Close sidebar on Escape key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && isOpen) {
         onClose();
       }
     };
@@ -52,25 +55,31 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-4 border-transparent transition duration-150';
   };
 
+  const adminLinks = [
+    { path: '/admin/users', label: 'User Approvals', icon: <Users className="w-4 h-4" /> },
+    { path: '/admin/categories', label: 'Business Categories', icon: <Layers className="w-4 h-4" /> }
+  ];
+
   const smeLinks = [
     { path: '/', label: 'SME Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
+    { path: '/profile', label: 'Business Profile', icon: <Briefcase className="w-4 h-4" /> },
     { path: '/inventory', label: 'Inventory Catalog', icon: <Package className="w-4 h-4" /> },
     { path: '/sales', label: 'Record Sales', icon: <ShoppingBag className="w-4 h-4" /> },
     { path: '/expenses', label: 'Expenses', icon: <FileBarChart className="w-4 h-4" /> },
     { path: '/opportunity-hub', label: 'Opportunity Hub', icon: <Target className="w-4 h-4" /> },
-    { path: '/loan-workspace', label: 'Loan Decision Workspace', icon: <BrainCircuit className="w-4 h-4" /> },
     { path: '/reports', label: 'Financial Reports', icon: <FileBarChart className="w-4 h-4" /> }
   ];
 
   const aiLinks = [
-   // { path: '/advisor', label: 'Loan Decision Workspace', icon: <BrainCircuit className="w-4 h-4" /> },
-    { path: '/tech-advisor', label: 'Tech Upgrade Advisor', icon: <Cpu className="w-4 h-4" /> },
-    // { path: '/business-advisor', label: 'Startup Planner', icon: <Lightbulb className="w-4 h-4" /> }
+    { path: '/ai-bot', label: 'Elevata AI Copilot', icon: <Bot className="w-4 h-4" /> },
+
   ];
 
   const bankerLinks = [
-    { path: '/banker', label: 'Bank Officer Panel', icon: <Building2 className="w-4 h-4" /> },
-    { path: '/banker/publisher', label: 'Opportunity Publisher', icon: <Sparkles className="w-4 h-4" /> },
+    { path: '/profile', label: 'Institution Profile', icon: <Building2 className="w-4 h-4" /> },
+    { path: '/ai-bot', label: 'AI Banker Copilot', icon: <Bot className="w-4 h-4" /> },
+    { path: '/banker', label: 'Bank Officer Panel', icon: <Landmark className="w-4 h-4" /> },
+    { path: '/banker/publisher', label: 'Opportunity Publisher', icon: <Megaphone className="w-4 h-4" /> },
     { path: '/banker/applications', label: 'Applications', icon: <FileText className="w-4 h-4" /> },
     { path: '/banker/monitoring', label: 'SMEs Monitoring', icon: <LayoutDashboard className="w-4 h-4" /> }
   ];
@@ -119,6 +128,25 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">Advisory & Planning</h3>
               <div className="space-y-1">
                 {aiLinks.map((link) => (
+                  <Link
+                    key={link.path}
+                    to={link.path}
+                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
+                  >
+                    <span>{link.icon}</span>
+                    <span>{link.label}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Admin Segment */}
+          {user?.role === 'ADMIN' && (
+            <div>
+              <h3 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest mb-2 px-3">Administration</h3>
+              <div className="space-y-1">
+                {adminLinks.map((link) => (
                   <Link
                     key={link.path}
                     to={link.path}
@@ -244,6 +272,26 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">Advisory & Planning</h3>
                 <div className="space-y-1">
                   {aiLinks.map((link) => (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
+                      onClick={onClose}
+                    >
+                      <span>{link.icon}</span>
+                      <span>{link.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Admin Segment */}
+            {user?.role === 'ADMIN' && (
+              <div>
+                <h3 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest mb-1.5 px-3">Administration</h3>
+                <div className="space-y-1">
+                  {adminLinks.map((link) => (
                     <Link
                       key={link.path}
                       to={link.path}

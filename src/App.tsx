@@ -19,8 +19,11 @@ import SmeMonitoring from './pages/SmeMonitoring';
 import OpportunityPublisher from './pages/OpportunityPublisher';
 import OpportunityHub from './pages/OpportunityHub';
 import Expenses from './pages/Expenses';
-import LoanEngine from './pages/LoanEngine';
 import BankerApplications from './pages/BankerApplications';
+import AdminUsersPage from './pages/AdminUsersPage';
+import AdminCategoriesPage from './pages/AdminCategoriesPage';
+import ElevataBotPage from './pages/ElevataBotPage';
+import BusinessProfilePage from './pages/BusinessProfilePage';
 
 function App() {
   return (
@@ -38,6 +41,7 @@ function App() {
               <Route path="/pilot-restricted" element={<PilotRestrictedPage />} />
               <Route path="/" element={<MainLayout />}>
                 <Route index element={<SmeDashboard />} />
+                <Route path="profile" element={<BusinessProfilePage />} />
                 <Route path="opportunity-hub" element={<OpportunityHub />} />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="sales" element={<Sales />} />
@@ -46,7 +50,7 @@ function App() {
                 <Route path="advisor" element={<SmeAdvisor />} />
                 <Route path="tech-advisor" element={<TechAdvisor />} />
                 <Route path="business-advisor" element={<BusinessStartAdvisor />} />
-                <Route path="loan-workspace" element={<LoanEngine />} />
+                <Route path="ai-bot" element={<ElevataBotPage />} />
 
                 {/* Restricted banker route - gate to ADMIN/FI users */}
                 <Route element={<RoleRoute allowedRoles={['ADMIN', 'FINANCIAL_INSTITUTION']} />}>
@@ -54,6 +58,12 @@ function App() {
                   <Route path="banker/publisher" element={<OpportunityPublisher />} />
                   <Route path="banker/applications" element={<BankerApplications />} />
                   <Route path="banker/monitoring" element={<SmeMonitoring />} />
+                </Route>
+
+                {/* Restricted Admin user and category management */}
+                <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
+                  <Route path="admin/users" element={<AdminUsersPage />} />
+                  <Route path="admin/categories" element={<AdminCategoriesPage />} />
                 </Route>
               </Route>
             </Route>

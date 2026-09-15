@@ -17,9 +17,18 @@ import {
   Coins,
   Calendar,
   MapPin,
-  TrendingUp
+  TrendingUp,
+  User,
+  X,
+  Building2,
+  ShieldCheck,
+  Trash2,
+  AlertCircle,
+  Check,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
+import FormattedText from '../assets/components/ui/FormattedText';
 
 export default function OpportunityHub() {
   const {
@@ -159,10 +168,135 @@ export default function OpportunityHub() {
     return scoredOpportunities.find(o => o.id === selectedOppId) || null;
   }, [scoredOpportunities, selectedOppId]);
 
-  // Handle Quick Apply
-  const handleApply = (oppId: string, oppTitle: string) => {
-    applyForOpportunity(oppId, activeSme.id);
-    triggerToast(`Application submitted successfully for "${oppTitle}"!`);
+  // Quick Apply Modal Form State
+  const [applyingOpp, setApplyingOpp] = useState<typeof scoredOpportunities[0] | null>(null);
+  const [applyAmount, setApplyAmount] = useState<string>('5000000');
+  const [applyPurpose, setApplyPurpose] = useState<string>('Working Capital & Inventory Purchase');
+  const [applyTerm, setApplyTerm] = useState<string>('24');
+  const [applyPhone, setApplyPhone] = useState<string>('+250 788 123 456');
+  const [applyEmail, setApplyEmail] = useState<string>(activeSme.email || 'marie@kigalifresh.rw');
+  const [applyNotes, setApplyNotes] = useState<string>('');
+  const [applyAgreed, setApplyAgreed] = useState<boolean>(true);
+  const [uploadedDocs, setUploadedDocs] = useState<Record<string, { fileName: string; fileSize: string; uploadedAt: string }>>({});
+  const [isSubmittingApp, setIsSubmittingApp] = useState<boolean>(false);
+  const [applyErrors, setApplyErrors] = useState<Record<string, string>>({});
+
+  const handleOpenApplyModal = (opp: typeof scoredOpportunities[0]) => {
+    setApplyingOpp(opp);
+    setApplyErrors({});
+    if (opp.category === 'Grant') {
+      setApplyAmount('10000000');
+    } else if (opp.category === 'Loan') {
+      setApplyAmount('5000000');
+    } else {
+      setApplyAmount('2500000');
+    }
+
+    // Auto-populate documents if already uploaded in readiness
+    const initialDocs: Record<string, { fileName: string; fileSize: string; uploadedAt: string }> = {};
+    if (taxClearanceUploaded) {
+      initialDocs['Tax Clearance'] = {
+        fileName: 'RRA_Tax_Clearance_Q3_2026.pdf',
+        fileSize: '1.2 MB',
+        uploadedAt: 'Verified today'
+      };
+    }
+    if (auditedStatementsUploaded) {
+      initialDocs['Financial Statements'] = {
+        fileName: 'Audited_Financial_Ledger_2026.pdf',
+        fileSize: '3.4 MB',
+        uploadedAt: 'Verified today'
+      };
+    }
+    if (profileCompleted) {
+      initialDocs['Business Registration Certificate'] = {
+        fileName: 'RDB_Business_Registration.pdf',
+        fileSize: '890 KB',
+        uploadedAt: 'Verified on Elevata'
+      };
+    }
+    setUploadedDocs(initialDocs);
+  };
+
+  const handleFileUpload = (docName: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const sizeStr = file.size > 1024 * 1024 
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.round(file.size / 1024)} KB`;
+
+      setUploadedDocs(prev => ({
+        ...prev,
+        [docName]: {
+          fileName: file.name,
+          fileSize: sizeStr,
+          uploadedAt: 'Just now'
+        }
+      }));
+
+      // Clear error for this doc if it was flagged
+      if (applyErrors[docName] || applyErrors.documents) {
+        setApplyErrors(prev => {
+          const copy = { ...prev };
+          delete copy[docName];
+          delete copy.documents;
+          return copy;
+        });
+      }
+    }
+  };
+
+  const handleRemoveUploadedDoc = (docName: string) => {
+    setUploadedDocs(prev => {
+      const copy = { ...prev };
+      delete copy[docName];
+      return copy;
+    });
+  };
+
+  const handleSubmitApplication = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!applyingOpp) return;
+
+    const newErrors: Record<string, string> = {};
+
+    if (!applyAmount || Number(applyAmount) <= 0) {
+      newErrors.applyAmount = 'Please enter a valid requested funding amount.';
+    }
+
+    if (!applyPhone.trim()) {
+      newErrors.applyPhone = 'Contact phone number is required.';
+    }
+
+    if (!applyEmail.trim()) {
+      newErrors.applyEmail = 'Contact email is required.';
+    }
+
+    if (!applyAgreed) {
+      newErrors.applyAgreed = 'You must certify the accuracy of provided information.';
+    }
+
+    // Validate that required documents have been uploaded
+    const missingRequiredDocs = (applyingOpp.requiredDocs || []).filter(doc => !uploadedDocs[doc]);
+    if (missingRequiredDocs.length > 0) {
+      newErrors.documents = `Please upload all required files (${missingRequiredDocs.join(', ')}).`;
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setApplyErrors(newErrors);
+      triggerToast('Please complete all highlighted fields and upload required documents.');
+      return;
+    }
+
+    setIsSubmittingApp(true);
+    setTimeout(() => {
+      applyForOpportunity(applyingOpp.id, activeSme.id);
+      setIsSubmittingApp(false);
+      const title = applyingOpp.title;
+      setApplyingOpp(null);
+      triggerToast(`Application submitted successfully for "${title}"!`);
+      setActiveTab('applications');
+    }, 800);
   };
 
   // Chatbot Q&A simulation
@@ -340,7 +474,7 @@ export default function OpportunityHub() {
                     View Details
                   </button>
                   <button
-                    onClick={() => handleApply(recommendedOpp.id, recommendedOpp.title)}
+                    onClick={() => handleOpenApplyModal(recommendedOpp)}
                     className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-md shadow-sm transition"
                   >
                     Quick Apply
@@ -508,7 +642,7 @@ export default function OpportunityHub() {
                         Details
                       </button>
                       <button
-                        onClick={() => handleApply(opp.id, opp.title)}
+                        onClick={() => handleOpenApplyModal(opp)}
                         className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold transition text-[9px]"
                       >
                         Quick Apply
@@ -654,10 +788,8 @@ export default function OpportunityHub() {
                 <div key={tr.id} className="p-4 border border-slate-200 bg-white rounded-lg flex flex-col justify-between hover:shadow-md transition">
                   <div className="space-y-2">
                     <div className="flex justify-between items-start">
-                      <span className={`text-[8px] font-bold px-2 py-0.5 rounded border ${
-                        tr.attended ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-100 text-slate-500'
-                      }`}>
-                        {tr.attended ? 'Completed' : 'Upcoming'}
+                      <span className="text-[8px] font-bold px-2 py-0.5 rounded border bg-blue-50 text-blue-700 border-blue-100">
+                        To be attended
                       </span>
                       {tr.hasCertificate && (
                         <Award className="w-4 h-4 text-emerald-500" />
@@ -667,29 +799,26 @@ export default function OpportunityHub() {
                     <h4 className="text-xs font-bold text-slate-900">{tr.title}</h4>
                     <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">{tr.description}</p>
                     
-                    <div className="space-y-1 text-[10px] text-slate-400 font-sans border-t border-slate-100 pt-2">
-                      <div>🗓 {tr.date} · {tr.time}</div>
-                      <div>👤 {tr.speaker}</div>
+                    <div className="space-y-1.5 text-[10px] text-slate-400 font-sans border-t border-slate-100 pt-2">
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{tr.date} · {tr.time}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <User className="w-3 h-3 text-slate-400 shrink-0" />
+                        <span>{tr.speaker}</span>
+                      </div>
                     </div>
                   </div>
 
                   <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end gap-2">
-                    {tr.hasCertificate ? (
-                      <button
-                        onClick={() => triggerToast(`Downloading PDF Certificate of Completion for "${tr.title}"...`)}
-                        className="px-2.5 py-1 text-[10px] font-bold bg-white border border-slate-200 rounded hover:bg-slate-50 text-slate-700 transition"
-                      >
-                        Download PDF
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => startWebinar(tr)}
-                        className="px-3 py-1 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm transition flex items-center gap-1"
-                      >
-                        <Video className="w-3.5 h-3.5" />
-                        <span>Attend Training</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => startWebinar(tr)}
+                      className="px-3 py-1 text-[10px] font-bold bg-emerald-600 hover:bg-emerald-700 text-white rounded shadow-sm transition flex items-center gap-1"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Attend Training</span>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -783,9 +912,9 @@ export default function OpportunityHub() {
                   
                   <button
                     onClick={() => setSelectedOppId(null)}
-                    className="text-slate-400 hover:text-slate-655 text-sm font-bold md:hidden"
+                    className="p-1 text-slate-400 hover:text-slate-600 transition md:hidden"
                   >
-                    ✕
+                    <X className="w-4 h-4" />
                   </button>
                 </div>
 
@@ -851,14 +980,18 @@ export default function OpportunityHub() {
                   </div>
                 )}
 
-                <div className="space-y-1">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Overview</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed font-sans">{selectedOpp.description}</p>
+                <div className="space-y-1.5">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Overview &amp; Scope</h4>
+                  <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg">
+                    <FormattedText text={selectedOpp.description} />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Benefits</h4>
-                  <p className="text-xs text-slate-600 leading-relaxed font-sans">{selectedOpp.benefits}</p>
+                <div className="space-y-1.5">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Benefits &amp; Terms</h4>
+                  <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg">
+                    <FormattedText text={selectedOpp.benefits} />
+                  </div>
                 </div>
 
                 <div className="space-y-1.5 pt-2 border-t border-slate-100">
@@ -1062,9 +1195,9 @@ export default function OpportunityHub() {
                     
                     <button
                       onClick={() => setSelectedOppId(null)}
-                      className="text-slate-400 hover:text-slate-655 font-bold text-sm hidden md:block"
+                      className="p-1 text-slate-400 hover:text-slate-600 transition hidden md:block"
                     >
-                      ✕
+                      <X className="w-4 h-4" />
                     </button>
                   </div>
 
@@ -1109,8 +1242,9 @@ export default function OpportunityHub() {
                 <div className="pt-4 border-t border-slate-200 mt-4">
                   <button
                     onClick={() => {
-                      handleApply(selectedOpp.id, selectedOpp.title);
+                      const oppToApply = selectedOpp;
                       setSelectedOppId(null);
+                      if (oppToApply) handleOpenApplyModal(oppToApply);
                     }}
                     className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-md transition"
                   >
@@ -1122,6 +1256,342 @@ export default function OpportunityHub() {
           </div>
         );
       })()}
+
+      {/* QUICK APPLY & DYNAMIC DOCUMENT UPLOAD MODAL */}
+      {applyingOpp && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-slate-150 bg-slate-50 flex justify-between items-start shrink-0">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-wider">
+                    {applyingOpp.category} Application
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">
+                    Max: {applyingOpp.maxFunding}
+                  </span>
+                </div>
+                <h3 className="text-sm font-bold text-slate-950 font-heading">
+                  Apply for {applyingOpp.title}
+                </h3>
+                <p className="text-[10px] text-slate-500">
+                  Offered by <strong className="text-slate-800 font-semibold">{applyingOpp.institution}</strong> · Deadline: <span className="font-mono text-slate-700">{applyingOpp.deadline}</span>
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setApplyingOpp(null)}
+                className="p-1 text-slate-400 hover:text-slate-600 transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSubmitApplication} className="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
+              
+              {/* Top Section: Pre-filled Business Profile Dossier */}
+              <div className="p-3 bg-slate-50/80 border border-slate-200 rounded-xl space-y-2">
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                    <Building2 className="w-3 h-3 text-slate-400" />
+                    Applicant Business Dossier
+                  </span>
+                  <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1">
+                    <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                    Verified on Elevata
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
+                  <div>
+                    <span className="text-slate-400 block text-[8px] uppercase">Business Name</span>
+                    <strong className="text-slate-800 font-bold block truncate">{activeSme.name}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[8px] uppercase">Sector</span>
+                    <strong className="text-slate-800 font-bold block truncate">{activeSme.sector}</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[8px] uppercase">Health Score</span>
+                    <strong className="text-emerald-600 font-bold block font-mono">{activeSme.healthScore}%</strong>
+                  </div>
+                  <div>
+                    <span className="text-slate-400 block text-[8px] uppercase">Loan Readiness</span>
+                    <strong className="text-indigo-600 font-bold block font-mono">{calculatedReadiness}%</strong>
+                  </div>
+                </div>
+              </div>
+
+              {/* Funding Request Details */}
+              <div className="space-y-3 pt-1">
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block border-b pb-1">
+                  1. Funding &amp; Facility Request
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <div className="flex justify-between items-center">
+                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                        Requested Amount (FRW) <span className="text-rose-500">*</span>
+                      </label>
+                      <span className="text-[9px] text-slate-400 font-mono">Max: {applyingOpp.maxFunding}</span>
+                    </div>
+                    <input
+                      type="number"
+                      value={applyAmount}
+                      onChange={e => {
+                        setApplyAmount(e.target.value);
+                        if (applyErrors.applyAmount) {
+                          setApplyErrors(prev => {
+                            const copy = { ...prev };
+                            delete copy.applyAmount;
+                            return copy;
+                          });
+                        }
+                      }}
+                      placeholder="e.g. 5000000"
+                      className={`w-full p-2.5 rounded-lg border text-xs font-mono transition ${
+                        applyErrors.applyAmount ? 'border-rose-500 ring-1 ring-rose-500/20 bg-rose-50/20' : 'border-slate-250 bg-slate-50/30 focus:ring-1 focus:ring-emerald-500'
+                      } focus:outline-none`}
+                      required
+                    />
+                    {applyErrors.applyAmount && (
+                      <p className="text-[9.5px] font-bold text-rose-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3 text-rose-600 shrink-0" /> {applyErrors.applyAmount}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                      Intended Use of Funds <span className="text-rose-500">*</span>
+                    </label>
+                    <select
+                      value={applyPurpose}
+                      onChange={e => setApplyPurpose(e.target.value)}
+                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                    >
+                      <option value="Working Capital & Inventory Purchase">Working Capital &amp; Inventory Purchase</option>
+                      <option value="Machinery & Equipment Acquisition">Machinery &amp; Equipment Acquisition</option>
+                      <option value="Business Operations Expansion">Business Operations Expansion</option>
+                      <option value="Agriculture & Supply Chain Financing">Agriculture &amp; Supply Chain Financing</option>
+                      <option value="Technology & Digital Upgrade">Technology &amp; Digital Upgrade</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                      Repayment / Term
+                    </label>
+                    <select
+                      value={applyTerm}
+                      onChange={e => setApplyTerm(e.target.value)}
+                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-white text-xs focus:outline-none"
+                    >
+                      <option value="6">6 Months</option>
+                      <option value="12">12 Months (1 Year)</option>
+                      <option value="24">24 Months (2 Years)</option>
+                      <option value="36">36 Months (3 Years)</option>
+                    </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                      Contact Phone <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={applyPhone}
+                      onChange={e => setApplyPhone(e.target.value)}
+                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/30 text-xs focus:outline-none font-mono"
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                      Official Email <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={applyEmail}
+                      onChange={e => setApplyEmail(e.target.value)}
+                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/30 text-xs focus:outline-none"
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* DYNAMIC DOCUMENT UPLOADS BASED ON OPPORTUNITY REQUIREMENTS */}
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between border-b pb-1">
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">
+                      2. Required Compliance &amp; Verification Documents
+                    </span>
+                    <p className="text-[9.5px] text-slate-400 mt-0.5">
+                      Upload verification files mapped to {applyingOpp.institution}'s underwriting checklist.
+                    </p>
+                  </div>
+                  <span className="text-[9px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    {Object.keys(uploadedDocs).length} / {applyingOpp.requiredDocs.length || 1} Uploaded
+                  </span>
+                </div>
+
+                {applyErrors.documents && (
+                  <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[10px] font-semibold flex items-center gap-1.5">
+                    <AlertCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
+                    <span>{applyErrors.documents}</span>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  {applyingOpp.requiredDocs && applyingOpp.requiredDocs.length > 0 ? (
+                    applyingOpp.requiredDocs.map((doc, idx) => {
+                      const isUploaded = !!uploadedDocs[doc];
+                      const uploadedInfo = uploadedDocs[doc];
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-3 rounded-xl border transition flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 ${
+                            isUploaded ? 'bg-emerald-50/30 border-emerald-200' : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="space-y-0.5 max-w-sm">
+                            <div className="flex items-center gap-2">
+                              <FileText className={`w-3.5 h-3.5 ${isUploaded ? 'text-emerald-600' : 'text-slate-400'}`} />
+                              <strong className="text-xs font-bold text-slate-900">{doc}</strong>
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-600 uppercase tracking-wider">
+                                Required
+                              </span>
+                            </div>
+
+                            {isUploaded ? (
+                              <p className="text-[9.5px] text-emerald-700 font-mono pl-5.5 flex items-center gap-2">
+                                <span className="truncate max-w-[200px]">{uploadedInfo.fileName}</span>
+                                <span className="text-slate-400">({uploadedInfo.fileSize})</span>
+                                <span className="text-slate-400">· {uploadedInfo.uploadedAt}</span>
+                              </p>
+                            ) : (
+                              <p className="text-[9px] text-slate-400 pl-5.5">
+                                Accepts PDF, JPG, PNG (Max 10MB)
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                            {isUploaded ? (
+                              <div className="flex items-center gap-1.5">
+                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-full flex items-center gap-1">
+                                  <Check className="w-2.5 h-2.5 text-emerald-700 stroke-[3]" />
+                                  Attached
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveUploadedDoc(doc)}
+                                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                                  title="Remove file"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            ) : (
+                              <label className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 shadow-2xs">
+                                <UploadCloud className="w-3.5 h-3.5 text-emerald-600" />
+                                <span>Attach Document</span>
+                                <input
+                                  type="file"
+                                  accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx"
+                                  onChange={(e) => handleFileUpload(doc, e)}
+                                  className="hidden"
+                                />
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-400 text-[10px]">
+                      No additional documents required for this program.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Cover Note */}
+              <div className="space-y-1 pt-1">
+                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                  3. Remarks / Note to Underwriting Officer (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="Provide additional context regarding your operational cashflows, upcoming supplier contracts, or specific financing timelines..."
+                  value={applyNotes}
+                  onChange={e => setApplyNotes(e.target.value)}
+                  className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/30 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none leading-relaxed"
+                />
+              </div>
+
+              {/* Consent and terms checkbox */}
+              <div className="pt-2 border-t border-slate-200/80">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={applyAgreed}
+                    onChange={e => setApplyAgreed(e.target.checked)}
+                    className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-[10px] text-slate-600 leading-snug">
+                    I declare that the information and documents uploaded are authentic and accurately represent the current trading records of <strong className="text-slate-900 font-bold">{activeSme.name}</strong> on Elevata.
+                  </span>
+                </label>
+                {applyErrors.applyAgreed && (
+                  <p className="text-[9.5px] font-bold text-rose-600 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3 h-3 text-rose-600 shrink-0" /> {applyErrors.applyAgreed}
+                  </p>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="pt-3 border-t border-slate-150 flex justify-between items-center shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setApplyingOpp(null)}
+                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-semibold text-slate-700 transition"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingApp}
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
+                >
+                  {isSubmittingApp ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Submitting Application...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-3.5 h-3.5" />
+                      <span>Submit Application Dossier</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* VIRTUAL WEBINAR POPUP DIALOG (FULL SCREEN ZOOM STYLE) */}
       {activeLiveTraining && (
@@ -1247,20 +1717,20 @@ export default function OpportunityHub() {
                     <Award className="w-16 h-16 text-emerald-400 animate-bounce" />
                     
                     <div className="space-y-1.5 text-center max-w-sm">
-                      <h4 className="text-base font-bold">Training Complete!</h4>
+                      <h4 className="text-base font-bold">Session Ended</h4>
                       <p className="text-xs text-slate-300 leading-relaxed font-sans">
-                        Your seminar attendance has been signed off. We have added a Custom Compliance certificate to your Academy dashboard.
+                        Thank you for attending this virtual capacity webinar session.
                       </p>
                     </div>
 
                     <button
                       onClick={() => {
                         closeWebinar();
-                        triggerToast('Certificate successfully saved to your academy panel.');
+                        triggerToast('Session attendance noted.');
                       }}
                       className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-xs font-extrabold rounded-lg shadow-md transition"
                     >
-                      Collect Certificate & Exit
+                      Exit Session
                     </button>
                   </div>
                 )}
