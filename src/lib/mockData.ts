@@ -65,7 +65,7 @@ export interface Sale {
   total: number;
   date: string;
   customer: string;
-  status: 'Completed' | 'Processing' | 'Cancelled';
+  status: 'Completed' | 'Processing' | 'Cancelled' | 'Pending' | 'Partial';
   items?: SaleItemSnapshot[];
 }
 

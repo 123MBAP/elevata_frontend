@@ -186,8 +186,8 @@ export default function ElevataBotPage() {
           context: {
             activeSmeName: activeSme?.name,
             activeSmeSector: activeSme?.sector,
-            activeSmeRevenue: activeSme?.revenue,
-            activeSmeCreditScore: activeSme?.creditScore
+            activeSmeRevenue: activeSme?.monthlyData ? activeSme.monthlyData.reduce((sum, d) => sum + d.revenue, 0) : undefined,
+            activeSmeCreditScore: activeSme?.healthScore
           }
         })
       });

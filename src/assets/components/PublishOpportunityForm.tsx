@@ -262,12 +262,12 @@ export default function PublishOpportunityForm({
       category: oppCategory,
       description: oppDesc || `${oppCategory} opportunity targeting growing local enterprises.`,
       benefits:
-        oppType === 'loan' || oppType === 'agricultural_loan'
+        oppType === 'loan'
           ? `${loanRate || '8.5'}% Annual Interest, ${loanTerm || '24'} months term, grace period of ${loanGrace || '3'} months.`
+          : oppType === 'agricultural_loan'
+          ? `Tailored seasonal repayment (${agriSeasonCycle}), ${agriCropFocus}`
           : oppType === 'grant'
           ? `100% equity-free funding. Expected impact: ${grantImpact}`
-          : oppType === 'agri'
-          ? `Tailored seasonal repayment (${agriSeasonCycle}), ${agriCropFocus}`
           : 'Automated terms, digital disbursement, and capacity scaling benefits.',
       deadline: finalDeadline,
       maxFunding: fundingVal,

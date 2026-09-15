@@ -95,20 +95,6 @@ export default function OpportunityPublisher() {
 
   // Dynamic business categories from DB
   const [availableCategories, setAvailableCategories] = useState<{ id: string; businessType: string }[]>(DEFAULT_CATEGORIES);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('cat-5');
-
-  // Form validation errors state
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const clearError = (field: string) => {
-    if (errors[field]) {
-      setErrors(prev => {
-        const copy = { ...prev };
-        delete copy[field];
-        return copy;
-      });
-    }
-  };
 
   useEffect(() => {
     async function loadCategories() {
@@ -121,9 +107,6 @@ export default function OpportunityPublisher() {
           })).filter((c: any) => c.businessType);
           if (formatted.length > 0) {
             setAvailableCategories(formatted);
-            if (!selectedCategoryId || selectedCategoryId === 'cat-5') {
-              setSelectedCategoryId(formatted[0].id);
-            }
           }
         }
       } catch (e) {
@@ -143,122 +126,7 @@ export default function OpportunityPublisher() {
   const [selectedOppType, setSelectedOppType] = useState<ModalOpportunityType>('loan');
   const [selectedOppCategory, setSelectedOppCategory] = useState('Loan');
   
-  // Step 2: Basic info
-  const [oppName, setOppName] = useState('');
-  const [oppDesc, setOppDesc] = useState('');
-  const [descViewMode, setDescViewMode] = useState<'write' | 'preview'>('write');
-  const descRef = useRef<HTMLTextAreaElement>(null);
 
-  const insertFormatting = (prefix: string, suffix: string = '', defaultText: string = '') => {
-    if (!descRef.current) {
-      setOppDesc(prev => (prev ? prev + '\n' : '') + prefix + defaultText + suffix);
-      return;
-    }
-    const textarea = descRef.current;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selected = oppDesc.substring(start, end) || defaultText;
-    const replacement = prefix + selected + suffix;
-    const newText = oppDesc.substring(0, start) + replacement + oppDesc.substring(end);
-    setOppDesc(newText);
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(start + prefix.length, start + prefix.length + selected.length);
-    }, 15);
-  };
-
-  const insertTemplate = () => {
-    const template = `## Program Overview\nComprehensive financing program designed to provide accessible capital to growing businesses across target sectors.\n\n### Key Highlights & Benefits\n• Subsidized fixed interest rate with flexible repayment\n• Fast approval decision within 48 to 72 business hours\n• Dedicated credit advisory and capacity building support\n\n### Targeted Use of Funds\n1. Working capital & inventory expansion\n2. Equipment acquisition & technology upgrades\n3. Market distribution and scaling operations\n\n> Note: All eligible SMEs must have active financial bookkeeping records on Elevata.`;
-    setOppDesc(template);
-  };
-
-  const [oppProvider, setOppProvider] = useState('Elevata Underwriting Corp');
-  const [oppCategory, setOppCategory] = useState('Loan');
-  const [oppStage, setOppStage] = useState('Growth');
-  const [oppSectors, setOppSectors] = useState<string[]>(['Agriculture', 'Retail Shop']);
-  const [oppLocation, setOppLocation] = useState('Rwanda');
-  const [oppDeadline, setOppDeadline] = useState('2026-10-31');
-
-  // Step 3: Type specific details
-  // Loan params
-  const [loanType, setLoanType] = useState('Working Capital');
-  const [loanMinAmt, setLoanMinAmt] = useState('1000000');
-  const [loanMaxAmt, setLoanMaxAmt] = useState('25000000');
-  const [loanRate, setLoanRate] = useState('8.5');
-  const [loanTerm, setLoanTerm] = useState('24');
-  const [loanGrace, setLoanGrace] = useState('3');
-  const [loanCollateralReq, setLoanCollateralReq] = useState(false);
-  const [loanCollateralType, setLoanCollateralType] = useState('Asset Registration');
-  const [loanPurpose, setLoanPurpose] = useState('Working Capital');
-
-  // Grant params
-  const [grantAmt, setGrantAmt] = useState('15000000');
-  const [grantCoFundingReq, setGrantCoFundingReq] = useState(false);
-  const [grantCoFundingPct, setGrantCoFundingPct] = useState('20');
-  const [grantDuration, setGrantDuration] = useState('12');
-  const [grantImpact, setGrantImpact] = useState('Employment & Green Tech');
-
-  // Fintech params
-  const [fintechType, setFintechType] = useState('POS Payments');
-  const [fintechFee, setFintechFee] = useState('15000');
-  const [fintechTxFee, setFintechTxFee] = useState('1.5%');
-
-  // Step 4: Business Profile Eligibility Builder
-  const [eligSoleProp, setEligSoleProp] = useState(true);
-  const [eligCompany, setEligCompany] = useState(true);
-  const [eligCooperative, setEligCooperative] = useState(true);
-  const [eligStartup, setEligStartup] = useState(true);
-  const [eligMinAge, setEligMinAge] = useState(1);
-  const [eligMinEmployees, setEligMinEmployees] = useState(3);
-  const [eligLocations, setEligLocations] = useState<string[]>(['Kigali', 'Northern Province']);
-
-  // Step 5: Financial Eligibility Builder
-  const [finMinMonthlyRev, setFinMinMonthlyRev] = useState(2000000);
-  const [finMinAnnualRev, setFinMinAnnualRev] = useState(24000000);
-  const [finMinReadiness, setFinMinReadiness] = useState(65);
-  const [finMinHealth, setFinMinHealth] = useState(60);
-  const [finMaxDebtToRevenue, setFinMaxDebtToRevenue] = useState(35);
-  const [finStatementsReq, setFinStatementsReq] = useState(true);
-
-  // Step 6: Documentation Requirements Dossier checklist
-  const [docRequirements, setDocRequirements] = useState<Record<string, 'Required' | 'Optional' | 'N/A'>>({
-    'Business Registration Certificate': 'Required',
-    'National ID': 'Required',
-    'Tax Clearance': 'Required',
-    'Bank Statements': 'Required',
-    'Financial Statements': 'Optional',
-    'Business Plan': 'Optional',
-    'Cash Flow Projection': 'Optional',
-    'Collateral Documents': 'N/A'
-  });
-
-  // Step 7: Readiness Requirements
-  const [readinessMinRecords, setReadinessMinRecords] = useState('6 months');
-  const [readinessPlanReq, setReadinessPlanReq] = useState(true);
-  const [readinessMinDigitalActivity, setReadinessMinDigitalActivity] = useState('3 months');
-  const [readinessTaxCompliance, setReadinessTaxCompliance] = useState(true);
-
-  // Step 8: Application Process Definition
-  const [appMethod, setAppMethod] = useState('Apply directly through Elevata');
-  const appSteps = [
-    '1. Check eligibility profile',
-    '2. Complete application dossier',
-    '3. Upload required documents',
-    '4. Automated AI risk review',
-    '5. Bank officer interview & disburse'
-  ];
-
-  // Step 9: AI Matching Weights
-  const [weights, setWeights] = useState<Record<string, 'Required' | 'Important' | 'Preferred'>>({
-    'Business sector': 'Required',
-    'Business location': 'Important',
-    'Revenue': 'Required',
-    'Business age': 'Preferred',
-    'Financial health': 'Required',
-    'Loan readiness': 'Required',
-    'Required documents': 'Important',
-    'Business stage': 'Preferred'
-  });
 
   // Step 10: AI Match Preview & Suitability Simulator Data
   const simulatedMatches = useMemo(() => {
@@ -342,95 +210,7 @@ export default function OpportunityPublisher() {
   // Categories helper
   const categories = ['All', 'Loan', 'Grant', 'Savings Product', 'Investment', 'Training', 'Insurance', 'Business Advisory'];
 
-  // Stepper helper
-  const stepsList = [
-    { num: 1, name: 'Select Type' },
-    { num: 2, name: 'Basic Info' },
-    { num: 3, name: 'Product Details' },
-    { num: 4, name: 'Profile Rules' },
-    { num: 5, name: 'Financial Rules' },
-    { num: 6, name: 'Documents' },
-    { num: 7, name: 'Readiness' },
-    { num: 8, name: 'Application' },
-    { num: 9, name: 'AI Weights' },
-    { num: 10, name: 'AI Preview' }
-  ];
 
-  // Handle step navigations (allows freely going through details even if not fully filled)
-  const handleNextStep = () => {
-    setErrors({});
-    if (publishStep === 9) {
-      setPublishStep(10);
-      setMatchingAnimation(true);
-      setTimeout(() => {
-        setMatchingAnimation(false);
-      }, 1500);
-    } else {
-      setPublishStep(prev => prev + 1);
-    }
-  };
-
-  // Handle final opportunity publication
-  const handlePublishSubmit = () => {
-    let fundingVal = 'Flexible';
-    if (oppType === 'loan') {
-      fundingVal = `${formatRWF(parseInt(loanMaxAmt) || 0)}`;
-    } else if (oppType === 'grant') {
-      fundingVal = `${formatRWF(parseInt(grantAmt) || 0)}`;
-    }
-
-    const docsList = Object.keys(docRequirements).filter(doc => docRequirements[doc] === 'Required');
-    const finalTitle = oppName.trim() || `${oppCategory || 'Financing'} Facility`;
-    const finalInstitution = oppProvider.trim() || 'Elevata Underwriting Corp';
-    const finalDeadline = oppDeadline || '2026-10-31';
-    const finalSectors = oppSectors && oppSectors.length > 0 ? oppSectors : ['All Sectors'];
-
-    publishOpportunity({
-      title: finalTitle,
-      institution: finalInstitution,
-      category: oppCategory || 'Loan',
-      description: oppDesc || `${oppCategory} opportunity targeting growing local ventures.`,
-      benefits: oppType === 'loan'
-        ? `${loanRate || '8.5'}% Interest, ${loanTerm || '24'} months term, grace period of ${loanGrace || '3'} months.`
-        : oppType === 'grant'
-        ? `100% equity-free funding. Expected impact: ${grantImpact}`
-        : 'Automated terms and capacity scaling benefits.',
-      deadline: finalDeadline,
-      maxFunding: fundingVal,
-      sectors: finalSectors,
-      categoryId: selectedCategoryId,
-      minAge: eligMinAge,
-      minRevenue: finMinAnnualRev,
-      minHealthScore: finMinHealth,
-      minReadinessScore: finMinReadiness,
-      registrationRequired: eligSoleProp || eligCompany,
-      taxCompliance: readinessTaxCompliance,
-      collateralRequired: loanCollateralReq,
-      requiredDocs: docsList,
-      
-      // Extended fields
-      minMonthlyRevenue: finMinMonthlyRev,
-      maxDebtToRevenue: finMaxDebtToRevenue,
-      collateralType: loanCollateralReq ? loanCollateralType : undefined,
-      eligLocations: eligLocations,
-      loanRate: oppType === 'loan' ? parseFloat(loanRate) || 8.5 : undefined,
-      loanTerm: oppType === 'loan' ? parseInt(loanTerm) || 24 : undefined,
-      loanGrace: oppType === 'loan' ? parseInt(loanGrace) || 3 : undefined,
-      grantCoFundingReq: oppType === 'grant' ? grantCoFundingReq : undefined,
-      grantCoFundingPct: oppType === 'grant' && grantCoFundingReq ? parseFloat(grantCoFundingPct) : undefined,
-      grantDuration: oppType === 'grant' ? parseInt(grantDuration) || 12 : undefined,
-      appMethod: appMethod,
-      appSteps: appSteps
-    });
-
-    triggerToast(`"${finalTitle}" published successfully! AI matches simulated and active.`);
-    setIsPublishModalOpen(false);
-    
-    // Reset Form states
-    setOppName('');
-    setOppDesc('');
-    setPublishStep(1);
-  };
 
   // Action: Create Training from Gap Analysis
   const handleCreateTrainingFromGap = (missingRequirement: string, count: number) => {

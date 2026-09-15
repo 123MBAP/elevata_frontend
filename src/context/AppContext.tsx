@@ -436,13 +436,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
             prev.forEach(o => map.set(o.id, o));
             // Overlay backend database opportunities
             res.data.forEach((o: any) => {
-              const existing = map.get(o.id) || {};
+              const existing = (map.get(o.id) || {}) as Partial<Opportunity>;
               map.set(o.id, {
                 ...existing,
                 ...o,
                 sectors: Array.isArray(o.sectors) ? o.sectors : (existing.sectors || []),
                 requiredDocs: Array.isArray(o.requiredDocs) ? o.requiredDocs : (existing.requiredDocs || [])
-              });
+              } as Opportunity);
             });
             return Array.from(map.values());
           });
@@ -735,7 +735,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
-  const deleteSale = (smeId: string, saleId: number) => {
+  const deleteSale = (smeId: string, saleId: string | number) => {
     setSmes(prev => prev.map(sme => {
       if (sme.id === smeId) {
         const saleToDelete = sme.sales.find(s => s.id === saleId);

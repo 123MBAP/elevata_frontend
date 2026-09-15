@@ -19,7 +19,8 @@ import {
   Italic,
   Heading3,
   List,
-  Quote
+  Quote,
+  Sparkles
 } from 'lucide-react';
 import logo from '../images/elevata_logo.png';
 import FormattedText from './ui/FormattedText';
