@@ -76,6 +76,7 @@ export default function VirtualTrainingAttendeeModal({
   const [progress, setProgress] = useState(0);
   const [showCertificate, setShowCertificate] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [attendeeViewMode, setAttendeeViewMode] = useState<'video' | 'slides'>('video');
 
   // Sample slides synced with host presentation
   const presentationSlides = [
@@ -214,37 +215,42 @@ export default function VirtualTrainingAttendeeModal({
         if (!msg) return;
 
         if (msg.type === 'SCREEN_SHARE_STARTED') {
+          console.log("[SME] SCREEN_SHARE_STARTED received");
           setIsHostScreenSharing(true);
-          ch?.postMessage({
-            type: 'ATTENDEE_REQUEST_STREAM',
-            attendeeId: activeSme.id
-          });
-          apiRequest(`/trainings/${training.id}/signal`, {
-            method: 'POST',
-            body: JSON.stringify({
-              from: activeSme.id,
-              to: 'host',
-              signal: { type: 'request_stream' }
-            })
-          }).catch(() => {});
+          if (!remoteStream && !peerConnectionRef.current) {
+            ch?.postMessage({
+              type: 'ATTENDEE_REQUEST_STREAM',
+              attendeeId: activeSme.id
+            });
+            apiRequest(`/trainings/${training.id}/signal`, {
+              method: 'POST',
+              body: JSON.stringify({
+                from: activeSme.id,
+                to: 'host',
+                signal: { type: 'request_stream' }
+              })
+            }).catch(() => {});
+          }
         } else if (msg.type === 'SCREEN_SHARE_STOPPED') {
+          console.log("[SME] SCREEN_SHARE_STOPPED received, returning to presenter camera stream");
           setIsHostScreenSharing(false);
           setLiveSnapshot(null);
-          setRemoteStream(null);
-          if (peerConnectionRef.current) {
-            peerConnectionRef.current.close();
-            peerConnectionRef.current = null;
-          }
+          // Do not close peer connection or null out remoteStream: presenter restored camera track
         } else if (msg.type === 'SCREEN_FRAME' && msg.frame) {
-          setIsHostScreenSharing(true);
           setLiveSnapshot(msg.frame);
         } else if (msg.type === 'SLIDE_CHANGED' && msg.slideIndex !== undefined) {
           setCurrentSlideIndex(msg.slideIndex);
         } else if (msg.type === 'OFFER' && (msg.to === activeSme.id || msg.to === 'all')) {
+          console.log("[SME] WebRTC offer received via BroadcastChannel");
           handleWebRTCOffer(msg.offer);
         } else if (msg.type === 'ICE_CANDIDATE' && msg.to === activeSme.id && msg.candidate) {
-          if (peerConnectionRef.current) {
-            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(msg.candidate));
+          console.log("[SME] ICE candidates exchanged from host");
+          if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+            try {
+              await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(msg.candidate));
+            } catch (e) {
+              console.warn("[SME] ICE candidate add error:", e);
+            }
           }
         }
       };
@@ -263,10 +269,16 @@ export default function VirtualTrainingAttendeeModal({
         if (res && res.success && Array.isArray(res.data)) {
           for (const item of res.data) {
             if (item.signal?.type === 'offer') {
+              console.log("[SME] WebRTC offer received via API polling");
               handleWebRTCOffer(item.signal.offer);
             } else if (item.signal?.type === 'candidate' && item.signal.candidate) {
-              if (peerConnectionRef.current) {
-                await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(item.signal.candidate));
+              console.log("[SME] ICE candidates exchanged via API polling");
+              if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
+                try {
+                  await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(item.signal.candidate));
+                } catch (e) {
+                  console.warn("[SME] ICE candidate add error:", e);
+                }
               }
             }
           }
@@ -291,18 +303,44 @@ export default function VirtualTrainingAttendeeModal({
       }
 
       const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:stun1.l.google.com:19302' }
+        ]
       });
 
+      pc.onconnectionstatechange = () => {
+        console.log("[SME] connection state:", pc.connectionState);
+      };
+      pc.oniceconnectionstatechange = () => {
+        console.log("[SME] ICE connection state:", pc.iceConnectionState);
+      };
+
       pc.ontrack = (event) => {
-        if (event.streams && event.streams[0]) {
-          setRemoteStream(event.streams[0]);
-          setIsHostScreenSharing(true);
+        console.log("[SME] remote track received:", event.track.id, event.track.kind);
+        const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+        console.log("[SME] remote stream ID:", stream.id);
+        console.log("[SME] remote video track kind:", event.track.kind);
+        setRemoteStream(stream);
+
+        if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = stream;
+          remoteVideoRef.current.play().catch(e => console.warn("[SME] video play error:", e));
+          console.log("[SME] remote video element assigned");
         }
+
+        event.track.onunmute = () => {
+          console.log("[SME] remote track unmuted:", event.track.id);
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = stream;
+            remoteVideoRef.current.play().catch(() => {});
+          }
+        };
       };
 
       pc.onicecandidate = (event) => {
         if (event.candidate) {
+          console.log("[SME] ICE candidate generated:", event.candidate.candidate);
           try {
             const ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
             ch.postMessage({
@@ -351,13 +389,15 @@ export default function VirtualTrainingAttendeeModal({
 
       peerConnectionRef.current = pc;
     } catch (err) {
-      console.warn('Error handling WebRTC offer:', err);
+      console.warn('[SME] Error handling WebRTC offer:', err);
     }
   };
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
+      remoteVideoRef.current.play().catch(() => {});
+      console.log("[SME] remote video element assigned via useEffect");
     }
   }, [remoteStream, isHostScreenSharing]);
 
@@ -508,7 +548,7 @@ export default function VirtualTrainingAttendeeModal({
                   </button>
                 </div>
               </div>
-            ) : (isHostScreenSharing || remoteStream || liveSnapshot) ? (
+            ) : isHostScreenSharing ? (
               /* STATE 2A: LIVE SCREEN SHARE VIEWPORT */
               <div className="w-full h-full bg-black flex flex-col justify-between relative overflow-hidden">
                 {/* Screen Share Video Stream / Snapshot */}
@@ -620,8 +660,105 @@ export default function VirtualTrainingAttendeeModal({
                   </div>
                 </div>
               </div>
+            ) : attendeeViewMode === 'video' ? (
+              /* STATE 2B: TRAINER LIVE CAMERA BROADCAST VIEWPORT */
+              <div className="w-full h-full bg-black flex flex-col justify-between relative overflow-hidden">
+                {/* Trainer Camera Video Stream */}
+                <div className="flex-1 w-full h-full relative flex items-center justify-center overflow-hidden bg-slate-950">
+                  {remoteStream ? (
+                    <video
+                      ref={(el) => {
+                        remoteVideoRef.current = el;
+                        if (el && el.srcObject !== remoteStream) {
+                          el.srcObject = remoteStream;
+                          el.play().catch(() => {});
+                        }
+                      }}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                      <div className="w-20 h-20 rounded-full bg-[#0a66c2]/20 border border-[#0a66c2]/40 flex items-center justify-center shadow-lg">
+                        <div className="w-14 h-14 rounded-full bg-[#0a66c2] flex items-center justify-center text-xl font-bold text-white shadow">
+                          {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">{training.speaker}</h3>
+                        <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                          Connecting to trainer's live video broadcast...
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        WebRTC video stream establishing...
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Overlaid Top Header */}
+                <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10 pointer-events-none">
+                  <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/80 shadow-lg pointer-events-auto">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                      <Radio className="w-3.5 h-3.5 text-emerald-400" /> Trainer Live Broadcast
+                    </span>
+                    <span className="text-slate-600">|</span>
+                    <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
+                      {training.speaker} is speaking
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pointer-events-auto">
+                    <button
+                      type="button"
+                      onClick={() => setAttendeeViewMode('slides')}
+                      className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-600/80 rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer"
+                    >
+                      <FileText className="w-3.5 h-3.5 text-[#38bdf8]" />
+                      <span>View Session Slides</span>
+                    </button>
+                    <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-md uppercase tracking-wider shadow">
+                      WebRTC HD P2P
+                    </span>
+                  </div>
+                </div>
+
+                {/* Overlaid Bottom Status Bar */}
+                <div className="p-3 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent flex justify-between items-center text-xs text-slate-400 z-10">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Elevata Encrypted Stream
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    Live Camera Feed · Synced with Trainer
+                  </span>
+                </div>
+
+                {/* Picture-In-Picture: Attendee Preview */}
+                <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
+                  <div className="w-36 sm:w-40 h-20 sm:h-24 bg-[#0d1424]/90 backdrop-blur-md border border-slate-700 rounded-xl overflow-hidden shadow-xl p-2 flex flex-col justify-between">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-bold text-slate-400 bg-black/60 px-1.5 py-0.5 rounded">
+                        You ({activeSme.name})
+                      </span>
+                      {isMicOn ? <Mic className="w-2.5 h-2.5 text-emerald-400" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}
+                    </div>
+                    <div className="text-center my-auto">
+                      {isCamOn ? (
+                        <div className="text-[10px] text-slate-300 font-medium">Camera Active</div>
+                      ) : (
+                        <div className="text-[10px] text-slate-500">Camera Off</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
-              /* STATE 2B: ADMITTED LIVE SLIDES VIEWPORT */
+              /* STATE 2C: ADMITTED LIVE SLIDES VIEWPORT */
               <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white relative">
                 
                 {/* Stage Header */}
@@ -635,24 +772,35 @@ export default function VirtualTrainingAttendeeModal({
                     </span>
                   </div>
 
-                  {/* Slide controls for attendee */}
-                  <div className="flex items-center gap-1.5">
+                  {/* Slide controls & Back to Video for attendee */}
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      disabled={currentSlideIndex === 0}
-                      onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
-                      className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
+                      onClick={() => setAttendeeViewMode('video')}
+                      className="px-3 py-1.5 bg-[#0a66c2]/80 hover:bg-[#0a66c2] text-xs font-semibold text-white border border-[#38bdf8]/40 rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer"
                     >
-                      <ChevronLeft className="w-4 h-4" />
+                      <Video className="w-3.5 h-3.5 text-[#38bdf8]" />
+                      <span>Watch Trainer Video</span>
                     </button>
-                    <button
-                      type="button"
-                      disabled={currentSlideIndex === presentationSlides.length - 1}
-                      onClick={() => setCurrentSlideIndex(prev => Math.min(presentationSlides.length - 1, prev + 1))}
-                      className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
-                    >
-                      <ChevronRight className="w-4 h-4" />
-                    </button>
+
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        disabled={currentSlideIndex === 0}
+                        onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+                        className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={currentSlideIndex === presentationSlides.length - 1}
+                        onClick={() => setCurrentSlideIndex(prev => Math.min(presentationSlides.length - 1, prev + 1))}
+                        className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
+                      >
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -701,19 +849,34 @@ export default function VirtualTrainingAttendeeModal({
                 {/* Picture-In-Picture: Trainer Live Video & Attendee Preview */}
                 <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
                   {/* Trainer Video Window */}
-                  <div className="w-40 h-28 bg-[#0a0f1d] border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl p-2 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold text-slate-300 bg-black/60 px-1.5 py-0.2 rounded">
+                  <div className="w-40 h-28 bg-[#0a0f1d] border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl p-2 flex flex-col justify-between relative">
+                    <div className="flex justify-between items-center z-10">
+                      <span className="text-[9px] font-bold text-slate-300 bg-black/60 px-1.5 py-0.5 rounded">
                         Trainer (Speaker)
                       </span>
                       <Mic className="w-3 h-3 text-emerald-400" />
                     </div>
-                    <div className="text-center my-auto">
-                      <div className="w-8 h-8 rounded-full bg-[#0a66c2] mx-auto flex items-center justify-center text-xs font-bold">
-                        {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
-                      </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {remoteStream ? (
+                        <video
+                          ref={(el) => {
+                            if (el && el.srcObject !== remoteStream) {
+                              el.srcObject = remoteStream;
+                              el.play().catch(() => {});
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-[#0a66c2] mx-auto flex items-center justify-center text-xs font-bold text-white">
+                          {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
+                        </div>
+                      )}
                     </div>
-                    <div className="text-[9px] text-slate-300 truncate font-semibold text-center">
+                    <div className="z-10 text-[9px] text-slate-300 truncate font-semibold text-center bg-black/60 py-0.5 rounded">
                       {training.speaker}
                     </div>
                   </div>
@@ -721,7 +884,7 @@ export default function VirtualTrainingAttendeeModal({
                   {/* My Attendee Camera Window */}
                   <div className="w-40 h-24 bg-[#0d1424] border border-slate-700 rounded-xl overflow-hidden shadow-xl p-2 flex flex-col justify-between">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold text-slate-400 bg-black/60 px-1.5 py-0.2 rounded">
+                      <span className="text-[9px] font-bold text-slate-400 bg-black/60 px-1.5 py-0.5 rounded">
                         You ({activeSme.name})
                       </span>
                       {isMicOn ? <Mic className="w-2.5 h-2.5 text-emerald-400" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}

@@ -29,6 +29,57 @@ interface VirtualTrainingDeliveryModalProps {
   onComplete?: () => void;
 }
 
+// Fallback high-performance canvas stream to ensure camera track always exists
+const createVirtualCameraStream = (speakerName: string): MediaStream => {
+  const canvas = document.createElement('canvas');
+  canvas.width = 640;
+  canvas.height = 360;
+  const ctx = canvas.getContext('2d');
+  let frame = 0;
+
+  const draw = () => {
+    if (!ctx) return;
+    frame++;
+    const grad = ctx.createLinearGradient(0, 0, 640, 360);
+    grad.addColorStop(0, '#0c1527');
+    grad.addColorStop(1, '#050a14');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 640, 360);
+
+    ctx.beginPath();
+    ctx.arc(320, 140, 55, 0, Math.PI * 2);
+    ctx.fillStyle = '#0a66c2';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#38bdf8';
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const initials = speakerName.split(' ').map(n => n[0]).join('').slice(0, 2) || 'TR';
+    ctx.fillText(initials, 320, 140);
+
+    ctx.font = 'bold 18px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(speakerName, 320, 225);
+
+    ctx.font = '13px sans-serif';
+    ctx.fillStyle = '#10b981';
+    ctx.fillText('● Presenter Live Camera', 320, 255);
+  };
+
+  draw();
+  const interval = setInterval(draw, 1000 / 15);
+  const stream = canvas.captureStream ? canvas.captureStream(15) : (canvas as any).mozCaptureStream(15);
+  const vTrack = stream.getVideoTracks()[0];
+  if (vTrack) {
+    vTrack.addEventListener('ended', () => clearInterval(interval));
+  }
+  return stream;
+};
+
 export default function VirtualTrainingDeliveryModal({
   training,
   onClose,
@@ -148,99 +199,121 @@ export default function VirtualTrainingDeliveryModal({
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const screenStreamRef = useRef<MediaStream | null>(null);
   const hiddenVideoRef = useRef<HTMLVideoElement | null>(null);
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
+  const presenterCameraVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Keep screenStreamRef synchronized
   useEffect(() => {
     screenStreamRef.current = screenStream;
   }, [screenStream]);
 
-  // WebRTC Host & Local Broadcast Channel (persists across screen share toggles)
+  // Initialize Presenter Camera Stream (real webcam with canvas fallback)
   useEffect(() => {
-    let ch: BroadcastChannel | null = null;
-    try {
-      ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
-      broadcastChannelRef.current = ch;
-      ch.onmessage = async (e) => {
-        const msg = e.data;
-        if (!msg) return;
-        if (msg.type === 'ATTENDEE_REQUEST_STREAM' && screenStreamRef.current) {
-          initiatePeerConnection(msg.attendeeId, screenStreamRef.current);
-        } else if (msg.type === 'ANSWER' && msg.to === 'host') {
-          const pc = peerConnectionsRef.current.get(msg.from);
-          if (pc && pc.signalingState !== 'stable') {
-            await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
-          }
-        } else if (msg.type === 'ICE_CANDIDATE' && msg.to === 'host') {
-          const pc = peerConnectionsRef.current.get(msg.from);
-          if (pc && msg.candidate) {
-            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
-          }
-        }
-      };
-    } catch (err) {}
-
-    // Polling backend for signals from cross-device attendees
-    const signalInterval = setInterval(async () => {
+    let active = true;
+    const initCamera = async () => {
+      let stream: MediaStream;
       try {
-        const res = await apiRequest(`/trainings/${training.id}/signal?peerId=host`);
-        if (res && res.success && Array.isArray(res.data)) {
-          for (const item of res.data) {
-            if (item.signal?.type === 'request_stream' && screenStreamRef.current) {
-              initiatePeerConnection(item.from, screenStreamRef.current);
-            } else if (item.signal?.type === 'answer') {
-              const pc = peerConnectionsRef.current.get(item.from);
-              if (pc && pc.signalingState !== 'stable') {
-                await pc.setRemoteDescription(new RTCSessionDescription(item.signal.answer));
-              }
-            } else if (item.signal?.type === 'candidate' && item.signal.candidate) {
-              const pc = peerConnectionsRef.current.get(item.from);
-              if (pc) {
-                await pc.addIceCandidate(new RTCIceCandidate(item.signal.candidate));
-              }
-            }
-          }
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: 1280, height: 720 },
+            audio: false
+          });
+        } else {
+          stream = createVirtualCameraStream(training.speaker || 'Trainer');
         }
-      } catch (e) {}
-    }, 2000);
+      } catch (err) {
+        console.warn('[Presenter] Physical webcam unavailable, initializing virtual presenter camera:', err);
+        stream = createVirtualCameraStream(training.speaker || 'Trainer');
+      }
+
+      if (!active) return;
+      cameraStreamRef.current = stream;
+      const vTrack = stream.getVideoTracks()[0];
+      if (vTrack) {
+        cameraTrackRef.current = vTrack;
+      }
+      if (presenterCameraVideoRef.current) {
+        presenterCameraVideoRef.current.srcObject = stream;
+      }
+    };
+
+    initCamera();
 
     return () => {
-      ch?.close();
-      clearInterval(signalInterval);
-      stopSnapshotLoop();
-      peerConnectionsRef.current.forEach(pc => pc.close());
-      peerConnectionsRef.current.clear();
+      active = false;
+      if (cameraStreamRef.current) {
+        cameraStreamRef.current.getTracks().forEach(t => t.stop());
+      }
     };
-  }, [training.id]);
+  }, [training.speaker]);
 
-  const initiatePeerConnection = async (attendeeId: string, stream: MediaStream) => {
+  // Establish or update WebRTC peer connection with an SME attendee
+  const initiatePeerConnection = async (attendeeId: string, customStream?: MediaStream) => {
     try {
-      const pc = new RTCPeerConnection({
-        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
-      });
+      let pc = peerConnectionsRef.current.get(attendeeId);
+      const isNew = !pc || pc.connectionState === 'closed' || pc.connectionState === 'failed';
 
-      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+      if (isNew) {
+        pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        });
+        peerConnectionsRef.current.set(attendeeId, pc);
 
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          broadcastChannelRef.current?.postMessage({
-            type: 'ICE_CANDIDATE',
-            from: 'host',
-            to: attendeeId,
-            candidate: event.candidate
-          });
-          apiRequest(`/trainings/${training.id}/signal`, {
-            method: 'POST',
-            body: JSON.stringify({
+        pc.onconnectionstatechange = () => {
+          console.log(`[Presenter] connection state for ${attendeeId}:`, pc!.connectionState);
+        };
+        pc.oniceconnectionstatechange = () => {
+          console.log(`[Presenter] ICE connection state for ${attendeeId}:`, pc!.iceConnectionState);
+        };
+
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            console.log(`[Presenter] ICE candidates exchanged for ${attendeeId}:`, event.candidate.candidate);
+            broadcastChannelRef.current?.postMessage({
+              type: 'ICE_CANDIDATE',
               from: 'host',
               to: attendeeId,
-              signal: { type: 'candidate', candidate: event.candidate }
-            })
-          }).catch(() => {});
-        }
-      };
+              candidate: event.candidate
+            });
+            apiRequest(`/trainings/${training.id}/signal`, {
+              method: 'POST',
+              body: JSON.stringify({
+                from: 'host',
+                to: attendeeId,
+                signal: { type: 'candidate', candidate: event.candidate }
+              })
+            }).catch(() => {});
+          }
+        };
+      }
 
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
+      // Determine active stream to transmit (screen share if active, else camera)
+      const streamToSend = customStream || screenStreamRef.current || cameraStreamRef.current;
+      if (!streamToSend) {
+        console.warn(`[Presenter] No media stream ready to transmit to ${attendeeId}`);
+        return;
+      }
+
+      const videoTrack = streamToSend.getVideoTracks()[0];
+      if (videoTrack) {
+        const videoSender = pc!.getSenders().find(s => s.track?.kind === 'video');
+        if (videoSender) {
+          console.log(`[Presenter] screen track added/replaced on existing sender for ${attendeeId}`);
+          await videoSender.replaceTrack(videoTrack);
+        } else {
+          console.log(`[Presenter] adding track to peer connection for ${attendeeId}`);
+          pc!.addTrack(videoTrack, streamToSend);
+        }
+      }
+
+      // Create and send WebRTC Offer
+      const offer = await pc!.createOffer();
+      await pc!.setLocalDescription(offer);
+      console.log(`[Presenter] offer created for ${attendeeId}`);
 
       broadcastChannelRef.current?.postMessage({
         type: 'OFFER',
@@ -257,12 +330,83 @@ export default function VirtualTrainingDeliveryModal({
           signal: { type: 'offer', offer }
         })
       });
-
-      peerConnectionsRef.current.set(attendeeId, pc);
+      console.log(`[Presenter] offer sent to ${attendeeId}`);
     } catch (err) {
-      console.warn('Failed to initiate WebRTC with attendee:', err);
+      console.warn(`[Presenter] Error initiating WebRTC with ${attendeeId}:`, err);
     }
   };
+
+  // WebRTC Signaling Listener & Polling (persists throughout training)
+  useEffect(() => {
+    let ch: BroadcastChannel | null = null;
+    try {
+      ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
+      broadcastChannelRef.current = ch;
+      ch.onmessage = async (e) => {
+        const msg = e.data;
+        if (!msg) return;
+
+        if (msg.type === 'ATTENDEE_REQUEST_STREAM') {
+          console.log(`[Presenter] ATTENDEE_REQUEST_STREAM received from ${msg.attendeeId}`);
+          initiatePeerConnection(msg.attendeeId);
+        } else if (msg.type === 'ANSWER' && msg.to === 'host') {
+          console.log(`[Presenter] answer received from ${msg.from}`);
+          const pc = peerConnectionsRef.current.get(msg.from);
+          if (pc && pc.signalingState !== 'stable') {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+          }
+        } else if (msg.type === 'ICE_CANDIDATE' && msg.to === 'host') {
+          console.log(`[Presenter] ICE candidate received from ${msg.from}`);
+          const pc = peerConnectionsRef.current.get(msg.from);
+          if (pc && pc.remoteDescription && msg.candidate) {
+            try {
+              await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+            } catch (e) {
+              console.warn(`[Presenter] ICE candidate add error for ${msg.from}:`, e);
+            }
+          }
+        }
+      };
+    } catch (err) {}
+
+    // Polling backend for WebRTC signals from cross-device attendees
+    const signalInterval = setInterval(async () => {
+      try {
+        const res = await apiRequest(`/trainings/${training.id}/signal?peerId=host`);
+        if (res && res.success && Array.isArray(res.data)) {
+          for (const item of res.data) {
+            if (item.signal?.type === 'request_stream') {
+              console.log(`[Presenter] request_stream received from ${item.from}`);
+              initiatePeerConnection(item.from);
+            } else if (item.signal?.type === 'answer') {
+              console.log(`[Presenter] answer received from ${item.from}`);
+              const pc = peerConnectionsRef.current.get(item.from);
+              if (pc && pc.signalingState !== 'stable') {
+                await pc.setRemoteDescription(new RTCSessionDescription(item.signal.answer));
+              }
+            } else if (item.signal?.type === 'candidate' && item.signal.candidate) {
+              const pc = peerConnectionsRef.current.get(item.from);
+              if (pc && pc.remoteDescription) {
+                try {
+                  await pc.addIceCandidate(new RTCIceCandidate(item.signal.candidate));
+                } catch (e) {
+                  console.warn(`[Presenter] ICE candidate add error for ${item.from}:`, e);
+                }
+              }
+            }
+          }
+        }
+      } catch (e) {}
+    }, 2000);
+
+    return () => {
+      ch?.close();
+      clearInterval(signalInterval);
+      stopSnapshotLoop();
+      peerConnectionsRef.current.forEach(pc => pc.close());
+      peerConnectionsRef.current.clear();
+    };
+  }, [training.id]);
 
   const startSnapshotLoop = (stream: MediaStream) => {
     if (snapshotIntervalRef.current) clearInterval(snapshotIntervalRef.current);
@@ -306,28 +450,11 @@ export default function VirtualTrainingDeliveryModal({
       setTimeout(captureFrame, 150);
     };
 
-    // Immediate initial captures
     setTimeout(captureFrame, 200);
     setTimeout(captureFrame, 600);
     setTimeout(captureFrame, 1200);
 
     snapshotIntervalRef.current = setInterval(captureFrame, 1500);
-  };
-
-  const handleAdmitAttendee = (attendeeId: string) => {
-    admitAttendee(training.id, attendeeId);
-    if (screenStreamRef.current) {
-      initiatePeerConnection(attendeeId, screenStreamRef.current);
-    }
-  };
-
-  const handleAdmitAll = () => {
-    admitAllAttendees(training.id);
-    if (screenStreamRef.current) {
-      waitingAttendees.forEach(att => {
-        initiatePeerConnection(att.id, screenStreamRef.current!);
-      });
-    }
   };
 
   const stopSnapshotLoop = () => {
@@ -337,40 +464,66 @@ export default function VirtualTrainingDeliveryModal({
     }
   };
 
+  const handleAdmitAttendee = (attendeeId: string) => {
+    admitAttendee(training.id, attendeeId);
+    initiatePeerConnection(attendeeId);
+  };
+
+  const handleAdmitAll = () => {
+    admitAllAttendees(training.id);
+    waitingAttendees.forEach(att => {
+      initiatePeerConnection(att.id);
+    });
+  };
+
   const handleToggleScreenShare = async () => {
     if (isScreenSharing) {
-      if (screenStream) {
-        screenStream.getTracks().forEach(track => track.stop());
-      }
-      setScreenStream(null);
-      setIsScreenSharing(false);
-      stopSnapshotLoop();
-      peerConnectionsRef.current.forEach(pc => pc.close());
-      peerConnectionsRef.current.clear();
-
-      broadcastChannelRef.current?.postMessage({
-        type: 'SCREEN_SHARE_STOPPED',
-        trainingId: training.id
-      });
-      updateTrainingLiveState(training.id, {
-        isScreenSharing: false,
-        shareType: 'slides',
-        screenSnapshot: ''
-      });
+      await handleStopScreenShare();
     } else {
       try {
+        console.log("[Presenter] getDisplayMedia started");
         if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
           const stream = await navigator.mediaDevices.getDisplayMedia({
             video: true,
             audio: false
           });
+
+          const screenTrack = stream.getVideoTracks()[0];
+          console.log("[Presenter] screen track obtained:", screenTrack?.id, screenTrack?.label);
+
           setScreenStream(stream);
+          screenStreamRef.current = stream;
           setIsScreenSharing(true);
           startSnapshotLoop(stream);
 
           if (screenVideoRef.current) {
             screenVideoRef.current.srcObject = stream;
           }
+
+          // Replace track on existing peer connections or initiate if not yet established
+          for (const [attendeeId, pc] of peerConnectionsRef.current.entries()) {
+            const sender = pc.getSenders().find(s => s.track?.kind === "video");
+            if (sender && screenTrack) {
+              console.log(`[Presenter] screen track added/replaced for attendee ${attendeeId}`);
+              await sender.replaceTrack(screenTrack);
+            } else {
+              console.log(`[Presenter] no video sender on pc for ${attendeeId}, initiating peer connection`);
+              await initiatePeerConnection(attendeeId, stream);
+            }
+          }
+
+          // Pre-connect to any admitted attendees not in peerConnectionsRef
+          admittedAttendees.forEach(att => {
+            if (!peerConnectionsRef.current.has(att.id)) {
+              initiatePeerConnection(att.id, stream);
+            }
+          });
+
+          // Handle browser's native stop sharing button
+          screenTrack.onended = async () => {
+            console.log("[Presenter] screen sharing stopped via onended");
+            await handleStopScreenShare();
+          };
 
           broadcastChannelRef.current?.postMessage({
             type: 'SCREEN_SHARE_STARTED',
@@ -380,45 +533,53 @@ export default function VirtualTrainingDeliveryModal({
             isScreenSharing: true,
             shareType: 'screen'
           });
-
-          // Pre-connect to existing admitted attendees
-          admittedAttendees.forEach(att => {
-            initiatePeerConnection(att.id, stream);
-          });
-
-          stream.getVideoTracks()[0].onended = () => {
-            setScreenStream(null);
-            setIsScreenSharing(false);
-            stopSnapshotLoop();
-            broadcastChannelRef.current?.postMessage({
-              type: 'SCREEN_SHARE_STOPPED',
-              trainingId: training.id
-            });
-            updateTrainingLiveState(training.id, {
-              isScreenSharing: false,
-              shareType: 'slides',
-              screenSnapshot: ''
-            });
-          };
-        } else {
-          setIsScreenSharing(true);
-          setActiveSideTab('slides');
-          updateTrainingLiveState(training.id, {
-            isScreenSharing: true,
-            shareType: 'slides',
-            currentSlideIndex
-          });
         }
       } catch (err) {
-        setIsScreenSharing(true);
-        setActiveSideTab('slides');
-        updateTrainingLiveState(training.id, {
-          isScreenSharing: true,
-          shareType: 'slides',
-          currentSlideIndex
-        });
+        console.warn('[Presenter] Error starting screen share:', err);
       }
     }
+  };
+
+  const handleStopScreenShare = async () => {
+    console.log("[Presenter] screen sharing stopped");
+    if (screenStreamRef.current) {
+      screenStreamRef.current.getTracks().forEach(track => track.stop());
+      screenStreamRef.current = null;
+    }
+    setScreenStream(null);
+    setIsScreenSharing(false);
+    stopSnapshotLoop();
+
+    // Restore presenter's camera track using the same RTCRtpSender
+    const cameraTrack = cameraTrackRef.current;
+    if (cameraTrack) {
+      for (const [attendeeId, pc] of peerConnectionsRef.current.entries()) {
+        try {
+          const sender = pc.getSenders().find(s => s.track?.kind === "video");
+          if (sender) {
+            console.log(`[Presenter] restoring camera track for attendee ${attendeeId}`);
+            await sender.replaceTrack(cameraTrack);
+          }
+        } catch (e) {
+          console.warn(`[Presenter] Error restoring camera track for ${attendeeId}:`, e);
+        }
+      }
+    }
+
+    // Restore local video display
+    if (presenterCameraVideoRef.current && cameraStreamRef.current) {
+      presenterCameraVideoRef.current.srcObject = cameraStreamRef.current;
+    }
+
+    broadcastChannelRef.current?.postMessage({
+      type: 'SCREEN_SHARE_STOPPED',
+      trainingId: training.id
+    });
+    updateTrainingLiveState(training.id, {
+      isScreenSharing: false,
+      shareType: undefined,
+      screenSnapshot: ''
+    });
   };
 
   const handleSlideChange = (newIndex: number) => {
@@ -627,25 +788,29 @@ export default function VirtualTrainingDeliveryModal({
               </div>
             ) : (
               /* Case C: Trainer Stage Grid View */
-              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center relative">
-                {/* Trainer Avatar / Camera Box */}
-                <div className="w-32 h-32 sm:w-40 sm:h-40 rounded-full bg-gradient-to-tr from-[#0a66c2] to-[#38bdf8] flex items-center justify-center shadow-2xl p-1 border-4 border-slate-700/50 relative">
-                  <div className="w-full h-full rounded-full bg-[#0d1527] flex items-center justify-center overflow-hidden">
-                    {isCamOn ? (
-                      <div className="w-full h-full bg-[#0a66c2]/20 flex flex-col items-center justify-center">
-                        <Video className="w-12 h-12 text-[#38bdf8] animate-pulse" />
-                        <span className="text-[10px] font-bold text-slate-300 mt-1">Host Camera Active</span>
-                      </div>
-                    ) : (
-                      <div className="flex flex-col items-center justify-center text-slate-400">
-                        <VideoOff className="w-10 h-10 text-slate-500" />
-                        <span className="text-[10px] text-slate-500 mt-1">Camera Muted</span>
-                      </div>
-                    )}
+              <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center relative bg-slate-950">
+                {/* Trainer Camera Video Box */}
+                <div className="w-64 sm:w-80 h-44 sm:h-56 rounded-2xl bg-slate-900 border-2 border-slate-700/80 overflow-hidden shadow-2xl relative flex items-center justify-center">
+                  <video
+                    ref={(el) => {
+                      presenterCameraVideoRef.current = el;
+                      if (el && cameraStreamRef.current && el.srcObject !== cameraStreamRef.current) {
+                        el.srcObject = cameraStreamRef.current;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-black/70 backdrop-blur-md rounded text-[10px] font-bold text-white flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    Presenter Live Video
                   </div>
                   {isMicOn && (
-                    <span className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-[#090d16] flex items-center justify-center shadow">
-                      <Mic className="w-3 h-3 text-white" />
+                    <span className="absolute bottom-2.5 right-2.5 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow">
+                      <Mic className="w-3.5 h-3.5 text-white" />
                     </span>
                   )}
                 </div>
@@ -662,7 +827,7 @@ export default function VirtualTrainingDeliveryModal({
                     className="px-4 py-2 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition cursor-pointer"
                   >
                     <Monitor className="w-4 h-4" />
-                    <span>Share Screen or Slides</span>
+                    <span>Share Screen</span>
                   </button>
                   <button
                     type="button"
@@ -678,8 +843,8 @@ export default function VirtualTrainingDeliveryModal({
 
             {/* Picture-In-Picture: Host Camera Corner Overlay when Screen Sharing or in Slides */}
             {(isScreenSharing || activeSideTab === 'slides') && (
-              <div className="absolute bottom-4 right-4 w-44 h-32 bg-[#0a0f1d] border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl flex flex-col justify-between p-2.5 z-20">
-                <div className="flex justify-between items-center">
+              <div className="absolute bottom-4 right-4 w-44 h-32 bg-[#0a0f1d] border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl flex flex-col justify-between p-2 z-20">
+                <div className="flex justify-between items-center z-10">
                   <span className="text-[10px] font-bold text-slate-300 bg-black/60 px-2 py-0.5 rounded">
                     Host (You)
                   </span>
@@ -688,20 +853,22 @@ export default function VirtualTrainingDeliveryModal({
                   </div>
                 </div>
 
-                <div className="flex items-center justify-center my-auto">
-                  {isCamOn ? (
-                    <div className="text-center">
-                      <div className="w-10 h-10 rounded-full bg-[#0a66c2] mx-auto flex items-center justify-center text-xs font-bold">
-                        {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
-                      </div>
-                      <span className="text-[10px] text-slate-400 mt-1 block">Live Video</span>
-                    </div>
-                  ) : (
-                    <VideoOff className="w-6 h-6 text-slate-600" />
-                  )}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <video
+                    ref={(el) => {
+                      if (el && cameraStreamRef.current && el.srcObject !== cameraStreamRef.current) {
+                        el.srcObject = cameraStreamRef.current;
+                        el.play().catch(() => {});
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="w-full h-full object-cover"
+                  />
                 </div>
 
-                <div className="text-[9px] text-slate-400 truncate text-center">
+                <div className="z-10 text-[9px] text-slate-300 truncate text-center font-semibold bg-black/60 py-0.5 rounded">
                   {training.speaker}
                 </div>
               </div>
