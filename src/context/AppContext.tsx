@@ -1,5 +1,19 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { SmeProfile, mockSmes, Sale, InventoryItem, Expense, formatRWF, ProductItem, SaleItemSnapshot, MeasurementUnit } from '../lib/mockData';
+import {
+  SmeProfile,
+  mockSmes,
+  Sale,
+  InventoryItem,
+  Expense,
+  formatRWF,
+  ProductItem,
+  SaleItemSnapshot,
+  MeasurementUnit,
+  PurchaseTransaction,
+  CashInTransaction,
+  CashOutTransaction,
+  OtherActivity
+} from '../lib/mockData';
 import { apiRequest } from '../lib/api';
 
 export interface Opportunity {
@@ -57,6 +71,28 @@ export interface Application {
   aiSuggestions: string[];
 }
 
+export interface TrainingAttendee {
+  id: string;
+  name: string;
+  businessName: string;
+  sector: string;
+  avatar?: string;
+  status: 'waiting' | 'admitted' | 'declined';
+  handRaised?: boolean;
+  isMuted?: boolean;
+  joinedAt?: string;
+  cameraOn?: boolean;
+}
+
+export interface TrainingChatMessage {
+  id: string;
+  senderName: string;
+  senderRole: 'host' | 'attendee' | 'system';
+  avatar?: string;
+  text: string;
+  timestamp: string;
+}
+
 export interface Training {
   id: string;
   title: string;
@@ -64,12 +100,26 @@ export interface Training {
   date: string;
   time: string;
   speaker: string;
+  speakerRole?: string;
+  speakerOrg?: string;
   meetingLink: string;
   targetAudience: string[];
   participantsCount: number;
   attended: boolean;
   completed: boolean;
   hasCertificate: boolean;
+  status?: 'scheduled' | 'live' | 'completed';
+  opportunityId?: string;
+  opportunityTitle?: string;
+  curriculum?: string[];
+  sector?: string;
+  durationMinutes?: number;
+  maxCapacity?: number;
+  enrolled?: boolean;
+  enrolledAt?: string;
+  materials?: { title: string; url: string; size: string }[];
+  attendees?: TrainingAttendee[];
+  chatMessages?: TrainingChatMessage[];
 }
 
 interface Scenarios {
@@ -102,6 +152,14 @@ interface AppContextType {
   deleteInventoryItem: (smeId: string, itemId: string) => void;
   addExpense: (smeId: string, description: string, category: string, amount: number) => void;
   deleteExpense: (smeId: string, expenseId: number) => void;
+  addPurchase: (smeId: string, supplier: string, items: any[], invoiceRef?: string, paymentMethod?: string, notes?: string) => Promise<any>;
+  deletePurchase: (smeId: string, purchaseId: string | number) => void;
+  addCashIn: (smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string }) => void;
+  deleteCashIn: (smeId: string, id: string | number) => void;
+  addCashOut: (smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string }) => void;
+  deleteCashOut: (smeId: string, id: string | number) => void;
+  addOtherActivity: (smeId: string, data: { title: string; description?: string; date: string; status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold'; moneyInvolved: boolean; amount?: number; paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'N/A'; category?: string }) => void;
+  deleteOtherActivity: (smeId: string, id: string | number) => void;
   resetAll: () => void;
   
   // Products Master Catalog
@@ -146,7 +204,17 @@ interface AppContextType {
   applyForOpportunity: (oppId: string, smeId: string) => void;
   updateApplicationStatus: (appId: string, status: Application['status'], feedback?: string) => void;
   createTraining: (training: Omit<Training, 'id' | 'participantsCount' | 'attended' | 'completed' | 'hasCertificate'>) => void;
+  updateTraining: (trainingId: string, data: Partial<Training>) => void;
+  deleteTraining: (trainingId: string) => void;
   joinTraining: (trainingId: string) => void;
+  toggleTrainingEnrollment: (trainingId: string) => void;
+  startLiveTraining: (trainingId: string) => void;
+  endLiveTraining: (trainingId: string) => void;
+  requestJoinLiveTraining: (trainingId: string, attendee: Omit<TrainingAttendee, 'status' | 'joinedAt'>) => void;
+  admitAttendee: (trainingId: string, attendeeId: string) => void;
+  admitAllAttendees: (trainingId: string) => void;
+  toggleHandRaise: (trainingId: string, attendeeId: string) => void;
+  sendTrainingMessage: (trainingId: string, message: Omit<TrainingChatMessage, 'id' | 'timestamp'>) => void;
   bookmarkOpportunity: (oppId: string) => void;
 }
 
@@ -329,45 +397,101 @@ const initialApplications: Application[] = [
 const initialTrainings: Training[] = [
   {
     id: 'tr-1',
-    title: 'Financial Readiness & Tax Compliance',
+    title: 'Financial Readiness & Tax Compliance Masterclass',
     description: 'Learn how to properly prepare tax clearances, maintain clean financial ledgers, and leverage digital logs to unlock bank financing.',
-    date: '2026-08-12',
+    date: '2026-08-22',
     time: '10:00 AM - 12:00 PM',
-    speaker: 'Jean Paul Habimana (Senior Advisor, RRA)',
-    meetingLink: 'https://zoom.us/j/elevata-training-1',
-    targetAudience: ['Low Readiness SMEs', 'Retail', 'Agriculture'],
+    speaker: 'Jean Paul Habimana',
+    speakerRole: 'Senior Credit & Compliance Advisor',
+    speakerOrg: 'BPR Bank / RRA Taskforce',
+    meetingLink: 'https://elevata.live/rooms/tr-1',
+    targetAudience: ['Low Readiness SMEs', 'Retail', 'Agriculture', 'Wholesale'],
     participantsCount: 45,
     attended: false,
     completed: false,
-    hasCertificate: false
+    hasCertificate: true,
+    status: 'live',
+    opportunityId: 'opp-1',
+    opportunityTitle: 'Business Expansion Loan',
+    curriculum: [
+      'Understanding RRA Tax Clearance & EBM compliance requirements',
+      'Bank cash flow debt-service ratio (DSCR) calculations',
+      'Automated accounting records vs. physical manual logs',
+      'Step-by-step credit application dossier compilation'
+    ],
+    materials: [
+      { title: 'SME Tax Clearance Checklist.pdf', url: '#', size: '1.2 MB' },
+      { title: 'Credit Readiness Evaluation Sheet.xlsx', url: '#', size: '850 KB' },
+      { title: 'Presentation Slides - Session 1.pdf', url: '#', size: '3.4 MB' }
+    ],
+    attendees: [
+      { id: 'sme-1', name: 'Marie Kabera', businessName: "Marie's Kigali Fresh Mart", sector: 'Retail', avatar: 'MK', status: 'admitted', handRaised: false, cameraOn: true, joinedAt: '10:02 AM' },
+      { id: 'sme-2', name: 'Jean Bosco', businessName: 'Rwanda Agro-Processors Ltd', sector: 'Agriculture', avatar: 'JB', status: 'admitted', handRaised: true, cameraOn: false, joinedAt: '10:05 AM' },
+      { id: 'sme-3', name: 'David Mugisha', businessName: 'David Transport Haulage', sector: 'Logistics', avatar: 'DM', status: 'waiting', handRaised: false, cameraOn: true, joinedAt: '10:14 AM' },
+      { id: 'sme-4', name: 'Divine Mutoni', businessName: 'Gisenyi Tech Solutions', sector: 'Technology', avatar: 'DM', status: 'waiting', handRaised: false, cameraOn: false, joinedAt: '10:15 AM' }
+    ],
+    chatMessages: [
+      { id: 'm-1', senderName: 'Jean Paul Habimana (Trainer)', senderRole: 'host', text: 'Welcome everyone! We will begin the session on credit readiness dossier requirements in 2 minutes.', timestamp: '10:00 AM' },
+      { id: 'm-2', senderName: 'Marie Kabera', senderRole: 'attendee', avatar: 'MK', text: 'Good morning Jean Paul! Excited to attend from Kigali.', timestamp: '10:02 AM' },
+      { id: 'm-3', senderName: 'Jean Bosco', senderRole: 'attendee', avatar: 'JB', text: 'Does BPR require audited statements for agricultural cooperatives under 50M?', timestamp: '10:08 AM' }
+    ]
   },
   {
     id: 'tr-2',
     title: 'Scaling Agribusiness Operations in East Africa',
     description: 'A deep-dive workshop into modern inventory logistics, cooperative management, and obtaining processing certificates.',
-    date: '2026-08-15',
+    date: '2026-08-25',
     time: '02:00 PM - 04:30 PM',
-    speaker: 'Dr. Agnes Kalibata (Director, AgroGrow)',
-    meetingLink: 'https://zoom.us/j/elevata-training-2',
+    speaker: 'Dr. Agnes Kalibata',
+    speakerRole: 'Director of Agribusiness Scaling',
+    speakerOrg: 'AgroGrow Rwanda',
+    meetingLink: 'https://elevata.live/rooms/tr-2',
     targetAudience: ['Agriculture', 'High Growth SMEs'],
     participantsCount: 68,
     attended: false,
     completed: false,
-    hasCertificate: false
+    hasCertificate: true,
+    status: 'scheduled',
+    opportunityId: 'opp-2',
+    opportunityTitle: 'Agribusiness Growth Grant',
+    curriculum: [
+      'Seasonal working capital structuring',
+      'Cold chain storage and harvest losses reduction',
+      'Contract farming agreements with commercial buyers'
+    ],
+    materials: [
+      { title: 'Agri Supply Chain Handbook.pdf', url: '#', size: '4.1 MB' }
+    ],
+    attendees: [
+      { id: 'sme-2', name: 'Jean Bosco', businessName: 'Rwanda Agro-Processors Ltd', sector: 'Agriculture', avatar: 'JB', status: 'admitted', joinedAt: '02:00 PM' }
+    ],
+    chatMessages: []
   },
   {
     id: 'tr-3',
     title: 'SME Digitization & E-commerce Strategy',
     description: 'Interactive session outlining how digital point-of-sale systems can automate cashflow tracking and generate pre-approved credit files.',
-    date: '2026-08-19',
+    date: '2026-08-28',
     time: '09:00 AM - 11:30 AM',
-    speaker: 'Divine Mutoni (CEO, Gisenyi Tech)',
-    meetingLink: 'https://zoom.us/j/elevata-training-3',
+    speaker: 'Divine Mutoni',
+    speakerRole: 'Head of Fintech Integrations',
+    speakerOrg: 'Gisenyi Tech Solutions',
+    meetingLink: 'https://elevata.live/rooms/tr-3',
     targetAudience: ['Women', 'Retail', 'Technology'],
     participantsCount: 32,
-    attended: false,
-    completed: false,
-    hasCertificate: false
+    attended: true,
+    completed: true,
+    hasCertificate: true,
+    status: 'completed',
+    curriculum: [
+      'Setting up digital POS merchant wallets',
+      'Automated transaction reporting for credit scoring'
+    ],
+    materials: [
+      { title: 'Digital Rails Playbook.pdf', url: '#', size: '2.5 MB' }
+    ],
+    attendees: [],
+    chatMessages: []
   }
 ];
 
@@ -1154,6 +1278,288 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
+  const addPurchase = async (smeId: string, supplier: string, items: any[], invoiceRef?: string, paymentMethod: string = 'Cash', notes?: string) => {
+    const totalAmount = items.reduce((sum, item) => sum + (Number(item.quantity || 0) * Number(item.unitPrice || 0)), 0);
+    const newPurchase: PurchaseTransaction = {
+      id: `purch-${Date.now()}`,
+      supplier,
+      invoiceRef,
+      paymentMethod,
+      totalAmount,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: 'Completed',
+      items: items.map(it => ({
+        productId: it.productId,
+        productName: it.name || it.productName,
+        unit: it.unit || 'pcs',
+        quantity: Number(it.quantity || 0),
+        unitPrice: Number(it.unitPrice || 0),
+        total: Number(it.quantity || 0) * Number(it.unitPrice || 0)
+      })),
+      notes
+    };
+
+    try {
+      await recordStockIntake(
+        supplier,
+        items.map(it => ({
+          productId: it.productId,
+          productName: it.name || it.productName,
+          unit: it.unit || 'pcs',
+          quantity: Number(it.quantity || 0),
+          unitPrice: Number(it.unitPrice || 0)
+        })),
+        invoiceRef ? `Invoice: ${invoiceRef}` : notes
+      );
+    } catch (e) {
+      console.warn('Stock intake backend fallback:', e);
+    }
+
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        const updatedAlerts = [
+          {
+            id: `alert-purch-${Date.now()}`,
+            type: 'info' as const,
+            text: `Purchase recorded: ${items.length} product(s) from ${supplier}. Total outflow ${formatRWF(totalAmount)}.`
+          },
+          ...sme.riskAlerts
+        ];
+
+        const updatedMonthlyData = [...sme.monthlyData];
+        if (updatedMonthlyData.length > 0) {
+          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
+          updatedMonthlyData[updatedMonthlyData.length - 1] = {
+            ...currentMonth,
+            outflow: currentMonth.outflow + totalAmount
+          };
+        }
+
+        return {
+          ...sme,
+          currentBalance: Math.max(0, sme.currentBalance - totalAmount),
+          riskAlerts: updatedAlerts,
+          monthlyData: updatedMonthlyData,
+          purchases: [newPurchase, ...(sme.purchases || [])]
+        };
+      }
+      return sme;
+    }));
+
+    return newPurchase;
+  };
+
+  const deletePurchase = (smeId: string, purchaseId: string | number) => {
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        const pToDelete = (sme.purchases || []).find(p => p.id === purchaseId);
+        if (!pToDelete) return sme;
+
+        const updatedMonthlyData = [...sme.monthlyData];
+        if (updatedMonthlyData.length > 0) {
+          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
+          updatedMonthlyData[updatedMonthlyData.length - 1] = {
+            ...currentMonth,
+            outflow: Math.max(0, currentMonth.outflow - pToDelete.totalAmount)
+          };
+        }
+
+        return {
+          ...sme,
+          currentBalance: sme.currentBalance + pToDelete.totalAmount,
+          monthlyData: updatedMonthlyData,
+          purchases: (sme.purchases || []).filter(p => p.id !== purchaseId)
+        };
+      }
+      return sme;
+    }));
+  };
+
+  const addCashIn = (smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string }) => {
+    const newCashIn: CashInTransaction = {
+      id: `cashin-${Date.now()}`,
+      amount: data.amount,
+      source: data.source,
+      reason: data.reason,
+      category: data.category || 'Other Inflow',
+      paymentMethod: data.paymentMethod,
+      date: data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      notes: data.notes
+    };
+
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        const updatedAlerts = [
+          {
+            id: `alert-cashin-${Date.now()}`,
+            type: 'info' as const,
+            text: `Cash Inflow logged: ${formatRWF(data.amount)} received from ${data.source} (${data.reason}).`
+          },
+          ...sme.riskAlerts
+        ];
+
+        const updatedMonthlyData = [...sme.monthlyData];
+        if (updatedMonthlyData.length > 0) {
+          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
+          updatedMonthlyData[updatedMonthlyData.length - 1] = {
+            ...currentMonth,
+            inflow: currentMonth.inflow + data.amount
+          };
+        }
+
+        return {
+          ...sme,
+          currentBalance: sme.currentBalance + data.amount,
+          riskAlerts: updatedAlerts,
+          monthlyData: updatedMonthlyData,
+          cashIns: [newCashIn, ...(sme.cashIns || [])]
+        };
+      }
+      return sme;
+    }));
+  };
+
+  const deleteCashIn = (smeId: string, id: string | number) => {
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        const item = (sme.cashIns || []).find(c => c.id === id);
+        if (!item) return sme;
+
+        const updatedMonthlyData = [...sme.monthlyData];
+        if (updatedMonthlyData.length > 0) {
+          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
+          updatedMonthlyData[updatedMonthlyData.length - 1] = {
+            ...currentMonth,
+            inflow: Math.max(0, currentMonth.inflow - item.amount)
+          };
+        }
+
+        return {
+          ...sme,
+          currentBalance: Math.max(0, sme.currentBalance - item.amount),
+          monthlyData: updatedMonthlyData,
+          cashIns: (sme.cashIns || []).filter(c => c.id !== id)
+        };
+      }
+      return sme;
+    }));
+  };
+
+  const addCashOut = (smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string }) => {
+    const newCashOut: CashOutTransaction = {
+      id: `cashout-${Date.now()}`,
+      amount: data.amount,
+      category: data.category,
+      description: data.description,
+      paymentMethod: data.paymentMethod,
+      date: data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      notes: data.notes
+    };
+
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        const updatedAlerts = [
+          {
+            id: `alert-cashout-${Date.now()}`,
+            type: 'info' as const,
+            text: `Cash Outflow logged: ${formatRWF(data.amount)} for ${data.description} (${data.category}).`
+          },
+          ...sme.riskAlerts
+        ];
+
+        const updatedMonthlyData = [...sme.monthlyData];
+        if (updatedMonthlyData.length > 0) {
+          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
+          updatedMonthlyData[updatedMonthlyData.length - 1] = {
+            ...currentMonth,
+            outflow: currentMonth.outflow + data.amount
+          };
+        }
+
+        return {
+          ...sme,
+          currentBalance: Math.max(0, sme.currentBalance - data.amount),
+          riskAlerts: updatedAlerts,
+          monthlyData: updatedMonthlyData,
+          cashOuts: [newCashOut, ...(sme.cashOuts || [])]
+        };
+      }
+      return sme;
+    }));
+  };
+
+  const deleteCashOut = (smeId: string, id: string | number) => {
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        const item = (sme.cashOuts || []).find(c => c.id === id);
+        if (!item) return sme;
+
+        const updatedMonthlyData = [...sme.monthlyData];
+        if (updatedMonthlyData.length > 0) {
+          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
+          updatedMonthlyData[updatedMonthlyData.length - 1] = {
+            ...currentMonth,
+            outflow: Math.max(0, currentMonth.outflow - item.amount)
+          };
+        }
+
+        return {
+          ...sme,
+          currentBalance: sme.currentBalance + item.amount,
+          monthlyData: updatedMonthlyData,
+          cashOuts: (sme.cashOuts || []).filter(c => c.id !== id)
+        };
+      }
+      return sme;
+    }));
+  };
+
+  const addOtherActivity = (smeId: string, data: { title: string; description?: string; date: string; status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold'; moneyInvolved: boolean; amount?: number; paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'N/A'; category?: string }) => {
+    const newAct: OtherActivity = {
+      id: `act-${Date.now()}`,
+      title: data.title,
+      description: data.description,
+      date: data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      status: data.status || 'Completed',
+      moneyInvolved: data.moneyInvolved,
+      amount: data.amount,
+      paymentStatus: data.paymentStatus,
+      category: data.category
+    };
+
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        const updatedAlerts = [
+          {
+            id: `alert-act-${Date.now()}`,
+            type: 'info' as const,
+            text: `Milestone logged: ${data.title} marked as ${data.status || 'Completed'}.`
+          },
+          ...sme.riskAlerts
+        ];
+
+        return {
+          ...sme,
+          riskAlerts: updatedAlerts,
+          otherActivities: [newAct, ...(sme.otherActivities || [])]
+        };
+      }
+      return sme;
+    }));
+  };
+
+  const deleteOtherActivity = (smeId: string, id: string | number) => {
+    setSmes(prev => prev.map(sme => {
+      if (sme.id === smeId) {
+        return {
+          ...sme,
+          otherActivities: (sme.otherActivities || []).filter(a => a.id !== id)
+        };
+      }
+      return sme;
+    }));
+  };
+
   const publishOpportunity = async (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => {
     let createdOpp: Opportunity = {
       ...opp,
@@ -1240,9 +1646,49 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       participantsCount: 0,
       attended: false,
       completed: false,
-      hasCertificate: false
+      hasCertificate: true,
+      status: 'scheduled',
+      attendees: [],
+      chatMessages: [
+        {
+          id: `m-init-${Date.now()}`,
+          senderName: training.speaker || 'Trainer',
+          senderRole: 'host',
+          text: `Welcome to ${training.title}! The session will start on ${training.date} at ${training.time}.`,
+          timestamp: 'Scheduled'
+        }
+      ]
     };
     setTrainings(prev => [newTr, ...prev]);
+  };
+
+  const updateTraining = (trainingId: string, data: Partial<Training>) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        return { ...t, ...data };
+      }
+      return t;
+    }));
+  };
+
+  const deleteTraining = (trainingId: string) => {
+    setTrainings(prev => prev.filter(t => t.id !== trainingId));
+  };
+
+  const toggleTrainingEnrollment = (trainingId: string) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        const isNowEnrolled = !t.enrolled;
+        const countDiff = isNowEnrolled ? 1 : -1;
+        return {
+          ...t,
+          enrolled: isNowEnrolled,
+          enrolledAt: isNowEnrolled ? new Date().toISOString() : undefined,
+          participantsCount: Math.max(0, t.participantsCount + countDiff)
+        };
+      }
+      return t;
+    }));
   };
 
   const joinTraining = (trainingId: string) => {
@@ -1250,10 +1696,133 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (t.id === trainingId) {
         return {
           ...t,
-          participantsCount: t.participantsCount + 1,
+          participantsCount: t.participantsCount + (t.attended ? 0 : 1),
+          enrolled: true,
           attended: true,
           completed: true,
           hasCertificate: true
+        };
+      }
+      return t;
+    }));
+  };
+
+  const startLiveTraining = (trainingId: string) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        return {
+          ...t,
+          status: 'live'
+        };
+      }
+      return t;
+    }));
+  };
+
+  const endLiveTraining = (trainingId: string) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        return {
+          ...t,
+          status: 'completed',
+          completed: true,
+          attended: true
+        };
+      }
+      return t;
+    }));
+  };
+
+  const requestJoinLiveTraining = (trainingId: string, attendee: Omit<TrainingAttendee, 'status' | 'joinedAt'>) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        const existingAttendees = t.attendees || [];
+        const found = existingAttendees.find(a => a.id === attendee.id);
+        if (found) {
+          return t;
+        }
+        const newAttendee: TrainingAttendee = {
+          ...attendee,
+          status: 'waiting',
+          joinedAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          handRaised: false,
+          isMuted: false,
+          cameraOn: true
+        };
+        return {
+          ...t,
+          attendees: [...existingAttendees, newAttendee],
+          participantsCount: t.participantsCount + 1,
+          enrolled: true
+        };
+      }
+      return t;
+    }));
+  };
+
+  const admitAttendee = (trainingId: string, attendeeId: string) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        const updatedAttendees = (t.attendees || []).map(a => {
+          if (a.id === attendeeId) {
+            return { ...a, status: 'admitted' as const };
+          }
+          return a;
+        });
+        return {
+          ...t,
+          attendees: updatedAttendees
+        };
+      }
+      return t;
+    }));
+  };
+
+  const admitAllAttendees = (trainingId: string) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        const updatedAttendees = (t.attendees || []).map(a => ({
+          ...a,
+          status: 'admitted' as const
+        }));
+        return {
+          ...t,
+          attendees: updatedAttendees
+        };
+      }
+      return t;
+    }));
+  };
+
+  const toggleHandRaise = (trainingId: string, attendeeId: string) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        const updatedAttendees = (t.attendees || []).map(a => {
+          if (a.id === attendeeId) {
+            return { ...a, handRaised: !a.handRaised };
+          }
+          return a;
+        });
+        return {
+          ...t,
+          attendees: updatedAttendees
+        };
+      }
+      return t;
+    }));
+  };
+
+  const sendTrainingMessage = (trainingId: string, message: Omit<TrainingChatMessage, 'id' | 'timestamp'>) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        const newMsg: TrainingChatMessage = {
+          ...message,
+          id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        return {
+          ...t,
+          chatMessages: [...(t.chatMessages || []), newMsg]
         };
       }
       return t;
@@ -1315,6 +1884,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       deleteInventoryItem,
       addExpense,
       deleteExpense,
+      addPurchase,
+      deletePurchase,
+      addCashIn,
+      deleteCashIn,
+      addCashOut,
+      deleteCashOut,
+      addOtherActivity,
+      deleteOtherActivity,
       resetAll,
       products,
       createProduct,
@@ -1332,7 +1909,17 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       applyForOpportunity,
       updateApplicationStatus,
       createTraining,
+      updateTraining,
+      deleteTraining,
       joinTraining,
+      toggleTrainingEnrollment,
+      startLiveTraining,
+      endLiveTraining,
+      requestJoinLiveTraining,
+      admitAttendee,
+      admitAllAttendees,
+      toggleHandRaise,
+      sendTrainingMessage,
       bookmarkOpportunity
     }}>
       {children}

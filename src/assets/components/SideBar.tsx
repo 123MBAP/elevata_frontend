@@ -17,7 +17,13 @@ import {
   Bot,
   Layers,
   Megaphone,
-  Landmark
+  Landmark,
+  Activity,
+  Truck,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Star,
+  GraduationCap
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -49,8 +55,38 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     };
   }, [isOpen, onClose]);
 
+  const isActivitiesRoute =
+    location.pathname === '/activities' ||
+    location.pathname === '/business-activities' ||
+    location.pathname === '/sales' ||
+    location.pathname === '/expenses';
+
+  const getActiveActivitySubtab = () => {
+    if (!isActivitiesRoute) return null;
+    const searchParams = new URLSearchParams(location.search);
+    const tab = searchParams.get('tab');
+    if (tab) {
+      if (tab === 'expenses') return 'cash_out';
+      return tab;
+    }
+    if (location.pathname === '/sales') return 'sales';
+    if (location.pathname === '/expenses') return 'cash_out';
+    return 'sales';
+  };
+
+  const currentActivitySubtab = getActiveActivitySubtab();
+
+  const activitySubtabs = [
+    { id: 'sales', label: 'Sales', path: '/activities?tab=sales', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
+    { id: 'purchases', label: 'Purchases', path: '/activities?tab=purchases', icon: <Truck className="w-3.5 h-3.5" /> },
+    { id: 'cash_in', label: 'Cash In', path: '/activities?tab=cash_in', icon: <ArrowDownLeft className="w-3.5 h-3.5" /> },
+    { id: 'cash_out', label: 'Cash Out', path: '/activities?tab=cash_out', icon: <ArrowUpRight className="w-3.5 h-3.5" /> },
+    { id: 'other', label: 'Other Activities', path: '/activities?tab=other', icon: <Star className="w-3.5 h-3.5" /> }
+  ];
+
   const isActive = (path: string) => {
-    return location.pathname === path
+    const isMatch = location.pathname === path || (path === '/activities' && isActivitiesRoute);
+    return isMatch
       ? 'bg-emerald-50 text-emerald-700 font-bold border-l-4 border-emerald-500 rounded-r-lg'
       : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-4 border-transparent transition duration-150';
   };
@@ -63,10 +99,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const smeLinks = [
     { path: '/', label: 'SME Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { path: '/profile', label: 'Business Profile', icon: <Briefcase className="w-4 h-4" /> },
-    { path: '/inventory', label: 'Inventory Catalog', icon: <Package className="w-4 h-4" /> },
-    { path: '/sales', label: 'Record Sales', icon: <ShoppingBag className="w-4 h-4" /> },
-    { path: '/expenses', label: 'Expenses', icon: <FileBarChart className="w-4 h-4" /> },
+    //{ path: '/inventory', label: 'Inventory Catalog', icon: <Package className="w-4 h-4" /> },
+    { path: '/activities', label: 'Business Activities', icon: <Activity className="w-4 h-4" /> },
     { path: '/opportunity-hub', label: 'Opportunity Hub', icon: <Target className="w-4 h-4" /> },
+    { path: '/trainings', label: 'Virtual Academy', icon: <GraduationCap className="w-4 h-4" /> },
     { path: '/reports', label: 'Financial Reports', icon: <FileBarChart className="w-4 h-4" /> }
   ];
 
@@ -80,6 +116,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     { path: '/ai-bot', label: 'AI Banker Copilot', icon: <Bot className="w-4 h-4" /> },
     { path: '/banker', label: 'Bank Officer Panel', icon: <Landmark className="w-4 h-4" /> },
     { path: '/banker/publisher', label: 'Opportunity Publisher', icon: <Megaphone className="w-4 h-4" /> },
+    { path: '/banker/trainings', label: 'Training Manager', icon: <GraduationCap className="w-4 h-4" /> },
     { path: '/banker/applications', label: 'Applications', icon: <FileText className="w-4 h-4" /> },
     { path: '/banker/monitoring', label: 'SMEs Monitoring', icon: <LayoutDashboard className="w-4 h-4" /> }
   ];
@@ -108,16 +145,55 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             <div>
               <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">SME Workspace</h3>
               <div className="space-y-1">
-                {smeLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
+                {smeLinks.map((link) => {
+                  if (link.path === '/activities') {
+                    return (
+                      <div key={link.path} className="space-y-1">
+                        <Link
+                          to="/activities"
+                          className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <span>{link.icon}</span>
+                            <span>{link.label}</span>
+                          </div>
+                        </Link>
+
+                        {/* Nested Subtabs inside Business Activities */}
+                        <div className="ml-3 pl-3 py-1 space-y-0.5 border-l-2 border-emerald-200/80 my-1">
+                          {activitySubtabs.map((sub) => {
+                            const isSubActive = isActivitiesRoute && currentActivitySubtab === sub.id;
+                            return (
+                              <Link
+                                key={sub.id}
+                                to={sub.path}
+                                className={`flex items-center space-x-2.5 px-2.5 py-1.5 rounded-lg text-[11px] transition-all duration-150 ${
+                                  isSubActive
+                                    ? 'bg-[#0a66c2]/10 text-[#0a66c2] font-bold border-l-2 border-[#0a66c2]'
+                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
+                                }`}
+                              >
+                                <span className={isSubActive ? 'text-[#0a66c2]' : 'text-slate-400'}>{sub.icon}</span>
+                                <span>{sub.label}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <Link
+                      key={link.path}
+                      to={link.path}
+                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
+                    >
+                      <span>{link.icon}</span>
+                      <span>{link.label}</span>
+                    </Link>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -251,17 +327,56 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div>
                 <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">SME Workspace</h3>
                 <div className="space-y-1">
-                  {smeLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
-                      onClick={onClose}
-                    >
-                      <span>{link.icon}</span>
-                      <span>{link.label}</span>
-                    </Link>
-                  ))}
+                  {smeLinks.map((link) => {
+                    if (link.path === '/activities') {
+                      return (
+                        <div key={link.path} className="space-y-1">
+                          <Link
+                            to="/activities"
+                            className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
+                            onClick={onClose}
+                          >
+                            <span>{link.icon}</span>
+                            <span>{link.label}</span>
+                          </Link>
+
+                          {/* Mobile Subtabs */}
+                          <div className="ml-3 pl-3 py-1 space-y-0.5 border-l-2 border-emerald-200/80 my-1">
+                            {activitySubtabs.map((sub) => {
+                              const isSubActive = isActivitiesRoute && currentActivitySubtab === sub.id;
+                              return (
+                                <Link
+                                  key={sub.id}
+                                  to={sub.path}
+                                  className={`flex items-center space-x-2.5 px-2 py-1.5 rounded-lg text-[11px] transition-all duration-150 ${
+                                    isSubActive
+                                      ? 'bg-[#0a66c2]/10 text-[#0a66c2] font-bold border-l-2 border-[#0a66c2]'
+                                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
+                                  }`}
+                                  onClick={onClose}
+                                >
+                                  <span className={isSubActive ? 'text-[#0a66c2]' : 'text-slate-400'}>{sub.icon}</span>
+                                  <span>{sub.label}</span>
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <Link
+                        key={link.path}
+                        to={link.path}
+                        className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
+                        onClick={onClose}
+                      >
+                        <span>{link.icon}</span>
+                        <span>{link.label}</span>
+                      </Link>
+                    );
+                  })}
                 </div>
               </div>
             )}

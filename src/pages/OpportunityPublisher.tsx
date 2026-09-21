@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatRWF } from '../lib/mockData';
 import { apiRequest } from '../lib/api';
@@ -46,6 +47,7 @@ import logo from '../assets/images/elevata_logo.png';
 import SelectOpportunityTypeModal, { OpportunityType as ModalOpportunityType } from '../assets/components/SelectOpportunityTypeModal';
 import PublishOpportunityForm from '../assets/components/PublishOpportunityForm';
 import FormattedText from '../assets/components/ui/FormattedText';
+import VirtualTrainingDeliveryModal from '../assets/components/VirtualTrainingDeliveryModal';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -95,6 +97,7 @@ export default function OpportunityPublisher() {
 
   // Dynamic business categories from DB
   const [availableCategories, setAvailableCategories] = useState<{ id: string; businessType: string }[]>(DEFAULT_CATEGORIES);
+  const [activeDeliveryTraining, setActiveDeliveryTraining] = useState<typeof trainings[0] | null>(null);
 
   useEffect(() => {
     async function loadCategories() {
@@ -874,57 +877,97 @@ export default function OpportunityPublisher() {
 
       {/* Virtual Training Manager Section */}
       <div className="pt-2 space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
           <div>
             <h3 className="text-xs font-bold text-[#181818] uppercase tracking-wider">Virtual Training Manager</h3>
             <p className="text-[11px] text-[#5e5e5e] mt-0.5 font-sans">Schedule interactive capacity sessions to increase SME credit worthiness.</p>
           </div>
-          <button
-            onClick={() => {
-              setTrTitle('');
-              setTrDescription('');
-              setIsTrainingModalOpen(true);
-            }}
-            className="px-4 py-1.5 bg-white hover:bg-[#f3f2f0] border border-[#666666] rounded-full text-xs font-semibold text-[#181818] transition-colors shadow-2xs"
-          >
-            Create Training Session
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/banker/trainings"
+              className="px-4 py-1.5 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-full text-xs font-bold transition-colors shadow-2xs flex items-center gap-1.5"
+            >
+              <GraduationCap className="w-3.5 h-3.5" />
+              <span>Full Training Studio</span>
+            </Link>
+            <button
+              onClick={() => {
+                setTrTitle('');
+                setTrDescription('');
+                setIsTrainingModalOpen(true);
+              }}
+              className="px-4 py-1.5 bg-white hover:bg-[#f3f2f0] border border-[#666666] rounded-full text-xs font-semibold text-[#181818] transition-colors shadow-2xs"
+            >
+              Create Training Session
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Active trainings list */}
           <div className="lg:col-span-2 space-y-3">
-            {trainings.map((tr) => (
-              <div key={tr.id} className="p-4 border border-[#e0e0e0] rounded-[10px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-bold text-[#181818]">{tr.title}</h4>
-                    <span className="bg-[#0a66c2]/10 text-[#0a66c2] text-[9px] px-2 py-0.5 rounded-full border border-[#0a66c2]/20 uppercase tracking-wider font-bold">
-                      Virtual
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-[#5e5e5e] line-clamp-1">{tr.description}</p>
-                  <div className="flex items-center gap-3 text-[11px] text-[#717171] pt-1 font-sans">
-                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-[#8c8c8c]" /> {tr.date} ({tr.time})</span>
-                    <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-[#8c8c8c]" /> {tr.speaker}</span>
-                  </div>
-                </div>
+            {trainings.map((tr) => {
+              const isLive = tr.status === 'live';
+              const isCompleted = tr.status === 'completed';
+              const waitingCount = tr.attendees?.filter(a => a.status === 'waiting').length || 0;
 
-                <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-                  <div className="text-right text-xs font-mono">
-                    <span className="block font-bold text-[#181818]">{tr.participantsCount} registered</span>
-                    <span className="text-[#717171] text-[11px]">Attendance rate: 85%</span>
+              return (
+                <div key={tr.id} className="p-4 border border-[#e0e0e0] rounded-[10px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] transition-all flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="text-xs font-bold text-[#181818]">{tr.title}</h4>
+                      {isLive ? (
+                        <span className="bg-red-500/10 text-red-600 text-[9px] px-2 py-0.5 rounded-full border border-red-500/30 uppercase tracking-wider font-bold flex items-center gap-1 animate-pulse font-mono">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" /> LIVE NOW
+                        </span>
+                      ) : isCompleted ? (
+                        <span className="bg-emerald-500/10 text-emerald-700 text-[9px] px-2 py-0.5 rounded-full border border-emerald-500/20 uppercase tracking-wider font-bold">
+                          Completed
+                        </span>
+                      ) : (
+                        <span className="bg-[#0a66c2]/10 text-[#0a66c2] text-[9px] px-2 py-0.5 rounded-full border border-[#0a66c2]/20 uppercase tracking-wider font-bold">
+                          Scheduled
+                        </span>
+                      )}
+                      {waitingCount > 0 && (
+                        <span className="bg-amber-500/10 text-amber-700 border border-amber-500/30 text-[9px] font-bold px-1.5 py-0.2 rounded-full">
+                          {waitingCount} waiting
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-[#5e5e5e] line-clamp-1">{tr.description}</p>
+                    <div className="flex items-center gap-3 text-[11px] text-[#717171] pt-1 font-sans">
+                      <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-[#8c8c8c]" /> {tr.date} ({tr.time})</span>
+                      <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-[#8c8c8c]" /> {tr.speaker}</span>
+                    </div>
                   </div>
-                  
-                  <button
-                    onClick={() => triggerToast(`Invited target audience for: ${tr.title}`)}
-                    className="px-3.5 py-1.5 border border-[#666666] hover:bg-[#f3f2f0] text-xs font-semibold text-[#181818] rounded-full transition-colors"
-                  >
-                    Invite Audience
-                  </button>
+
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                    <div className="text-right text-xs font-mono mr-1">
+                      <span className="block font-bold text-[#181818]">{tr.participantsCount} enrolled</span>
+                      <span className="text-[#717171] text-[10px]">Attended: {tr.attendees?.filter(a=>a.status==='admitted').length || 0}</span>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={() => setActiveDeliveryTraining(tr)}
+                      className="px-3.5 py-1.5 bg-[#0a66c2] hover:bg-[#004182] text-xs font-bold text-white rounded-full transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                    >
+                      <Video className="w-3.5 h-3.5" />
+                      <span>{isLive ? 'Enter Live Room' : 'Deliver Training'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => triggerToast(`Invited target SME audience for: ${tr.title}`)}
+                      className="px-3 py-1.5 border border-[#666666] hover:bg-[#f3f2f0] text-xs font-semibold text-[#181818] rounded-full transition-colors cursor-pointer"
+                    >
+                      Invite
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* AI Training Impact & Auto Participant recommendation */}
@@ -1084,6 +1127,17 @@ export default function OpportunityPublisher() {
             </div>
           </form>
         </div>
+      )}
+
+      {/* LIVE VIRTUAL TRAINING DELIVERY MODAL (HOST / TRAINER WORKSPACE) */}
+      {activeDeliveryTraining && (
+        <VirtualTrainingDeliveryModal
+          training={activeDeliveryTraining}
+          onClose={() => setActiveDeliveryTraining(null)}
+          onComplete={() => {
+            triggerToast('Training session concluded. Certificates issued to all attendees.', 'success');
+          }}
+        />
       )}
     </div>
   );

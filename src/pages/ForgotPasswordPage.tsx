@@ -87,7 +87,7 @@ export default function ForgotPasswordPage() {
     <div className="relative flex min-h-dvh w-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_#f7f9fc_0%,_#eef3f9_45%,_#e8eef7_100%)] p-3 font-sans sm:p-4">
       {/* Light Overlay */}
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.65),rgba(255,255,255,0.1))]" />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -106,7 +106,7 @@ export default function ForgotPasswordPage() {
             Reset Password
           </h2>
           <p className="text-[0.9rem] text-[#64748b] mt-1 leading-relaxed max-w-[320px]">
-            {step === 1 
+            {step === 1
               ? "Enter your email address to receive a 6-digit verification code."
               : `Enter the code sent to ${email} and your new password.`}
           </p>

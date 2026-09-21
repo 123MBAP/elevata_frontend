@@ -122,9 +122,8 @@ export default function LoginPage() {
               onClick={() => setRememberMe(!rememberMe)}
             >
               <div
-                className={`flex h-5 w-5 items-center justify-center rounded-[3px] transition-colors ${
-                  rememberMe ? 'bg-[#057642]' : 'border border-[#666666] bg-white'
-                }`}
+                className={`flex h-5 w-5 items-center justify-center rounded-[3px] transition-colors ${rememberMe ? 'bg-[#057642]' : 'border border-[#666666] bg-white'
+                  }`}
               >
                 {rememberMe && <Check className="h-3.5 w-3.5 stroke-[3] text-white" />}
               </div>

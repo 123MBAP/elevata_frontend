@@ -77,6 +77,61 @@ export interface Expense {
   date: string;
 }
 
+export interface PurchaseItemSnapshot {
+  id?: string;
+  productId?: string;
+  productName: string;
+  unit: string;
+  quantity: number;
+  unitPrice: number;
+  total: number;
+}
+
+export interface PurchaseTransaction {
+  id: string | number;
+  supplier: string;
+  invoiceRef?: string;
+  paymentMethod?: string;
+  totalAmount: number;
+  date: string;
+  status: 'Completed' | 'Pending' | 'Partial';
+  items?: PurchaseItemSnapshot[];
+  notes?: string;
+}
+
+export interface CashInTransaction {
+  id: string | number;
+  amount: number;
+  source: string;
+  reason: string;
+  category?: string;
+  paymentMethod: string;
+  date: string;
+  notes?: string;
+}
+
+export interface CashOutTransaction {
+  id: string | number;
+  amount: number;
+  category: string;
+  description: string;
+  paymentMethod: string;
+  date: string;
+  notes?: string;
+}
+
+export interface OtherActivity {
+  id: string | number;
+  title: string;
+  description?: string;
+  date: string;
+  status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold';
+  moneyInvolved: boolean;
+  amount?: number;
+  paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'N/A';
+  category?: string;
+}
+
 export interface SmeProfile {
   id: string;
   name: string;
@@ -95,6 +150,10 @@ export interface SmeProfile {
   monthlyData: MonthlyFinancial[];
   sales: Sale[];
   expenses: Expense[];
+  purchases?: PurchaseTransaction[];
+  cashIns?: CashInTransaction[];
+  cashOuts?: CashOutTransaction[];
+  otherActivities?: OtherActivity[];
   age: number;
 }
 

@@ -5,7 +5,7 @@ import { formatRWF, ProductItem } from '../lib/mockData';
 import { Button } from '../assets/components/ui/button';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Input } from '../assets/components/ui/input';
-import CreateProductModal from '../assets/components/CreateProductModal';
+import CreateProductModal, { UNIT_OPTIONS } from '../assets/components/CreateProductModal';
 import EditProductModal from '../assets/components/EditProductModal';
 import {
   Package,
@@ -160,7 +160,7 @@ export default function Inventory() {
   // Filter products
   const filteredProducts = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          (p.description || '').toLowerCase().includes(searchTerm.toLowerCase());
+      (p.description || '').toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'All' || p.category === selectedCategory;
     const matchesStatus = selectedStatus === 'All' || p.status === selectedStatus;
     return matchesSearch && matchesCategory && matchesStatus;
@@ -285,11 +285,10 @@ export default function Inventory() {
       <div className="flex border-b border-slate-200 bg-white px-4 rounded-t-2xl">
         <button
           onClick={() => setActiveTab('products')}
-          className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${
-            activeTab === 'products'
+          className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${activeTab === 'products'
               ? 'border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-lg'
               : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+            }`}
         >
           <Package className="w-4 h-4" />
           <span>Master Products List ({products.length})</span>
@@ -297,11 +296,10 @@ export default function Inventory() {
 
         <button
           onClick={() => setActiveTab('intake')}
-          className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${
-            activeTab === 'intake'
+          className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${activeTab === 'intake'
               ? 'border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-lg'
               : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+            }`}
         >
           <Truck className="w-4 h-4" />
           <span>Stock Intake & Restock</span>
@@ -309,11 +307,10 @@ export default function Inventory() {
 
         <button
           onClick={() => setActiveTab('alerts')}
-          className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${
-            activeTab === 'alerts'
+          className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${activeTab === 'alerts'
               ? 'border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-lg'
               : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
+            }`}
         >
           <AlertTriangle className="w-4 h-4" />
           <span>Stock Health & Alerts ({lowStockCount})</span>
@@ -552,9 +549,20 @@ export default function Inventory() {
                             </select>
                           </td>
                           <td className="py-2.5 px-2">
-                            <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 font-mono font-bold rounded text-[11px]">
-                              {item.unit || 'pcs'}
-                            </span>
+                            <select
+                              value={item.unit || 'pcs'}
+                              onChange={(e) => handleIntakeItemChange(item.id, 'unit', e.target.value)}
+                              className="border border-slate-200 h-8 text-xs font-mono w-full rounded-lg bg-white px-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                            >
+                              {UNIT_OPTIONS.map(u => (
+                                <option key={u.value} value={u.value}>
+                                  {u.value} ({u.label})
+                                </option>
+                              ))}
+                              {item.unit && !UNIT_OPTIONS.some(u => u.value === item.unit) && (
+                                <option value={item.unit}>{item.unit}</option>
+                              )}
+                            </select>
                           </td>
                           <td className="py-2.5 px-2">
                             <Input

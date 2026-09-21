@@ -456,9 +456,8 @@ export default function RegisterPage() {
               {Array.from({ length: totalSteps }, (_, index) => index + 1).map((i) => (
                 <div
                   key={i}
-                  className={`h-1.5 w-6 rounded-full transition-all duration-300 ${
-                    i <= step ? 'bg-[#0a66c2]' : 'bg-[#e0e0e0]'
-                  }`}
+                  className={`h-1.5 w-6 rounded-full transition-all duration-300 ${i <= step ? 'bg-[#0a66c2]' : 'bg-[#e0e0e0]'
+                    }`}
                 />
               ))}
             </div>
@@ -508,11 +507,10 @@ export default function RegisterPage() {
                   {/* SME Card */}
                   <div
                     onClick={() => setFormData(prev => ({ ...prev, registrationType: 'SME' }))}
-                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${
-                      formData.registrationType === 'SME'
+                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${formData.registrationType === 'SME'
                         ? 'border-[#0a66c2] bg-[#eaf2ff] text-[#0a66c2]'
                         : 'border-[#cccccc] bg-white text-[#5e5e5e] hover:border-[#666666]'
-                    }`}
+                      }`}
                   >
                     <Briefcase className={`mx-auto h-5 w-5 mb-1 transition-colors ${formData.registrationType === 'SME' ? 'text-[#0a66c2]' : 'text-[#5e5e5e]'}`} />
                     <span className="block text-xs font-bold text-[#181818]">SME Owner</span>
@@ -522,11 +520,10 @@ export default function RegisterPage() {
                   {/* Financial Institution Card */}
                   <div
                     onClick={() => setFormData(prev => ({ ...prev, registrationType: 'FINANCIAL_INSTITUTION' }))}
-                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${
-                      formData.registrationType === 'FINANCIAL_INSTITUTION'
+                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${formData.registrationType === 'FINANCIAL_INSTITUTION'
                         ? 'border-[#0a66c2] bg-[#eaf2ff] text-[#0a66c2]'
                         : 'border-[#cccccc] bg-white text-[#5e5e5e] hover:border-[#666666]'
-                    }`}
+                      }`}
                   >
                     <ShieldCheck className={`mx-auto h-5 w-5 mb-1 transition-colors ${formData.registrationType === 'FINANCIAL_INSTITUTION' ? 'text-[#0a66c2]' : 'text-[#5e5e5e]'}`} />
                     <span className="block text-xs font-bold text-[#181818]">Financial Institution</span>
@@ -707,7 +704,7 @@ export default function RegisterPage() {
                       </select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#5e5e5e]">
                         <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                         </svg>
                       </div>
                     </div>
@@ -751,7 +748,7 @@ export default function RegisterPage() {
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                           <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                           </svg>
                         </div>
                       </div>
@@ -776,7 +773,7 @@ export default function RegisterPage() {
                         </select>
                         <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                           <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                           </svg>
                         </div>
                       </div>
@@ -839,7 +836,7 @@ export default function RegisterPage() {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
                     </div>
                   </div>
@@ -865,7 +862,7 @@ export default function RegisterPage() {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
                     </div>
                   </div>
@@ -893,7 +890,7 @@ export default function RegisterPage() {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
                     </div>
                   </div>
@@ -919,7 +916,7 @@ export default function RegisterPage() {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
                     </div>
                   </div>
@@ -947,7 +944,7 @@ export default function RegisterPage() {
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/>
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
                     </div>
                   </div>

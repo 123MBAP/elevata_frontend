@@ -20,7 +20,8 @@ import {
   Heading3,
   List,
   Quote,
-  RefreshCw
+  RefreshCw,
+  ChevronDown
 } from 'lucide-react';
 import FormattedText from './ui/FormattedText';
 import { OpportunityType } from './SelectOpportunityTypeModal';
@@ -133,6 +134,18 @@ export default function PublishOpportunityForm({
     'Collateral Valuation Documents': 'N/A'
   });
 
+  const [docFormats, setDocFormats] = useState<Record<string, string[]>>({
+    'Business Registration Certificate': ['PDF (.pdf)', 'Images (.png, .jpg, .jpeg)'],
+    'National ID / Passport': ['PDF (.pdf)', 'Images (.png, .jpg, .jpeg)'],
+    'RRA Tax Clearance Certificate': ['PDF (.pdf)'],
+    'Bank Statements (Last 6 Months)': ['PDF (.pdf)', 'Excel (.xlsx, .csv)'],
+    'Audited Financial Statements': ['PDF (.pdf)', 'Excel (.xlsx, .csv)', 'Word (.docx, .doc)'],
+    'Business Plan & Projections': ['PDF (.pdf)', 'Word (.docx, .doc)', 'PowerPoint (.pptx, .ppt)'],
+    'Cash Flow Forecast': ['Excel (.xlsx, .csv)', 'PDF (.pdf)'],
+    'Collateral Valuation Documents': ['PDF (.pdf)', 'Images (.png, .jpg, .jpeg)']
+  });
+  const [openFormatDoc, setOpenFormatDoc] = useState<string | null>(null);
+
   // Section 5: Platform Verification & Submission
   const [readinessMinRecords, setReadinessMinRecords] = useState('6 months');
   const [readinessMinDigitalActivity, setReadinessMinDigitalActivity] = useState('3 months');
@@ -172,25 +185,48 @@ export default function PublishOpportunityForm({
     }
   };
 
-  // Pre-populate description template
+  // Rich templates tailored to each opportunity type
+  const getTemplateForType = (type: OpportunityType) => {
+    switch (type) {
+      case 'grant':
+        return `## Program Overview\nNon-dilutive grant facility designed to fund high-impact enterprises, green innovations, and community-driven economic initiatives across Rwanda.\n\n### Key Highlights & Terms\n• 100% equity-free matching subsidy with no repayment obligations\n• Direct milestone-based disbursement following verification\n• Structured technical assistance and ESG mentorship\n\n### Targeted Use of Grant Funds\n1. Community employment creation and youth/women empowerment\n2. Clean energy, circular economy, and green technology adoption\n3. Local value-chain development and export readiness\n\n> Note: Beneficiaries are required to report quarterly impact metrics and maintain transparent accounting on Elevata.`;
+      case 'fintech':
+        return `## Program Overview\nComprehensive fintech deployment program equipping micro, small, and medium businesses with modern digital commerce, mobile money, and merchant rails.\n\n### Key Highlights & Terms\n• Subsidized Smart POS hardware and contactless payment terminal\n• Preferential merchant discount rates (MDR) and next-day settlement\n• Automated RRA EBM tax invoicing bridge and ledger sync\n\n### Product Inclusions & Capabilities\n1. Multi-currency digital POS payment terminal\n2. Real-time cashflow analytics and automated reconciliation\n3. Pre-approved revolving working capital lines based on POS transaction turnover\n\n> Note: Requires active business registration and Rwandan merchant bank account.`;
+      case 'equity':
+        return `## Program Overview\nDirect growth equity and quasi-equity co-investment facility targeting high-growth Rwandan ventures and scalable enterprises.\n\n### Key Highlights & Terms\n• Patient minority equity investment (typically 10% – 25% stake)\n• Active board governance participation and strategic expansion advisory\n• Access to regional angel investor syndicates and international follow-on capital\n\n### Targeted Investment Focus\n1. Rapid geographical market expansion and distribution scale\n2. Product R&D, digital automation, and key executive hiring\n3. Strengthening balance sheet for senior debt readiness\n\n> Note: Eligible enterprises should have minimum 18 months audited track record and strong unit economics.`;
+      case 'agricultural_loan':
+        return `## Program Overview\nSeasonal agricultural value-chain financing program structured around planting cycles, harvest schedules, and guaranteed buyer off-taker contracts.\n\n### Key Highlights & Terms\n• Synchronized balloon repayment structured around Season A & B harvest timelines\n• Extended post-harvest grace period to safeguard against price volatility\n• Bundled climate-indexed crop and livestock insurance protection\n\n### Eligible Financing Areas\n1. Certified seed, organic fertilizer, and modern input procurement\n2. Post-harvest aggregation, cold storage, and warehouse receipt financing\n3. Irrigation infrastructure, tractor mechanization, and agro-processing equipment\n\n> Note: Cooperative off-taker supply contracts or structured off-take agreements required.`;
+      case 'guarantee':
+        return `## Program Overview\nPartial credit risk mitigation and loan guarantee scheme enabling under-collateralized SMEs to unlock commercial bank credit facilities.\n\n### Key Highlights & Terms\n• First-loss default coverage up to 75% for qualifying borrowing facilities\n• Waived or reduced physical real-estate collateral requirements\n• Streamlined bank credit committee approval under Elevata Risk Pool\n\n### Qualifying Guarantee Purposes\n1. Commercial bank working capital and letter of credit issuance\n2. Fixed asset and industrial equipment acquisition loans\n3. Public tender and corporate contract execution financing\n\n> Note: Borrowing SME must be registered on Elevata with at least 6 months digital bookkeeping history.`;
+      case 'loan':
+      default:
+        return `## Program Overview\nComprehensive Credit & Working Capital facility designed to provide accessible, low-friction growth financing to qualifying enterprises across Rwanda.\n\n### Key Highlights & Terms\n• Subsidized fixed annual interest rate and transparent repayment terms\n• Expedited underwriting approval decision within 48 to 72 business hours\n• Dedicated credit advisory and capacity building support\n\n### Targeted Use of Funds\n1. Working capital & inventory expansion\n2. Equipment acquisition & technology upgrades\n3. Market distribution and scaling operations\n\n> Note: All eligible businesses must maintain active digital bookkeeping records on Elevata.`;
+    }
+  };
+
+  // Dynamic placeholders based on opportunity type
+  const getTitlePlaceholder = () => {
+    switch (oppType) {
+      case 'grant':
+        return 'e.g. Green Innovation & Youth Employment Matching Grant';
+      case 'fintech':
+        return 'e.g. Smart POS & Digital Merchant Rails Facility';
+      case 'equity':
+        return 'e.g. Seed & Series A Equity Growth Capital Facility';
+      case 'agricultural_loan':
+        return 'e.g. Agri-SME Seasonal Harvest & Input Credit Facility';
+      case 'guarantee':
+        return 'e.g. SME Partial Credit Risk Guarantee & Collateral Support';
+      case 'loan':
+      default:
+        return 'e.g. Agri-SME Working Capital & Inventory Growth Facility';
+    }
+  };
+
+  // Pre-populate or update description template when type changes if empty
   useEffect(() => {
     if (!oppDesc) {
-      const typeLabel =
-        oppType === 'loan'
-          ? 'Credit & Working Capital'
-          : oppType === 'grant'
-          ? 'Non-Dilutive Grant'
-          : oppType === 'fintech'
-          ? 'Fintech & Payment Solution'
-          : oppType === 'equity'
-          ? 'Equity Growth Capital'
-          : oppType === 'agricultural_loan'
-          ? 'Agricultural Value-Chain'
-          : 'Credit Guarantee';
-
-      setOppDesc(
-        `## Program Overview\nComprehensive ${typeLabel} facility designed to provide accessible growth financing to qualifying enterprises across target sectors in Rwanda.\n\n### Key Highlights & Benefits\n• Subsidized fixed annual interest rate and transparent repayment terms\n• Expedited approval decision within 48 to 72 business hours\n• Dedicated credit advisory and capacity building support\n\n### Targeted Use of Funds\n1. Working capital & inventory expansion\n2. Equipment acquisition & technology upgrades\n3. Market distribution and scaling operations\n\n> Note: All eligible businesses must maintain active bookkeeping records on Elevata.`
-      );
+      setOppDesc(getTemplateForType(oppType));
     }
   }, [oppType]);
 
@@ -214,8 +250,7 @@ export default function PublishOpportunityForm({
   };
 
   const insertTemplate = () => {
-    const template = `## Program Overview\nComprehensive financing facility designed to provide accessible growth capital to qualifying enterprises across priority sectors.\n\n### Key Highlights & Terms\n• Subsidized fixed annual interest rate with transparent fee structure\n• Expedited underwriting approval decision within 48 to 72 business hours\n• Dedicated credit advisory and capacity building support\n\n### Targeted Use of Funds\n1. Working capital & inventory expansion\n2. Equipment acquisition & technology upgrades\n3. Market distribution and scaling operations\n\n> Note: All eligible SMEs must maintain active digital bookkeeping records on Elevata.`;
-    setOppDesc(template);
+    setOppDesc(getTemplateForType(oppType));
   };
 
   // Submit Handler
@@ -251,6 +286,13 @@ export default function PublishOpportunityForm({
     }
 
     const docsList = Object.keys(docRequirements).filter(doc => docRequirements[doc] === 'Required');
+    const docsWithFormats = Object.keys(docRequirements)
+      .filter(doc => docRequirements[doc] !== 'N/A')
+      .map(doc => ({
+        name: doc,
+        status: docRequirements[doc],
+        acceptedFormats: docFormats[doc] || ['PDF (.pdf)']
+      }));
     const finalTitle = oppName.trim();
     const finalInstitution = oppProvider.trim();
     const finalDeadline = oppDeadline || '2026-10-31';
@@ -280,6 +322,7 @@ export default function PublishOpportunityForm({
       taxCompliance: readinessTaxCompliance,
       collateralRequired: loanCollateralReq,
       requiredDocs: docsList,
+      documentDossier: docsWithFormats,
       minMonthlyRevenue: finMinMonthlyRev,
       loanRate: parseFloat(loanRate) || 8.5,
       loanTerm: parseInt(loanTerm) || 24,
@@ -355,7 +398,7 @@ export default function PublishOpportunityForm({
           
           <div className="flex items-center gap-3">
             <h1 className="text-xl sm:text-2xl font-bold text-[#181818] font-heading">
-              Publish New Opportunity
+              Publish New {typeMeta.title}
             </h1>
             <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1.5 ${typeMeta.badgeColor}`}>
               {typeMeta.icon}
@@ -363,7 +406,7 @@ export default function PublishOpportunityForm({
             </span>
           </div>
           <p className="text-[13px] text-[#5e5e5e] mt-1 font-sans">
-            Complete the single-page specification below to publish directly to matching SME businesses across Rwanda.
+            Complete the {typeMeta.title.toLowerCase()} specification below to publish directly to matching SME businesses across Rwanda.
           </p>
         </div>
 
@@ -380,10 +423,9 @@ export default function PublishOpportunityForm({
           <button
             type="button"
             onClick={() => handleSubmit()}
-            className="flex items-center justify-center space-x-1.5 px-6 py-2 rounded-full bg-[#0a66c2] hover:bg-[#004182] text-white text-xs font-bold transition-colors shadow-xs border-none"
+            className="flex items-center justify-center space-x-1.5 px-6 py-2 rounded-full bg-[#0a66c2] hover:bg-[#004182] text-white text-xs font-bold transition-colors shadow-xs border-none cursor-pointer"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>Publish Opportunity</span>
+            <span>Publish {typeMeta.title}</span>
           </button>
         </div>
       </div>
@@ -426,7 +468,7 @@ export default function PublishOpportunityForm({
               1
             </span>
             <h3 className="text-sm font-bold text-[#181818] font-heading uppercase tracking-wider">
-              Basic Information &amp; Overview
+              Basic Information &amp; Overview — {typeMeta.title}
             </h3>
           </div>
           <span className="text-[11px] text-[#5e5e5e] font-sans">Every field on its own dedicated row</span>
@@ -445,7 +487,7 @@ export default function PublishOpportunityForm({
                 setOppName(e.target.value);
                 clearError('oppName');
               }}
-              placeholder="e.g. Agri-SME Working Capital & Inventory Growth Facility"
+              placeholder={getTitlePlaceholder()}
               className={`h-11 w-full rounded-[6px] border bg-white px-3.5 text-[14px] text-[#181818] outline-none transition-colors ${
                 errors.oppName
                   ? 'border-red-500 bg-red-50/20 focus:border-red-600 focus:ring-1 focus:ring-red-600'
@@ -519,91 +561,210 @@ export default function PublishOpportunityForm({
           </div>
 
           {/* Row 6: Target Sectors */}
-          <div className="w-full max-w-3xl">
-            <label className="mb-1.5 block text-[13px] font-semibold text-[#181818]">
-              Eligible Target Sectors
-            </label>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {['Agriculture', 'Retail Shop', 'Wholesale', 'Manufacturing', 'ICT & Tech', 'Transport', 'Healthcare', 'Construction', 'Tourism & Hospitality'].map(sector => {
-                const isSelected = oppSectors.includes(sector);
+          <div className="w-full max-w-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[13px] font-semibold text-[#181818]">
+                Eligible Target Sectors <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[#5e5e5e] font-medium">
+                  {oppSectors.length} selected
+                </span>
+                <span className="text-[#e0e0e0]">|</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOppSectors([
+                      'Agriculture',
+                      'Retail Shop',
+                      'Wholesale',
+                      'Manufacturing',
+                      'ICT & Tech',
+                      'Transport',
+                      'Healthcare',
+                      'Construction',
+                      'Tourism & Hospitality'
+                    ])
+                  }
+                  className="text-[#0a66c2] hover:underline font-semibold cursor-pointer"
+                >
+                  Select All
+                </button>
+                <span className="text-[#e0e0e0]">|</span>
+                <button
+                  type="button"
+                  onClick={() => setOppSectors([])}
+                  className="text-[#5e5e5e] hover:text-[#181818] font-semibold cursor-pointer"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#5e5e5e]">
+              Select each qualifying sector. Matching SME businesses will be automatically surfaced and notified.
+            </p>
+
+            <div className="space-y-2 pt-1">
+              {[
+                { id: 'Agriculture', name: 'Agriculture & Agribusiness', desc: 'Farming, crop production, livestock, agri-processing & agricultural inputs' },
+                { id: 'Retail Shop', name: 'Retail Shop & Commerce', desc: 'Supermarkets, convenience stores, consumer goods & retail trade' },
+                { id: 'Wholesale', name: 'Wholesale & Distribution', desc: 'Bulk supply, FMCG distribution, import/export trade & merchant hubs' },
+                { id: 'Manufacturing', name: 'Manufacturing & Light Industry', desc: 'Value addition, assembly, packaging, textiles & industrial production' },
+                { id: 'ICT & Tech', name: 'ICT & Technology', desc: 'Software development, digital services, fintech & hardware solutions' },
+                { id: 'Transport', name: 'Transport & Logistics', desc: 'Freight forwarding, fleet haulage, delivery & public transit services' },
+                { id: 'Healthcare', name: 'Healthcare & Pharmaceuticals', desc: 'Clinics, pharmacies, diagnostic centers & medical supply operations' },
+                { id: 'Construction', name: 'Construction & Real Estate', desc: 'Contractors, building materials, architecture & infrastructure' },
+                { id: 'Tourism & Hospitality', name: 'Tourism & Hospitality', desc: 'Hotels, lodges, tour operations, restaurants & culinary services' }
+              ].map(sector => {
+                const isSelected = oppSectors.includes(sector.id);
                 return (
-                  <button
-                    key={sector}
-                    type="button"
-                    onClick={() => {
-                      setOppSectors(prev =>
-                        isSelected ? prev.filter(s => s !== sector) : [...prev, sector]
-                      );
-                    }}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition ${
+                  <label
+                    key={sector.id}
+                    className={`flex items-center justify-between p-3.5 rounded-[6px] border cursor-pointer transition-all duration-150 ${
                       isSelected
-                        ? 'bg-[#0a66c2] text-white border-[#0a66c2]'
-                        : 'bg-white text-[#5e5e5e] border-[#e0e0e0] hover:bg-[#f3f2f0]'
+                        ? 'bg-[#0a66c2]/5 border-[#0a66c2] shadow-[0_1px_3px_rgba(10,102,194,0.08)]'
+                        : 'bg-white border-[#e0e0e0] hover:border-[#0a66c2] hover:bg-[#fafafa]'
                     }`}
                   >
-                    {sector}
-                  </button>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          setOppSectors(prev =>
+                            isSelected ? prev.filter(s => s !== sector.id) : [...prev, sector.id]
+                          );
+                        }}
+                        className="h-4 w-4 rounded-[3px] accent-[#0a66c2] cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-xs font-semibold text-[#181818]">
+                          {sector.name}
+                        </div>
+                        <div className="text-[11px] text-[#5e5e5e] mt-0.5">
+                          {sector.desc}
+                        </div>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span className="shrink-0 ml-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#0a66c2] bg-[#0a66c2]/10 px-2.5 py-0.5 rounded-full">
+                        <Check className="w-3 h-3 stroke-[2.5]" />
+                        Selected
+                      </span>
+                    )}
+                  </label>
                 );
               })}
             </div>
           </div>
 
           {/* Row 7: Program Description & Terms */}
-          <div className="w-full max-w-3xl space-y-2">
+          <div className="w-full max-w-4xl space-y-2">
             <div className="flex justify-between items-center">
-              <label className="text-[13px] font-semibold text-[#181818]">
-                Program Description &amp; Terms (Markdown Supported)
-              </label>
-              <div className="flex items-center gap-1">
+              <div>
+                <label className="text-[13px] font-semibold text-[#181818] block">
+                  Program Description &amp; Terms (Markdown Supported)
+                </label>
+                <span className="text-[11px] text-[#5e5e5e] block mt-0.5">
+                  Full programmatic overview, eligibility criteria, disbursement terms, and benefits.
+                </span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => setDescViewMode('write')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-[4px] ${
-                    descViewMode === 'write' ? 'bg-[#0a66c2] text-white' : 'text-[#5e5e5e] hover:bg-[#f3f2f0]'
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-[6px] transition-colors cursor-pointer ${
+                    descViewMode === 'write' ? 'bg-[#0a66c2] text-white shadow-xs' : 'text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0]'
                   }`}
                 >
-                  Write
+                  Write Mode
                 </button>
                 <button
                   type="button"
                   onClick={() => setDescViewMode('preview')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-[4px] ${
-                    descViewMode === 'preview' ? 'bg-[#0a66c2] text-white' : 'text-[#5e5e5e] hover:bg-[#f3f2f0]'
+                  className={`px-3.5 py-1.5 text-xs font-semibold rounded-[6px] transition-colors cursor-pointer ${
+                    descViewMode === 'preview' ? 'bg-[#0a66c2] text-white shadow-xs' : 'text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0]'
                   }`}
                 >
-                  Preview
+                  Preview Rendered
                 </button>
               </div>
             </div>
 
             {descViewMode === 'write' ? (
-              <div className="border border-[#666666] rounded-[6px] overflow-hidden focus-within:border-[#0a66c2] focus-within:ring-1 focus-within:ring-[#0a66c2] bg-white">
-                <div className="bg-[#f3f2f0] border-b border-[#e0e0e0] px-3 py-2 flex flex-wrap items-center gap-1.5 text-xs">
-                  <button type="button" onClick={() => insertFormatting('**', '**', 'bold text')} className="p-1.5 hover:bg-white rounded text-[#181818]" title="Bold"><Bold className="w-3.5 h-3.5" /></button>
-                  <button type="button" onClick={() => insertFormatting('*', '*', 'italic text')} className="p-1.5 hover:bg-white rounded text-[#181818]" title="Italic"><Italic className="w-3.5 h-3.5" /></button>
-                  <button type="button" onClick={() => insertFormatting('### ', '', 'Heading')} className="p-1.5 hover:bg-white rounded text-[#181818]" title="Heading"><Heading3 className="w-3.5 h-3.5" /></button>
-                  <button type="button" onClick={() => insertFormatting('• ', '', 'List item')} className="p-1.5 hover:bg-white rounded text-[#181818]" title="Bullet List"><List className="w-3.5 h-3.5" /></button>
-                  <button type="button" onClick={() => insertFormatting('> ', '', 'Important note')} className="p-1.5 hover:bg-white rounded text-[#181818]" title="Quote / Callout"><Quote className="w-3.5 h-3.5" /></button>
-                  <div className="h-4 w-px bg-[#e0e0e0] mx-1" />
-                  <button type="button" onClick={insertTemplate} className="text-[#0a66c2] font-semibold text-xs hover:underline flex items-center gap-1">
-                    <Wand2 className="w-3.5 h-3.5" /> Auto-Fill Template
-                  </button>
+              <div className="border border-[#666666] rounded-[8px] overflow-hidden focus-within:border-[#0a66c2] focus-within:ring-1 focus-within:ring-[#0a66c2] bg-white shadow-xs transition-all">
+                {/* Formatting Toolbar */}
+                <div className="bg-[#f3f2f0] border-b border-[#e0e0e0] px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-1">
+                    <button type="button" onClick={() => insertFormatting('**', '**', 'bold text')} className="p-1.5 hover:bg-white rounded-[4px] text-[#181818] transition-colors cursor-pointer" title="Bold (**text**)">
+                      <Bold className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => insertFormatting('*', '*', 'italic text')} className="p-1.5 hover:bg-white rounded-[4px] text-[#181818] transition-colors cursor-pointer" title="Italic (*text*)">
+                      <Italic className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => insertFormatting('### ', '', 'Section Heading')} className="p-1.5 hover:bg-white rounded-[4px] text-[#181818] transition-colors cursor-pointer" title="Heading (### Title)">
+                      <Heading3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => insertFormatting('• ', '', 'List item')} className="p-1.5 hover:bg-white rounded-[4px] text-[#181818] transition-colors cursor-pointer" title="Bullet List (• item)">
+                      <List className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => insertFormatting('> ', '', 'Important requirement or note')} className="p-1.5 hover:bg-white rounded-[4px] text-[#181818] transition-colors cursor-pointer" title="Callout Quote (> note)">
+                      <Quote className="w-3.5 h-3.5" />
+                    </button>
+                    <button type="button" onClick={() => insertFormatting('```\n', '\n```', 'Key Metric: Specification')} className="p-1.5 hover:bg-white rounded-[4px] text-[#181818] text-[11px] font-mono transition-colors cursor-pointer" title="Code Block">
+                      &lt;/&gt;
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    {oppDesc && (
+                      <button
+                        type="button"
+                        onClick={() => setOppDesc('')}
+                        className="text-[#5e5e5e] hover:text-red-600 text-xs font-semibold px-2 py-1 rounded hover:bg-white transition-colors cursor-pointer"
+                        title="Clear Description"
+                      >
+                        Clear
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={insertTemplate}
+                      className="bg-white hover:bg-[#0a66c2]/10 border border-[#0a66c2]/30 text-[#0a66c2] px-2.5 py-1 rounded-[5px] font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Sparkles className="w-3.5 h-3.5" /> Auto-Fill {typeMeta.title} Template
+                    </button>
+                  </div>
                 </div>
+
+                {/* Extended Textarea */}
                 <textarea
                   ref={descRef}
-                  rows={7}
+                  rows={14}
                   value={oppDesc}
                   onChange={e => setOppDesc(e.target.value)}
-                  className="w-full p-3.5 text-[13px] text-[#181818] outline-none font-sans resize-y leading-relaxed"
-                  placeholder="Provide comprehensive program description..."
+                  className="w-full p-4 text-[13.5px] text-[#181818] outline-none font-sans resize-y leading-relaxed min-h-[300px] sm:min-h-[340px]"
+                  placeholder="Provide comprehensive program description, terms, covenants, disbursement mechanics, and compliance requirements..."
                 />
+
+                {/* Status Bar */}
+                <div className="bg-[#f9f9f9] border-t border-[#e0e0e0] px-4 py-2 flex flex-wrap items-center justify-between text-[11px] text-[#5e5e5e]">
+                  <span>Supports GitHub Flavored Markdown (Headers, Lists, Bold, Quotes &amp; Tables)</span>
+                  <span className="font-mono">
+                    {oppDesc ? `${oppDesc.trim().split(/\s+/).filter(Boolean).length} words · ${oppDesc.length} characters` : '0 words'}
+                  </span>
+                </div>
               </div>
             ) : (
-              <div className="border border-[#e0e0e0] rounded-[6px] p-5 bg-white min-h-[180px] text-xs leading-relaxed">
+              <div className="border border-[#e0e0e0] rounded-[8px] p-6 bg-white min-h-[340px] max-h-[600px] overflow-y-auto text-xs leading-relaxed shadow-2xs">
                 {oppDesc ? (
                   <FormattedText text={oppDesc} className="text-[#181818] leading-relaxed" />
                 ) : (
-                  <span className="text-[#5e5e5e] italic">No description entered yet.</span>
+                  <div className="flex flex-col items-center justify-center py-16 text-[#5e5e5e] text-center">
+                    <p className="text-sm font-semibold">No description entered yet</p>
+                    <p className="text-xs mt-1">Switch to Write Mode to add content or click Auto-Fill Template.</p>
+                  </div>
                 )}
               </div>
             )}
@@ -1036,22 +1197,97 @@ export default function PublishOpportunityForm({
           </div>
 
           {/* Row 9: Geographical Scope */}
-          <div className="w-full max-w-3xl space-y-1.5">
-            <label className="mb-1.5 block text-[13px] font-semibold text-[#181818]">Geographical Districts</label>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {['Kigali', 'Nyarugenge', 'Gasabo', 'Kicukiro', 'Northern Province', 'Western Province', 'Eastern Province', 'Southern Province'].map(loc => {
-                const exists = eligLocations.includes(loc);
+          <div className="w-full max-w-2xl space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-[13px] font-semibold text-[#181818]">
+                Geographical Districts &amp; Provinces <span className="text-red-500">*</span>
+              </label>
+              <div className="flex items-center gap-2 text-xs">
+                <span className="text-[#5e5e5e] font-medium">
+                  {eligLocations.length} selected
+                </span>
+                <span className="text-[#e0e0e0]">|</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setEligLocations([
+                      'Kigali',
+                      'Nyarugenge',
+                      'Gasabo',
+                      'Kicukiro',
+                      'Northern Province',
+                      'Western Province',
+                      'Eastern Province',
+                      'Southern Province'
+                    ])
+                  }
+                  className="text-[#0a66c2] hover:underline font-semibold cursor-pointer"
+                >
+                  Select All
+                </button>
+                <span className="text-[#e0e0e0]">|</span>
+                <button
+                  type="button"
+                  onClick={() => setEligLocations([])}
+                  className="text-[#5e5e5e] hover:text-[#181818] font-semibold cursor-pointer"
+                >
+                  Clear All
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs text-[#5e5e5e]">
+              Specify eligible operating territories. Registered businesses situated in these locations will be matched.
+            </p>
+
+            <div className="space-y-2 pt-1">
+              {[
+                { id: 'Kigali', name: 'Kigali City (All Districts)', desc: 'Metropolitan commerce & services across Nyarugenge, Gasabo, and Kicukiro' },
+                { id: 'Nyarugenge', name: 'Nyarugenge District', desc: 'Central commercial district, market centers, CBD & Biryogo commercial zone' },
+                { id: 'Gasabo', name: 'Gasabo District', desc: 'Tech corridors, commercial trading hubs, Kimironko, Remera & Kacyiru' },
+                { id: 'Kicukiro', name: 'Kicukiro District', desc: 'Industrial park zone, logistics hubs, Gahanga, Kanombe & Kagarama' },
+                { id: 'Northern Province', name: 'Northern Province', desc: 'Musanze, Gicumbi, Burera, Rulindo & Gakenke commercial & agri zones' },
+                { id: 'Western Province', name: 'Western Province', desc: 'Rubavu, Rusizi, Karongi, Rutsiro, Nyamasheke & cross-border trading' },
+                { id: 'Eastern Province', name: 'Eastern Province', desc: 'Bugesera, Rwamagana, Kayonza, Nyagatare, Gatsibo & agricultural corridor' },
+                { id: 'Southern Province', name: 'Southern Province', desc: 'Huye, Muhanga, Nyanza, Ruhango, Kamonyi, Gisagara & Southern economic hubs' }
+              ].map(loc => {
+                const isSelected = eligLocations.includes(loc.id);
                 return (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() => setEligLocations(prev => (exists ? prev.filter(x => x !== loc) : [...prev, loc]))}
-                    className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition ${
-                      exists ? 'bg-[#0a66c2]/10 border-[#0a66c2] text-[#0a66c2]' : 'bg-white border-[#e0e0e0] text-[#5e5e5e] hover:bg-[#f3f2f0]'
+                  <label
+                    key={loc.id}
+                    className={`flex items-center justify-between p-3.5 rounded-[6px] border cursor-pointer transition-all duration-150 ${
+                      isSelected
+                        ? 'bg-[#0a66c2]/5 border-[#0a66c2] shadow-[0_1px_3px_rgba(10,102,194,0.08)]'
+                        : 'bg-white border-[#e0e0e0] hover:border-[#0a66c2] hover:bg-[#fafafa]'
                     }`}
                   >
-                    {loc}
-                  </button>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          setEligLocations(prev =>
+                            isSelected ? prev.filter(x => x !== loc.id) : [...prev, loc.id]
+                          );
+                        }}
+                        className="h-4 w-4 rounded-[3px] accent-[#0a66c2] cursor-pointer"
+                      />
+                      <div>
+                        <div className="text-xs font-semibold text-[#181818]">
+                          {loc.name}
+                        </div>
+                        <div className="text-[11px] text-[#5e5e5e] mt-0.5">
+                          {loc.desc}
+                        </div>
+                      </div>
+                    </div>
+                    {isSelected && (
+                      <span className="shrink-0 ml-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#0a66c2] bg-[#0a66c2]/10 px-2.5 py-0.5 rounded-full">
+                        <Check className="w-3 h-3 stroke-[2.5]" />
+                        Selected
+                      </span>
+                    )}
+                  </label>
                 );
               })}
             </div>
@@ -1076,27 +1312,199 @@ export default function PublishOpportunityForm({
         </div>
 
         <div className="w-full max-w-3xl space-y-2.5">
-          {Object.keys(docRequirements).map((doc) => (
-            <div key={doc} className="flex justify-between items-center p-3.5 bg-white border border-[#e0e0e0] rounded-[8px] text-xs gap-3 hover:border-[#0a66c2] transition-colors">
-              <strong className="text-[#181818] font-bold text-xs truncate">{doc}</strong>
-              <div className="flex gap-1.5 shrink-0">
-                {['Required', 'Optional', 'N/A'].map((lvl) => (
-                  <button
-                    key={lvl}
-                    type="button"
-                    onClick={() => setDocRequirements(prev => ({ ...prev, [doc]: lvl as any }))}
-                    className={`px-3.5 py-1 rounded-full text-xs font-semibold border transition ${
-                      docRequirements[doc] === lvl
-                        ? 'bg-[#0a66c2] text-white border-[#0a66c2]'
-                        : 'bg-white text-[#5e5e5e] border-[#e0e0e0] hover:bg-[#f3f2f0]'
+          {Object.keys(docRequirements).map((doc) => {
+            const status = docRequirements[doc];
+            const isNA = status === 'N/A';
+            const currentFormats = docFormats[doc] || ['PDF (.pdf)'];
+
+            const formatOptions = [
+              { id: 'PDF (.pdf)', label: 'PDF (.pdf)', short: 'PDF' },
+              { id: 'Images (.png, .jpg, .jpeg)', label: 'Images (PNG, JPG, JPEG)', short: 'Images' },
+              { id: 'Word (.docx, .doc)', label: 'Word (DOCX, DOC)', short: 'Word' },
+              { id: 'Excel (.xlsx, .csv)', label: 'Excel (XLSX, CSV)', short: 'Excel' },
+              { id: 'PowerPoint (.pptx, .ppt)', label: 'PowerPoint (PPT, PPTX)', short: 'PPT' }
+            ];
+
+            const formatLabel = () => {
+              if (currentFormats.length === formatOptions.length) return 'All Formats';
+              if (currentFormats.length === 1) {
+                const found = formatOptions.find(f => f.id === currentFormats[0]);
+                return found ? found.short : '1 Format';
+              }
+              return `${currentFormats.length} Formats`;
+            };
+
+            return (
+              <div
+                key={doc}
+                className={`p-3.5 bg-white border rounded-[8px] transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative ${
+                  status === 'Required'
+                    ? 'border-[#0a66c2]/40 shadow-[0_1px_4px_rgba(10,102,194,0.06)]'
+                    : status === 'Optional'
+                    ? 'border-[#e0e0e0]'
+                    : 'border-[#e8e8e8] bg-[#fafafa]/80 opacity-70'
+                }`}
+              >
+                {/* Left: Document Name & Subtitle */}
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <FileText
+                    className={`w-4 h-4 shrink-0 ${
+                      status === 'Required'
+                        ? 'text-[#0a66c2]'
+                        : status === 'Optional'
+                        ? 'text-[#057642]'
+                        : 'text-gray-400'
                     }`}
-                  >
-                    {lvl}
-                  </button>
-                ))}
+                  />
+                  <div className="min-w-0">
+                    <strong className="text-[#181818] font-bold text-xs block truncate">{doc}</strong>
+                    <span className="text-[11px] text-[#5e5e5e] block truncate">
+                      {status === 'Required'
+                        ? 'Mandatory upload for underwriting'
+                        : status === 'Optional'
+                        ? 'Optional supporting document'
+                        : 'Not required for this program'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right: Dropdown for Document Format Types & Requirement Pills */}
+                <div className="flex items-center gap-2 shrink-0 self-start sm:self-center">
+                  {/* File Format Multi-Select Dropdown */}
+                  {!isNA && (
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setOpenFormatDoc(openFormatDoc === doc ? null : doc)}
+                        className={`h-8 px-2.5 rounded-[6px] border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                          openFormatDoc === doc
+                            ? 'bg-[#0a66c2]/10 border-[#0a66c2] text-[#0a66c2] ring-2 ring-[#0a66c2]/20'
+                            : 'bg-[#f8f9fa] border-[#d0d0d0] text-[#181818] hover:bg-[#f3f2f0] hover:border-[#a0a0a0]'
+                        }`}
+                        title="Select accepted file formats"
+                      >
+                        <span className="text-[11px] font-semibold">{formatLabel()}</span>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 text-[#5e5e5e] transition-transform duration-150 ${
+                            openFormatDoc === doc ? 'rotate-180 text-[#0a66c2]' : ''
+                          }`}
+                        />
+                      </button>
+
+                      {/* Dropdown Menu Popup */}
+                      {openFormatDoc === doc && (
+                        <>
+                          <div
+                            className="fixed inset-0 z-20 cursor-default"
+                            onClick={() => setOpenFormatDoc(null)}
+                          />
+                          <div className="absolute right-0 top-full mt-1.5 w-64 bg-white border border-[#d0d0d0] rounded-[8px] shadow-xl z-30 p-2.5 space-y-2 animate-in fade-in zoom-in-95 duration-100">
+                            <div className="flex items-center justify-between pb-1.5 border-b border-[#f0f0f0]">
+                              <span className="text-[11px] font-bold text-[#181818] uppercase tracking-wider">
+                                Accepted Formats
+                              </span>
+                              <div className="flex items-center gap-1.5 text-[11px]">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDocFormats(prev => ({
+                                      ...prev,
+                                      [doc]: formatOptions.map(f => f.id)
+                                    }))
+                                  }
+                                  className="text-[#0a66c2] hover:underline font-semibold cursor-pointer"
+                                >
+                                  All
+                                </button>
+                                <span className="text-[#e0e0e0]">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    setDocFormats(prev => ({
+                                      ...prev,
+                                      [doc]: ['PDF (.pdf)']
+                                    }))
+                                  }
+                                  className="text-[#5e5e5e] hover:text-[#181818] font-semibold cursor-pointer"
+                                >
+                                  PDF Only
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1">
+                              {formatOptions.map((fmt) => {
+                                const isChecked = currentFormats.includes(fmt.id);
+                                return (
+                                  <label
+                                    key={fmt.id}
+                                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-[5px] text-xs cursor-pointer transition-colors ${
+                                      isChecked
+                                        ? 'bg-[#0a66c2]/8 text-[#0a66c2] font-semibold'
+                                        : 'text-[#181818] hover:bg-[#f3f2f0]'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <input
+                                        type="checkbox"
+                                        checked={isChecked}
+                                        onChange={() => {
+                                          setDocFormats(prev => {
+                                            const list = prev[doc] || [];
+                                            const next = isChecked
+                                              ? list.filter(item => item !== fmt.id)
+                                              : [...list, fmt.id];
+                                            return {
+                                              ...prev,
+                                              [doc]: next.length > 0 ? next : [fmt.id]
+                                            };
+                                          });
+                                        }}
+                                        className="h-3.5 w-3.5 rounded-[3px] accent-[#0a66c2] cursor-pointer"
+                                      />
+                                      <span className="text-xs">{fmt.label}</span>
+                                    </div>
+                                    {isChecked && <Check className="w-3 h-3 text-[#0a66c2] stroke-[2.5]" />}
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Requirement Status Buttons */}
+                  <div className="flex gap-1 shrink-0">
+                    {(['Required', 'Optional', 'N/A'] as const).map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => {
+                          setDocRequirements(prev => ({ ...prev, [doc]: lvl }));
+                          if (lvl === 'N/A' && openFormatDoc === doc) {
+                            setOpenFormatDoc(null);
+                          }
+                        }}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${
+                          docRequirements[doc] === lvl
+                            ? lvl === 'Required'
+                              ? 'bg-[#0a66c2] text-white border-[#0a66c2]'
+                              : lvl === 'Optional'
+                              ? 'bg-[#057642] text-white border-[#057642]'
+                              : 'bg-gray-700 text-white border-gray-700'
+                            : 'bg-white text-[#5e5e5e] border-[#e0e0e0] hover:bg-[#f3f2f0]'
+                        }`}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -1114,7 +1522,7 @@ export default function PublishOpportunityForm({
             </h3>
           </div>
           <span className="text-[11px] text-[#057642] font-bold flex items-center gap-1">
-            <Sparkles className="w-3.5 h-3.5" /> Direct Publishing
+            Direct Publishing
           </span>
         </div>
 
@@ -1182,46 +1590,12 @@ export default function PublishOpportunityForm({
               onClick={() => handleSubmit()}
               className="flex h-12 items-center justify-center gap-2 rounded-full bg-[#0a66c2] hover:bg-[#004182] px-12 text-[15px] font-bold text-white transition-all shadow-md hover:shadow-lg border-none cursor-pointer"
             >
-              <Sparkles className="w-4 h-4" />
-              <span>Publish Opportunity</span>
+              <span>Publish {typeMeta.title}</span>
             </button>
             <p className="text-xs text-[#5e5e5e] font-sans">
               Matching SME businesses will immediately qualify upon publishing.
             </p>
           </div>
-        </div>
-      </div>
-
-      {/* Bottom Sticky Action Bar with Centered Submit */}
-      <div className="fixed bottom-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-t border-[#e0e0e0] px-6 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <button
-            type="button"
-            onClick={onCancel}
-            className="flex h-11 items-center justify-center rounded-full border border-[#666666] bg-white px-6 text-[13px] font-semibold text-[#181818] transition-colors hover:bg-[#f3f2f0]"
-          >
-            ← Cancel &amp; Return
-          </button>
-
-          {/* Centered Submit Button */}
-          <div className="flex items-center justify-center">
-            <button
-              type="button"
-              onClick={() => handleSubmit()}
-              className="flex h-11 items-center justify-center gap-2 rounded-full bg-[#0a66c2] hover:bg-[#004182] px-10 text-[14px] font-bold text-white transition-all shadow-sm hover:shadow-md border-none cursor-pointer"
-            >
-              <Sparkles className="w-4 h-4" />
-              <span>Publish Opportunity</span>
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={onChangeType}
-            className="flex h-11 items-center justify-center rounded-full border border-[#e0e0e0] bg-white px-5 text-[13px] font-semibold text-[#5e5e5e] transition-colors hover:bg-[#f3f2f0] hover:text-[#181818]"
-          >
-            Change Type
-          </button>
         </div>
       </div>
 
