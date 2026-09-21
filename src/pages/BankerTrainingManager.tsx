@@ -94,7 +94,7 @@ export default function BankerTrainingManager() {
       ['Attendee Name', 'Company', 'Sector', 'Status', 'Hand Raised', 'Joined At'],
       ...attendees.map(a => [
         a.name,
-        a.company || 'N/A',
+        a.company || a.businessName || 'N/A',
         a.sector || 'N/A',
         a.status,
         a.handRaised ? 'Yes' : 'No',
@@ -586,7 +586,7 @@ export default function BankerTrainingManager() {
                         >
                           <div>
                             <p className="font-bold text-slate-900">{att.name}</p>
-                            <p className="text-[11px] text-slate-500">{att.company} • {att.sector}</p>
+                            <p className="text-[11px] text-slate-500">{att.businessName || att.company} • {att.sector}</p>
                           </div>
                           <button
                             onClick={() => admitAttendee(rosterTraining.id, att.id)}
@@ -617,7 +617,7 @@ export default function BankerTrainingManager() {
                           </div>
                           <div>
                             <p className="font-bold text-slate-900">{att.name}</p>
-                            <p className="text-[11px] text-slate-500">{att.company} • {att.sector}</p>
+                            <p className="text-[11px] text-slate-500">{att.businessName || att.company} • {att.sector}</p>
                           </div>
                         </div>
 

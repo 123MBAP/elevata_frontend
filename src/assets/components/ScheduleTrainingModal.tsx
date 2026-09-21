@@ -48,9 +48,19 @@ export default function ScheduleTrainingModal({
   const [date, setDate] = useState(initialData?.date || new Date().toISOString().split('T')[0]);
   const [time, setTime] = useState(initialData?.time || '14:00 CAT');
   const [durationMinutes, setDurationMinutes] = useState(initialData?.durationMinutes || 60);
-  const [speaker, setSpeaker] = useState(initialData?.speaker || user?.name || 'Chief Credit Officer');
+  const [speaker, setSpeaker] = useState(
+    initialData?.speaker ||
+      user?.financialInstitution?.representativeName ||
+      user?.business?.ownerName ||
+      'Chief Credit Officer'
+  );
   const [speakerRole, setSpeakerRole] = useState(initialData?.speakerRole || 'Head of SME Underwriting');
-  const [speakerOrg, setSpeakerOrg] = useState(initialData?.speakerOrg || user?.institutionName || 'BPR Bank Rwanda');
+  const [speakerOrg, setSpeakerOrg] = useState(
+    initialData?.speakerOrg ||
+      user?.financialInstitution?.institutionName ||
+      user?.business?.businessName ||
+      'BPR Bank Rwanda'
+  );
   const [selectedSectors, setSelectedSectors] = useState<string[]>(
     initialData?.targetAudience && initialData.targetAudience.length > 0
       ? initialData.targetAudience

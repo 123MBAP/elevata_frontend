@@ -75,6 +75,7 @@ export interface TrainingAttendee {
   id: string;
   name: string;
   businessName: string;
+  company?: string;
   sector: string;
   avatar?: string;
   status: 'waiting' | 'admitted' | 'declined';

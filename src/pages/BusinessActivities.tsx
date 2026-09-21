@@ -2046,7 +2046,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       <CreateProductModal
         isOpen={isCreateModalOpen}
         onClose={() => setIsCreateModalOpen(false)}
-        onCreate={async (data) => {
+        onSubmit={async (data) => {
           const newProd = await createProduct(data);
           showToast(`Created new catalog item: "${newProd.name}"`);
         }}
@@ -2058,7 +2058,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
           isOpen={!!editingProduct}
           product={editingProduct}
           onClose={() => setEditingProduct(null)}
-          onUpdate={async (id, data) => {
+          onSubmit={async (id: string, data: any) => {
             await updateProduct(id, data);
             showToast(`Product updated successfully.`);
           }}
