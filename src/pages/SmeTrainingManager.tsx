@@ -21,7 +21,10 @@ import {
   Check,
   GraduationCap,
   CalendarPlus,
-  PlayCircle
+  PlayCircle,
+  Globe,
+  Layers,
+  Sparkle
 } from 'lucide-react';
 import { Training, useApp } from '../context/AppContext';
 import VirtualTrainingAttendeeModal from '../assets/components/VirtualTrainingAttendeeModal';
@@ -34,33 +37,25 @@ export default function SmeTrainingManager() {
     joinTraining
   } = useApp();
 
-  const [activeTab, setActiveTab] = useState<'enrolled' | 'explore' | 'certificates'>('enrolled');
+  const [activeTab, setActiveTab] = useState<'all' | 'enrolled' | 'live' | 'certificates'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [sectorFilter, setSectorFilter] = useState('ALL');
   const [attendingTraining, setAttendingTraining] = useState<Training | null>(null);
   const [previewCertTraining, setPreviewCertTraining] = useState<Training | null>(null);
 
-  // Enrolled list: sessions where SME has enrolled OR has attended/completed OR is listed in attendees
-  const enrolledTrainings = trainings.filter(t => {
-    const isExplicitlyEnrolled = t.enrolled;
-    const isAttendee = t.attendees?.some(a => a.id === activeSme.id);
-    const hasAttended = t.attended;
-    return isExplicitlyEnrolled || isAttendee || hasAttended;
-  });
-
-  const liveTrainings = trainings.filter(t => t.status === 'live');
-  const completedTrainings = enrolledTrainings.filter(t => t.completed || t.attended);
-
-  // Explore list: all trainings matching search / sector
-  const exploreTrainings = trainings.filter(t => {
+  // Filtered trainings: ALL banker scheduled trainings regardless of SME's registered sector
+  const allScheduledTrainings = trainings.filter(t => {
+    // Search query
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
       const matchTitle = t.title.toLowerCase().includes(q);
       const matchDesc = t.description?.toLowerCase().includes(q);
       const matchSpeaker = t.speaker?.toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc && !matchSpeaker) return false;
+      const matchOrg = t.speakerOrg?.toLowerCase().includes(q);
+      if (!matchTitle && !matchDesc && !matchSpeaker && !matchOrg) return false;
     }
 
+    // Optional user-selected sector filter
     if (sectorFilter !== 'ALL') {
       const hasSector = t.targetAudience?.some(
         aud => aud.toLowerCase().includes(sectorFilter.toLowerCase()) || aud === 'All Sectors'
@@ -71,16 +66,36 @@ export default function SmeTrainingManager() {
     return true;
   });
 
+  // Enrolled list: sessions where SME has enrolled OR has attended/completed OR is listed in attendees
+  const enrolledTrainings = allScheduledTrainings.filter(t => {
+    const isExplicitlyEnrolled = t.enrolled;
+    const isAttendee = t.attendees?.some(a => a.id === activeSme.id);
+    const hasAttended = t.attended;
+    return isExplicitlyEnrolled || isAttendee || hasAttended;
+  });
+
+  const liveTrainings = allScheduledTrainings.filter(t => t.status === 'live');
+  const completedTrainings = enrolledTrainings.filter(t => t.completed || t.attended);
+
   const readinessBoostTotal = completedTrainings.length * 12;
 
   const handleAddToCalendar = (training: Training) => {
     const title = encodeURIComponent(training.title);
     const details = encodeURIComponent(
-      `${training.description}\n\nInstructor: ${training.speaker} (${training.speakerOrg || 'Delivering Bank'})\nMeeting Link: ${training.meetingLink}`
+      `${training.description}\n\nDelivering Institution: ${training.speakerOrg || 'Bank Partner'}\nInstructor: ${training.speaker}\nMeeting Link: ${training.meetingLink}`
     );
     const url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${details}`;
     window.open(url, '_blank');
   };
+
+  const currentDisplayList =
+    activeTab === 'all'
+      ? allScheduledTrainings
+      : activeTab === 'enrolled'
+      ? enrolledTrainings
+      : activeTab === 'live'
+      ? liveTrainings
+      : [];
 
   return (
     <div className="space-y-6 pb-12">
@@ -97,32 +112,41 @@ export default function SmeTrainingManager() {
               Virtual Capacity Academy
             </h1>
             <p className="text-xs sm:text-sm text-emerald-100/90 max-w-2xl leading-relaxed">
-              Attend live interactive underwriting masterclasses delivered directly by financial institutions, master
-              financial statements, raise your questions in real-time, and earn verified accredited certificates.
+              Explore and attend all live interactive masterclasses scheduled by partner financial institutions.
+              Master underwriting criteria, ask bank officers questions directly, and earn verified accredited certificates.
             </p>
           </div>
 
           {/* Readiness Score Card */}
-          <div className="p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-center min-w-[180px]">
+          <div className="p-4 rounded-xl bg-white/10 backdrop-blur-md border border-white/20 text-center min-w-[190px]">
             <div className="flex items-center justify-center space-x-1.5 text-emerald-300 mb-1">
               <Sparkles className="w-4 h-4" />
               <span className="text-xs font-bold uppercase tracking-wider">Readiness Impact</span>
             </div>
             <p className="text-2xl font-extrabold text-white">+{readinessBoostTotal}%</p>
-            <p className="text-[10px] text-emerald-200 mt-0.5">Accredited Underwriting Boost</p>
+            <p className="text-[10px] text-emerald-200 mt-0.5">Verified Underwriting Boost</p>
+          </div>
+        </div>
+
+        {/* Universal Access Notice */}
+        <div className="mt-5 pt-4 border-t border-emerald-800/60 flex items-center justify-between flex-wrap gap-2 text-xs text-emerald-200">
+          <div className="flex items-center space-x-2">
+            <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span className="font-semibold text-white">Universal Cross-Sector Access:</span>
+            <span>All scheduled banker masterclasses are open for enrollment to your business ({activeSme.name} • {activeSme.sector} Sector).</span>
           </div>
         </div>
 
         {/* Live Warning Banner if sessions are active */}
         {liveTrainings.length > 0 && (
-          <div className="mt-6 pt-5 border-t border-emerald-900/60 flex items-center justify-between flex-wrap gap-3">
+          <div className="mt-4 p-3 rounded-xl bg-red-500/20 border border-red-500/40 flex items-center justify-between flex-wrap gap-3">
             <div className="flex items-center space-x-3">
-              <span className="relative flex h-3.5 w-3.5">
+              <span className="relative flex h-3 w-3">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-red-500"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
               </span>
               <p className="text-xs font-bold text-white">
-                🔴 {liveTrainings[0].title} is LIVE NOW with interactive screen stream!
+                🔴 "{liveTrainings[0].title}" by {liveTrainings[0].speakerOrg} is BROADCASTING LIVE NOW!
               </p>
             </div>
             <button
@@ -138,18 +162,28 @@ export default function SmeTrainingManager() {
 
       {/* KPI Metrics Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
-            <BookOpen className="w-5 h-5" />
+        <div
+          onClick={() => setActiveTab('all')}
+          className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center space-x-3 ${
+            activeTab === 'all' ? 'bg-emerald-50/70 border-emerald-300 ring-2 ring-emerald-500/20' : 'bg-white border-slate-200 hover:border-emerald-200'
+          }`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+            <Globe className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Enrolled Sessions</p>
-            <p className="text-lg font-bold text-slate-900">{enrolledTrainings.length}</p>
+            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">All Scheduled</p>
+            <p className="text-lg font-bold text-slate-900">{allScheduledTrainings.length} Masterclasses</p>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-bold">
+        <div
+          onClick={() => setActiveTab('live')}
+          className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center space-x-3 ${
+            activeTab === 'live' ? 'bg-red-50 border-red-300 ring-2 ring-red-500/20' : 'bg-white border-slate-200 hover:border-red-200'
+          }`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-red-100 text-red-600 flex items-center justify-center font-bold">
             <Radio className="w-5 h-5" />
           </div>
           <div>
@@ -158,32 +192,54 @@ export default function SmeTrainingManager() {
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
-            <CheckCircle2 className="w-5 h-5" />
+        <div
+          onClick={() => setActiveTab('enrolled')}
+          className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center space-x-3 ${
+            activeTab === 'enrolled' ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-500/20' : 'bg-white border-slate-200 hover:border-blue-200'
+          }`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+            <BookOpen className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Completed</p>
-            <p className="text-lg font-bold text-slate-900">{completedTrainings.length}</p>
+            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">My Enrolled</p>
+            <p className="text-lg font-bold text-slate-900">{enrolledTrainings.length}</p>
           </div>
         </div>
 
-        <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+        <div
+          onClick={() => setActiveTab('certificates')}
+          className={`p-4 rounded-xl border transition cursor-pointer shadow-sm flex items-center space-x-3 ${
+            activeTab === 'certificates' ? 'bg-amber-50 border-amber-300 ring-2 ring-amber-500/20' : 'bg-white border-slate-200 hover:border-amber-200'
+          }`}
+        >
+          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Certificates</p>
+            <p className="text-[11px] text-slate-500 font-semibold uppercase tracking-wider">Accredited Certs</p>
             <p className="text-lg font-bold text-amber-600">{completedTrainings.length}</p>
           </div>
         </div>
       </div>
 
-      {/* Navigation Tabs */}
+      {/* Navigation Tabs & Filter Bar */}
       <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           {/* Tabs */}
           <div className="flex items-center space-x-1.5 p-1 bg-slate-100 rounded-xl overflow-x-auto">
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center space-x-1.5 ${
+                activeTab === 'all'
+                  ? 'bg-white text-emerald-800 shadow-sm border border-slate-200/50'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5" />
+              <span>All Scheduled Masterclasses ({allScheduledTrainings.length})</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('enrolled')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center space-x-1.5 ${
@@ -193,19 +249,19 @@ export default function SmeTrainingManager() {
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              <span>My Enrolled Schedule ({enrolledTrainings.length})</span>
+              <span>My Enrolled ({enrolledTrainings.length})</span>
             </button>
 
             <button
-              onClick={() => setActiveTab('explore')}
+              onClick={() => setActiveTab('live')}
               className={`px-4 py-2 rounded-lg text-xs font-bold transition whitespace-nowrap flex items-center space-x-1.5 ${
-                activeTab === 'explore'
-                  ? 'bg-white text-emerald-800 shadow-sm border border-slate-200/50'
+                activeTab === 'live'
+                  ? 'bg-red-500 text-white shadow-sm'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              <BookOpen className="w-3.5 h-3.5" />
-              <span>Explore Masterclasses ({trainings.length})</span>
+              <Radio className="w-3.5 h-3.5" />
+              <span>Live Now ({liveTrainings.length})</span>
             </button>
 
             <button
@@ -217,11 +273,11 @@ export default function SmeTrainingManager() {
               }`}
             >
               <Award className="w-3.5 h-3.5" />
-              <span>Accredited Certificates ({completedTrainings.length})</span>
+              <span>Certificates ({completedTrainings.length})</span>
             </button>
           </div>
 
-          {/* Search & Filter */}
+          {/* Search & Sector Filters */}
           {activeTab !== 'certificates' && (
             <div className="flex items-center space-x-2.5">
               <div className="relative flex-1 sm:w-64">
@@ -230,8 +286,8 @@ export default function SmeTrainingManager() {
                   type="text"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
-                  placeholder="Search topic or bank..."
-                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Search masterclass, bank, speaker..."
+                  className="w-full pl-9 pr-3 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-500 font-medium"
                 />
               </div>
 
@@ -240,43 +296,55 @@ export default function SmeTrainingManager() {
                 onChange={e => setSectorFilter(e.target.value)}
                 className="px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-emerald-500 font-medium"
               >
-                <option value="ALL">All Sectors</option>
-                <option value="Retail">Retail</option>
-                <option value="Agriculture">Agriculture</option>
+                <option value="ALL">All Sectors (Cross-Sector)</option>
+                <option value="Retail">Retail & Wholesale</option>
+                <option value="Agriculture">Agriculture & Processing</option>
                 <option value="Manufacturing">Manufacturing</option>
-                <option value="Technology">Technology</option>
-                <option value="Logistics">Logistics</option>
+                <option value="Technology">Technology & ICT</option>
+                <option value="Logistics">Logistics & Transport</option>
               </select>
             </div>
           )}
         </div>
       </div>
 
-      {/* Tab 1: My Enrolled Schedule */}
-      {activeTab === 'enrolled' && (
+      {/* Main Grid: All / Enrolled / Live Masterclasses */}
+      {activeTab !== 'certificates' && (
         <div>
-          {enrolledTrainings.length === 0 ? (
+          {currentDisplayList.length === 0 ? (
             <div className="p-12 text-center bg-white rounded-2xl border border-slate-200 space-y-3">
               <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto">
                 <GraduationCap className="w-7 h-7" />
               </div>
-              <h3 className="text-base font-bold text-slate-800">You haven't enrolled in any masterclasses yet</h3>
+              <h3 className="text-base font-bold text-slate-800">
+                {activeTab === 'enrolled'
+                  ? "You haven't enrolled in any masterclasses yet"
+                  : activeTab === 'live'
+                  ? "No live masterclasses broadcasting right now"
+                  : "No masterclasses found matching your filters"}
+              </h3>
               <p className="text-xs text-slate-500 max-w-md mx-auto">
-                Explore available bankability trainings published by credit institutions to build capacity and earn verified certificate boosts.
+                All capacity masterclasses scheduled by partner financial institutions are accessible to your business across all sectors.
               </p>
-              <button
-                onClick={() => setActiveTab('explore')}
-                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition inline-flex items-center space-x-1.5"
-              >
-                <span>Browse Available Masterclasses</span>
-                <ChevronRight className="w-4 h-4" />
-              </button>
+              {activeTab !== 'all' && (
+                <button
+                  onClick={() => setActiveTab('all')}
+                  className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition inline-flex items-center space-x-1.5 shadow-sm"
+                >
+                  <Globe className="w-4 h-4" />
+                  <span>View All Scheduled Masterclasses</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {enrolledTrainings.map(training => {
+              {currentDisplayList.map(training => {
                 const isLive = training.status === 'live';
                 const isCompleted = training.completed || training.attended;
+                const isEnrolled =
+                  training.enrolled ||
+                  training.attendees?.some(a => a.id === activeSme.id) ||
+                  isCompleted;
 
                 return (
                   <div
@@ -289,25 +357,33 @@ export default function SmeTrainingManager() {
                         : 'border-slate-200 hover:border-emerald-300'
                     }`}
                   >
+                    {/* Card Content */}
                     <div className="p-5 space-y-3">
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
-                          {isLive ? (
-                            <span className="inline-flex items-center space-x-1 px-2.5 py-1 rounded-full bg-red-500 text-white text-[10px] font-extrabold uppercase tracking-wider animate-pulse shadow-sm">
-                              <Radio className="w-3 h-3 animate-ping" />
-                              <span>BROADCASTING LIVE</span>
+                          <div className="flex items-center flex-wrap gap-1.5">
+                            {isLive ? (
+                              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-extrabold uppercase tracking-wider animate-pulse shadow-sm">
+                                <Radio className="w-3 h-3 animate-ping" />
+                                <span>LIVE NOW</span>
+                              </span>
+                            ) : isCompleted ? (
+                              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
+                                <CheckCircle2 className="w-3 h-3" />
+                                <span>Certified & Completed</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
+                                <Calendar className="w-3 h-3" />
+                                <span>Scheduled</span>
+                              </span>
+                            )}
+
+                            <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold">
+                              <Building2 className="w-3 h-3 text-slate-500" />
+                              <span>{training.speakerOrg || 'Delivering Bank'}</span>
                             </span>
-                          ) : isCompleted ? (
-                            <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                              <CheckCircle2 className="w-3 h-3" />
-                              <span>Completed & Accredited</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-bold border border-blue-200">
-                              <Calendar className="w-3 h-3" />
-                              <span>Enrolled • Upcoming</span>
-                            </span>
-                          )}
+                          </div>
 
                           <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 mt-1">
                             {training.title}
@@ -318,6 +394,27 @@ export default function SmeTrainingManager() {
                       <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                         {training.description}
                       </p>
+
+                      {/* Universal Access / Focus Sector Pill */}
+                      <div className="p-2.5 rounded-xl bg-emerald-50/60 border border-emerald-200/60 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between text-emerald-900 font-bold">
+                          <span className="flex items-center space-x-1">
+                            <Globe className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Open to All Registered SMEs</span>
+                          </span>
+                          {training.hasCertificate && (
+                            <span className="text-amber-700 bg-amber-100/80 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                              +12% Readiness
+                            </span>
+                          )}
+                        </div>
+                        {training.targetAudience && training.targetAudience.length > 0 && (
+                          <p className="text-[10px] text-slate-500 truncate">
+                            <span className="font-semibold text-slate-700">Target Focus:</span>{' '}
+                            {training.targetAudience.join(', ')}
+                          </p>
+                        )}
+                      </div>
 
                       {/* Schedule Summary Box */}
                       <div className="p-3 bg-slate-50 rounded-xl space-y-1.5 text-xs text-slate-700 border border-slate-100">
@@ -333,11 +430,11 @@ export default function SmeTrainingManager() {
 
                         <div className="flex items-center justify-between">
                           <span className="text-slate-500 flex items-center space-x-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-slate-400" />
-                            <span>Host Institution:</span>
+                            <Users className="w-3.5 h-3.5 text-slate-400" />
+                            <span>Instructor:</span>
                           </span>
-                          <span className="font-semibold text-slate-800">
-                            {training.speakerOrg || 'Bank Credit Dept.'}
+                          <span className="font-semibold text-slate-800 truncate max-w-[150px]">
+                            {training.speaker}
                           </span>
                         </div>
                       </div>
@@ -370,7 +467,7 @@ export default function SmeTrainingManager() {
                             <span>Review Slides</span>
                           </button>
                         </div>
-                      ) : (
+                      ) : isEnrolled ? (
                         <div className="grid grid-cols-2 gap-2">
                           <button
                             onClick={() => setAttendingTraining(training)}
@@ -387,6 +484,23 @@ export default function SmeTrainingManager() {
                             <span>Add Calendar</span>
                           </button>
                         </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => toggleTrainingEnrollment(training.id)}
+                            className="flex-1 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition flex items-center justify-center space-x-1.5"
+                          >
+                            <Sparkles className="w-3.5 h-3.5" />
+                            <span>Enroll in Masterclass</span>
+                          </button>
+                          <button
+                            onClick={() => setAttendingTraining(training)}
+                            className="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition"
+                            title="Preview Room"
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -397,113 +511,7 @@ export default function SmeTrainingManager() {
         </div>
       )}
 
-      {/* Tab 2: Explore Masterclasses Catalog */}
-      {activeTab === 'explore' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {exploreTrainings.map(training => {
-            const isEnrolled =
-              training.enrolled ||
-              training.attendees?.some(a => a.id === activeSme.id) ||
-              training.attended;
-            const isLive = training.status === 'live';
-
-            return (
-              <div
-                key={training.id}
-                className="bg-white rounded-2xl border border-slate-200 hover:border-emerald-300 transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-sm hover:shadow-md"
-              >
-                <div className="p-5 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-1">
-                      <span className="inline-flex items-center space-x-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-bold border border-emerald-200">
-                        <Building2 className="w-3 h-3" />
-                        <span>{training.speakerOrg || 'Financial Institution'}</span>
-                      </span>
-
-                      <h3 className="text-sm font-bold text-slate-900 leading-snug line-clamp-2 mt-1">
-                        {training.title}
-                      </h3>
-                    </div>
-
-                    {isLive && (
-                      <span className="px-2 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-extrabold animate-pulse">
-                        LIVE NOW
-                      </span>
-                    )}
-                  </div>
-
-                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                    {training.description}
-                  </p>
-
-                  {/* Syllabus Roadmap Preview */}
-                  {training.curriculum && training.curriculum.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Key Modules:</p>
-                      <ul className="text-xs text-slate-600 space-y-1">
-                        {training.curriculum.slice(0, 2).map((mod, i) => (
-                          <li key={i} className="flex items-start space-x-1.5 truncate">
-                            <span className="text-emerald-500 font-bold">•</span>
-                            <span className="truncate">{mod}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {/* Schedule Details */}
-                  <div className="p-3 bg-slate-50 rounded-xl space-y-1 text-xs text-slate-700 border border-slate-100">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Date & Time:</span>
-                      <span className="font-bold text-slate-900">
-                        {training.date} • {training.time}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Instructor:</span>
-                      <span className="font-medium text-slate-800">{training.speaker}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Footer Enrollment Action */}
-                <div className="p-4 bg-slate-50/70 border-t border-slate-100 flex items-center justify-between gap-2">
-                  <span className="text-[11px] font-semibold text-slate-500">
-                    {training.participantsCount || 0} Registered
-                  </span>
-
-                  {isEnrolled ? (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs font-bold text-emerald-600 flex items-center space-x-1">
-                        <Check className="w-3.5 h-3.5" />
-                        <span>Enrolled</span>
-                      </span>
-                      <button
-                        onClick={() => setAttendingTraining(training)}
-                        className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition"
-                      >
-                        {isLive ? 'Join Live' : 'Open Room'}
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        toggleTrainingEnrollment(training.id);
-                      }}
-                      className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-500/20 transition flex items-center space-x-1.5"
-                    >
-                      <Sparkles className="w-3.5 h-3.5" />
-                      <span>Enroll in Masterclass</span>
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Tab 3: Accredited Certificates Portfolio */}
+      {/* Tab: Accredited Certificates Portfolio */}
       {activeTab === 'certificates' && (
         <div>
           {completedTrainings.length === 0 ? (
@@ -516,10 +524,11 @@ export default function SmeTrainingManager() {
                 Attend and complete virtual masterclasses delivered by financial institutions to unlock verified accredited certificates and boost your loan readiness score.
               </p>
               <button
-                onClick={() => setActiveTab('explore')}
-                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition"
+                onClick={() => setActiveTab('all')}
+                className="px-5 py-2.5 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition inline-flex items-center space-x-1.5 shadow-sm"
               >
-                Find a Masterclass to Attend
+                <Globe className="w-4 h-4" />
+                <span>Browse All Scheduled Masterclasses</span>
               </button>
             </div>
           ) : (

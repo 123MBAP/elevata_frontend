@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   SmeProfile,
   mockSmes,
@@ -199,6 +199,7 @@ interface AppContextType {
   opportunities: Opportunity[];
   applications: Application[];
   trainings: Training[];
+  refreshTrainings: (smeId?: string) => Promise<void>;
   bookmarkedOpportunities: string[];
   publishOpportunity: (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => void;
   applyForOpportunity: (oppId: string, smeId: string) => void;
@@ -717,6 +718,47 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   }, [smes]);
 
   const activeSme = smes.find(sme => sme.id === selectedSmeId) || smes[0];
+
+  // Synchronize trainings with PostgreSQL database for real-time cross-device availability
+  const refreshTrainings = useCallback(async (targetSmeId?: string) => {
+    try {
+      const activeId = targetSmeId || selectedSmeId || activeSme?.id || 'sme-1';
+      const res = await apiRequest(`/trainings?smeId=${encodeURIComponent(activeId)}`);
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setTrainings(prev => {
+          const map = new Map<string, Training>();
+          // Base mock trainings
+          initialTrainings.forEach(t => map.set(t.id, t));
+          // Current local state
+          prev.forEach(t => map.set(t.id, t));
+          // Overlay backend DB trainings
+          res.data.forEach((t: any) => {
+            const existing = (map.get(t.id) || {}) as Partial<Training>;
+            map.set(t.id, {
+              ...existing,
+              ...t,
+              targetAudience: Array.isArray(t.targetAudience) ? t.targetAudience : (existing.targetAudience || []),
+              curriculum: Array.isArray(t.curriculum) ? t.curriculum : (existing.curriculum || []),
+              attendees: Array.isArray(t.attendees) ? t.attendees : (existing.attendees || []),
+              chatMessages: Array.isArray(t.chatMessages) ? t.chatMessages : (existing.chatMessages || [])
+            } as Training);
+          });
+          return Array.from(map.values());
+        });
+      }
+    } catch (err) {
+      // Silently preserve existing data
+    }
+  }, [selectedSmeId, activeSme?.id]);
+
+  useEffect(() => {
+    refreshTrainings(selectedSmeId);
+    // Periodic polling (every 8 seconds) so banker and SME across devices sync without manual page reload
+    const interval = setInterval(() => {
+      refreshTrainings(selectedSmeId);
+    }, 8000);
+    return () => clearInterval(interval);
+  }, [refreshTrainings, selectedSmeId]);
 
   const approveLoan = (smeId: string, amount: number, period: number, rate: number) => {
     setSmes(prev => prev.map(sme => {
@@ -1639,10 +1681,22 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
-  const createTraining = (training: Omit<Training, 'id' | 'participantsCount' | 'attended' | 'completed' | 'hasCertificate'>) => {
+  const syncLiveRoomToBackend = async (trainingId: string, updates: { status?: string; attendees?: any[]; chatMessages?: any[] }) => {
+    try {
+      await apiRequest(`/trainings/${trainingId}/live`, {
+        method: 'PATCH',
+        body: JSON.stringify(updates)
+      });
+    } catch (e) {
+      // ignore
+    }
+  };
+
+  const createTraining = async (training: Omit<Training, 'id' | 'participantsCount' | 'attended' | 'completed' | 'hasCertificate'>) => {
+    const tempId = `tr-${Date.now()}`;
     const newTr: Training = {
       ...training,
-      id: `tr-${Date.now()}`,
+      id: tempId,
       participantsCount: 0,
       attended: false,
       completed: false,
@@ -1660,43 +1714,82 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ]
     };
     setTrainings(prev => [newTr, ...prev]);
+
+    try {
+      const res = await apiRequest('/trainings', {
+        method: 'POST',
+        body: JSON.stringify(training)
+      });
+      if (res && res.success && res.data) {
+        setTrainings(prev => prev.map(t => t.id === tempId ? { ...t, ...res.data } : t));
+      }
+    } catch (err) {
+      console.warn('Backend createTraining error:', err);
+    }
   };
 
-  const updateTraining = (trainingId: string, data: Partial<Training>) => {
+  const updateTraining = async (trainingId: string, data: Partial<Training>) => {
     setTrainings(prev => prev.map(t => {
       if (t.id === trainingId) {
         return { ...t, ...data };
       }
       return t;
     }));
+
+    try {
+      await apiRequest(`/trainings/${trainingId}`, {
+        method: 'PUT',
+        body: JSON.stringify(data)
+      });
+    } catch (err) {
+      console.warn('Backend updateTraining error:', err);
+    }
   };
 
-  const deleteTraining = (trainingId: string) => {
+  const deleteTraining = async (trainingId: string) => {
     setTrainings(prev => prev.filter(t => t.id !== trainingId));
+    try {
+      await apiRequest(`/trainings/${trainingId}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn('Backend deleteTraining error:', err);
+    }
   };
 
-  const toggleTrainingEnrollment = (trainingId: string) => {
+  const toggleTrainingEnrollment = async (trainingId: string) => {
+    const currentTr = trainings.find(t => t.id === trainingId);
+    const isNowEnrolled = !currentTr?.enrolled;
+    const countDiff = isNowEnrolled ? 1 : -1;
+
     setTrainings(prev => prev.map(t => {
       if (t.id === trainingId) {
-        const isNowEnrolled = !t.enrolled;
-        const countDiff = isNowEnrolled ? 1 : -1;
         return {
           ...t,
           enrolled: isNowEnrolled,
           enrolledAt: isNowEnrolled ? new Date().toISOString() : undefined,
-          participantsCount: Math.max(0, t.participantsCount + countDiff)
+          participantsCount: Math.max(0, (t.participantsCount || 0) + countDiff)
         };
       }
       return t;
     }));
+
+    try {
+      await apiRequest(`/trainings/${trainingId}/enroll`, {
+        method: 'POST',
+        body: JSON.stringify({ smeId: selectedSmeId || activeSme.id })
+      });
+    } catch (err) {
+      console.warn('Backend toggleTrainingEnrollment error:', err);
+    }
   };
 
-  const joinTraining = (trainingId: string) => {
+  const joinTraining = async (trainingId: string) => {
     setTrainings(prev => prev.map(t => {
       if (t.id === trainingId) {
         return {
           ...t,
-          participantsCount: t.participantsCount + (t.attended ? 0 : 1),
+          participantsCount: (t.participantsCount || 0) + (t.attended ? 0 : 1),
           enrolled: true,
           attended: true,
           completed: true,
@@ -1705,6 +1798,15 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return t;
     }));
+
+    try {
+      await apiRequest(`/trainings/${trainingId}/join`, {
+        method: 'POST',
+        body: JSON.stringify({ smeId: selectedSmeId || activeSme.id })
+      });
+    } catch (err) {
+      console.warn('Backend joinTraining error:', err);
+    }
   };
 
   const startLiveTraining = (trainingId: string) => {
@@ -1717,6 +1819,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return t;
     }));
+    syncLiveRoomToBackend(trainingId, { status: 'live' });
   };
 
   const endLiveTraining = (trainingId: string) => {
@@ -1731,6 +1834,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       }
       return t;
     }));
+    syncLiveRoomToBackend(trainingId, { status: 'completed' });
   };
 
   const requestJoinLiveTraining = (trainingId: string, attendee: Omit<TrainingAttendee, 'status' | 'joinedAt'>) => {
@@ -1749,10 +1853,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           isMuted: false,
           cameraOn: true
         };
+        const updatedAttendees = [...existingAttendees, newAttendee];
+        syncLiveRoomToBackend(trainingId, { attendees: updatedAttendees });
         return {
           ...t,
-          attendees: [...existingAttendees, newAttendee],
-          participantsCount: t.participantsCount + 1,
+          attendees: updatedAttendees,
+          participantsCount: (t.participantsCount || 0) + 1,
           enrolled: true
         };
       }
@@ -1769,6 +1875,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           }
           return a;
         });
+        syncLiveRoomToBackend(trainingId, { attendees: updatedAttendees });
         return {
           ...t,
           attendees: updatedAttendees
@@ -1785,6 +1892,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           ...a,
           status: 'admitted' as const
         }));
+        syncLiveRoomToBackend(trainingId, { attendees: updatedAttendees });
         return {
           ...t,
           attendees: updatedAttendees
@@ -1803,6 +1911,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           }
           return a;
         });
+        syncLiveRoomToBackend(trainingId, { attendees: updatedAttendees });
         return {
           ...t,
           attendees: updatedAttendees
@@ -1820,9 +1929,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
+        const updatedMessages = [...(t.chatMessages || []), newMsg];
+        syncLiveRoomToBackend(trainingId, { chatMessages: updatedMessages });
         return {
           ...t,
-          chatMessages: [...(t.chatMessages || []), newMsg]
+          chatMessages: updatedMessages
         };
       }
       return t;
@@ -1904,6 +2015,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       opportunities,
       applications,
       trainings,
+      refreshTrainings,
       bookmarkedOpportunities,
       publishOpportunity,
       applyForOpportunity,

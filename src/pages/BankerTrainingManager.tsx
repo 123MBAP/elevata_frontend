@@ -21,7 +21,8 @@ import {
   ShieldCheck,
   BookOpen,
   ArrowRight,
-  GraduationCap
+  GraduationCap,
+  Globe
 } from 'lucide-react';
 import { Training, useApp } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
@@ -128,8 +129,8 @@ export default function BankerTrainingManager() {
               Virtual Training & Masterclass Manager
             </h1>
             <p className="text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Schedule interactive capacity building, broadcast live underwriting masterclasses with screen sharing,
-              manage waiting room admissions, and issue official accredited certificates to SMEs.
+              Schedule interactive capacity building, broadcast live underwriting masterclasses to all registered SMEs across all sectors with screen sharing,
+              manage waiting room admissions, and issue official accredited certificates.
             </p>
           </div>
 
@@ -145,6 +146,12 @@ export default function BankerTrainingManager() {
               <span>Schedule New Training</span>
             </button>
           </div>
+        </div>
+
+        {/* Universal Access Notice */}
+        <div className="mt-4 pt-3 border-t border-slate-800 flex items-center gap-2 text-xs text-blue-200">
+          <Globe className="w-4 h-4 text-blue-400 shrink-0" />
+          <span><strong>Universal SME Distribution Active:</strong> All masterclasses scheduled here are immediately visible to and attendable by all SMEs across all business sectors.</span>
         </div>
 
         {/* Live Warning Banner if sessions are active */}
@@ -283,12 +290,12 @@ export default function BankerTrainingManager() {
               onChange={e => setSectorFilter(e.target.value)}
               className="px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-blue-500 font-medium"
             >
-              <option value="ALL">All Sectors</option>
-              <option value="Retail">Retail</option>
-              <option value="Agriculture">Agriculture</option>
+              <option value="ALL">All Sectors (Cross-Sector Reach)</option>
+              <option value="Retail">Retail & Wholesale</option>
+              <option value="Agriculture">Agriculture & Processing</option>
               <option value="Manufacturing">Manufacturing</option>
-              <option value="Technology">Technology</option>
-              <option value="Logistics">Logistics</option>
+              <option value="Technology">Technology & ICT</option>
+              <option value="Logistics">Logistics & Transport</option>
             </select>
           </div>
         </div>
@@ -419,24 +426,26 @@ export default function BankerTrainingManager() {
                     </div>
                   </div>
 
-                  {/* Target Audience Pills */}
-                  {training.targetAudience && training.targetAudience.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {training.targetAudience.slice(0, 3).map((sec, idx) => (
-                        <span
-                          key={idx}
-                          className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[10px] font-semibold"
-                        >
-                          {sec}
-                        </span>
-                      ))}
-                      {training.targetAudience.length > 3 && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 text-[10px]">
-                          +{training.targetAudience.length - 3}
+                  {/* Universal Access & Target Audience Pills */}
+                  <div className="p-2.5 rounded-xl bg-blue-50/60 border border-blue-100 text-[11px] space-y-1">
+                    <div className="flex items-center justify-between text-blue-900 font-bold">
+                      <span className="flex items-center space-x-1">
+                        <Globe className="w-3.5 h-3.5 text-blue-600" />
+                        <span>Open to All Registered SMEs</span>
+                      </span>
+                      {training.hasCertificate && (
+                        <span className="text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded text-[10px] font-bold">
+                          +12% Boost
                         </span>
                       )}
                     </div>
-                  )}
+                    {training.targetAudience && training.targetAudience.length > 0 && (
+                      <p className="text-[10px] text-slate-500 truncate">
+                        <span className="font-semibold text-slate-700">Target Focus:</span>{' '}
+                        {training.targetAudience.join(', ')}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 {/* Card Footer & CTAs */}

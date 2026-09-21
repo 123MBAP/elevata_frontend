@@ -334,9 +334,13 @@ export default function ScheduleTrainingModal({
 
           {/* Target Sectors */}
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
-              Target SME Sectors
+            <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1.5 flex items-center justify-between">
+              <span>Target SME Sectors (Priority Focus)</span>
+              <span className="text-[10px] text-blue-600 font-semibold">🌐 Open & accessible to all SMEs</span>
             </label>
+            <p className="text-[11px] text-slate-500 mb-2">
+              Select key focus industries. Note that all registered SMEs in any sector will still be able to discover and attend.
+            </p>
             <div className="flex flex-wrap gap-2">
               {AVAILABLE_SECTORS.map(sec => {
                 const isSelected = selectedSectors.includes(sec);
