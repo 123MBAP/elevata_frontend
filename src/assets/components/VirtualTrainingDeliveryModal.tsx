@@ -21,6 +21,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Training, useApp } from '../../context/AppContext';
+import { apiRequest } from '../../lib/api';
 
 interface VirtualTrainingDeliveryModalProps {
   training: Training;
@@ -40,7 +41,8 @@ export default function VirtualTrainingDeliveryModal({
     admitAttendee,
     admitAllAttendees,
     toggleHandRaise,
-    sendTrainingMessage
+    sendTrainingMessage,
+    updateTrainingLiveState
   } = useApp();
 
   // Find latest training state from context
@@ -141,7 +143,200 @@ export default function VirtualTrainingDeliveryModal({
     return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Screen Sharing using Browser WebRTC API with safe fallback
+  const snapshotIntervalRef = useRef<any>(null);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
+  const screenStreamRef = useRef<MediaStream | null>(null);
+  const hiddenVideoRef = useRef<HTMLVideoElement | null>(null);
+
+  // Keep screenStreamRef synchronized
+  useEffect(() => {
+    screenStreamRef.current = screenStream;
+  }, [screenStream]);
+
+  // WebRTC Host & Local Broadcast Channel (persists across screen share toggles)
+  useEffect(() => {
+    let ch: BroadcastChannel | null = null;
+    try {
+      ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
+      broadcastChannelRef.current = ch;
+      ch.onmessage = async (e) => {
+        const msg = e.data;
+        if (!msg) return;
+        if (msg.type === 'ATTENDEE_REQUEST_STREAM' && screenStreamRef.current) {
+          initiatePeerConnection(msg.attendeeId, screenStreamRef.current);
+        } else if (msg.type === 'ANSWER' && msg.to === 'host') {
+          const pc = peerConnectionsRef.current.get(msg.from);
+          if (pc && pc.signalingState !== 'stable') {
+            await pc.setRemoteDescription(new RTCSessionDescription(msg.answer));
+          }
+        } else if (msg.type === 'ICE_CANDIDATE' && msg.to === 'host') {
+          const pc = peerConnectionsRef.current.get(msg.from);
+          if (pc && msg.candidate) {
+            await pc.addIceCandidate(new RTCIceCandidate(msg.candidate));
+          }
+        }
+      };
+    } catch (err) {}
+
+    // Polling backend for signals from cross-device attendees
+    const signalInterval = setInterval(async () => {
+      try {
+        const res = await apiRequest(`/trainings/${training.id}/signal?peerId=host`);
+        if (res && res.success && Array.isArray(res.data)) {
+          for (const item of res.data) {
+            if (item.signal?.type === 'request_stream' && screenStreamRef.current) {
+              initiatePeerConnection(item.from, screenStreamRef.current);
+            } else if (item.signal?.type === 'answer') {
+              const pc = peerConnectionsRef.current.get(item.from);
+              if (pc && pc.signalingState !== 'stable') {
+                await pc.setRemoteDescription(new RTCSessionDescription(item.signal.answer));
+              }
+            } else if (item.signal?.type === 'candidate' && item.signal.candidate) {
+              const pc = peerConnectionsRef.current.get(item.from);
+              if (pc) {
+                await pc.addIceCandidate(new RTCIceCandidate(item.signal.candidate));
+              }
+            }
+          }
+        }
+      } catch (e) {}
+    }, 2000);
+
+    return () => {
+      ch?.close();
+      clearInterval(signalInterval);
+      stopSnapshotLoop();
+      peerConnectionsRef.current.forEach(pc => pc.close());
+      peerConnectionsRef.current.clear();
+    };
+  }, [training.id]);
+
+  const initiatePeerConnection = async (attendeeId: string, stream: MediaStream) => {
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+
+      stream.getTracks().forEach(track => pc.addTrack(track, stream));
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          broadcastChannelRef.current?.postMessage({
+            type: 'ICE_CANDIDATE',
+            from: 'host',
+            to: attendeeId,
+            candidate: event.candidate
+          });
+          apiRequest(`/trainings/${training.id}/signal`, {
+            method: 'POST',
+            body: JSON.stringify({
+              from: 'host',
+              to: attendeeId,
+              signal: { type: 'candidate', candidate: event.candidate }
+            })
+          }).catch(() => {});
+        }
+      };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+
+      broadcastChannelRef.current?.postMessage({
+        type: 'OFFER',
+        from: 'host',
+        to: attendeeId,
+        offer
+      });
+
+      await apiRequest(`/trainings/${training.id}/signal`, {
+        method: 'POST',
+        body: JSON.stringify({
+          from: 'host',
+          to: attendeeId,
+          signal: { type: 'offer', offer }
+        })
+      });
+
+      peerConnectionsRef.current.set(attendeeId, pc);
+    } catch (err) {
+      console.warn('Failed to initiate WebRTC with attendee:', err);
+    }
+  };
+
+  const startSnapshotLoop = (stream: MediaStream) => {
+    if (snapshotIntervalRef.current) clearInterval(snapshotIntervalRef.current);
+
+    const hiddenVideo = document.createElement('video');
+    hiddenVideo.srcObject = stream;
+    hiddenVideo.muted = true;
+    hiddenVideo.playsInline = true;
+    hiddenVideo.play().catch(() => {});
+    hiddenVideoRef.current = hiddenVideo;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const captureFrame = () => {
+      const vid = (screenVideoRef.current && screenVideoRef.current.videoWidth > 0)
+        ? screenVideoRef.current
+        : hiddenVideoRef.current;
+      if (!vid || !vid.videoWidth || !vid.videoHeight) return;
+      const targetWidth = 854;
+      const targetHeight = Math.round((vid.videoHeight / vid.videoWidth) * targetWidth);
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      ctx?.drawImage(vid, 0, 0, targetWidth, targetHeight);
+      try {
+        const frameData = canvas.toDataURL('image/jpeg', 0.6);
+        broadcastChannelRef.current?.postMessage({
+          type: 'SCREEN_FRAME',
+          frame: frameData,
+          trainingId: training.id
+        });
+        updateTrainingLiveState(training.id, {
+          isScreenSharing: true,
+          shareType: 'screen',
+          screenSnapshot: frameData
+        });
+      } catch (e) {}
+    };
+
+    hiddenVideo.onloadedmetadata = () => {
+      setTimeout(captureFrame, 150);
+    };
+
+    // Immediate initial captures
+    setTimeout(captureFrame, 200);
+    setTimeout(captureFrame, 600);
+    setTimeout(captureFrame, 1200);
+
+    snapshotIntervalRef.current = setInterval(captureFrame, 1500);
+  };
+
+  const handleAdmitAttendee = (attendeeId: string) => {
+    admitAttendee(training.id, attendeeId);
+    if (screenStreamRef.current) {
+      initiatePeerConnection(attendeeId, screenStreamRef.current);
+    }
+  };
+
+  const handleAdmitAll = () => {
+    admitAllAttendees(training.id);
+    if (screenStreamRef.current) {
+      waitingAttendees.forEach(att => {
+        initiatePeerConnection(att.id, screenStreamRef.current!);
+      });
+    }
+  };
+
+  const stopSnapshotLoop = () => {
+    if (snapshotIntervalRef.current) {
+      clearInterval(snapshotIntervalRef.current);
+      snapshotIntervalRef.current = null;
+    }
+  };
+
   const handleToggleScreenShare = async () => {
     if (isScreenSharing) {
       if (screenStream) {
@@ -149,6 +344,19 @@ export default function VirtualTrainingDeliveryModal({
       }
       setScreenStream(null);
       setIsScreenSharing(false);
+      stopSnapshotLoop();
+      peerConnectionsRef.current.forEach(pc => pc.close());
+      peerConnectionsRef.current.clear();
+
+      broadcastChannelRef.current?.postMessage({
+        type: 'SCREEN_SHARE_STOPPED',
+        trainingId: training.id
+      });
+      updateTrainingLiveState(training.id, {
+        isScreenSharing: false,
+        shareType: 'slides',
+        screenSnapshot: ''
+      });
     } else {
       try {
         if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
@@ -158,22 +366,72 @@ export default function VirtualTrainingDeliveryModal({
           });
           setScreenStream(stream);
           setIsScreenSharing(true);
+          startSnapshotLoop(stream);
+
           if (screenVideoRef.current) {
             screenVideoRef.current.srcObject = stream;
           }
+
+          broadcastChannelRef.current?.postMessage({
+            type: 'SCREEN_SHARE_STARTED',
+            trainingId: training.id
+          });
+          updateTrainingLiveState(training.id, {
+            isScreenSharing: true,
+            shareType: 'screen'
+          });
+
+          // Pre-connect to existing admitted attendees
+          admittedAttendees.forEach(att => {
+            initiatePeerConnection(att.id, stream);
+          });
+
           stream.getVideoTracks()[0].onended = () => {
-            setIsScreenSharing(false);
             setScreenStream(null);
+            setIsScreenSharing(false);
+            stopSnapshotLoop();
+            broadcastChannelRef.current?.postMessage({
+              type: 'SCREEN_SHARE_STOPPED',
+              trainingId: training.id
+            });
+            updateTrainingLiveState(training.id, {
+              isScreenSharing: false,
+              shareType: 'slides',
+              screenSnapshot: ''
+            });
           };
         } else {
           setIsScreenSharing(true);
           setActiveSideTab('slides');
+          updateTrainingLiveState(training.id, {
+            isScreenSharing: true,
+            shareType: 'slides',
+            currentSlideIndex
+          });
         }
       } catch (err) {
         setIsScreenSharing(true);
         setActiveSideTab('slides');
+        updateTrainingLiveState(training.id, {
+          isScreenSharing: true,
+          shareType: 'slides',
+          currentSlideIndex
+        });
       }
     }
+  };
+
+  const handleSlideChange = (newIndex: number) => {
+    setCurrentSlideIndex(newIndex);
+    broadcastChannelRef.current?.postMessage({
+      type: 'SLIDE_CHANGED',
+      slideIndex: newIndex,
+      trainingId: training.id
+    });
+    updateTrainingLiveState(training.id, {
+      currentSlideIndex: newIndex,
+      shareType: isScreenSharing ? 'screen' : 'slides'
+    });
   };
 
   // Connect video stream to video element when screenStream updates
@@ -309,7 +567,7 @@ export default function VirtualTrainingDeliveryModal({
                     <button
                       type="button"
                       disabled={currentSlideIndex === 0}
-                      onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+                      onClick={() => handleSlideChange(Math.max(0, currentSlideIndex - 1))}
                       className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
                     >
                       <ChevronLeft className="w-4 h-4" />
@@ -317,7 +575,7 @@ export default function VirtualTrainingDeliveryModal({
                     <button
                       type="button"
                       disabled={currentSlideIndex === presentationSlides.length - 1}
-                      onClick={() => setCurrentSlideIndex(prev => Math.min(presentationSlides.length - 1, prev + 1))}
+                      onClick={() => handleSlideChange(Math.min(presentationSlides.length - 1, currentSlideIndex + 1))}
                       className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
                     >
                       <ChevronRight className="w-4 h-4" />
@@ -612,7 +870,7 @@ export default function VirtualTrainingDeliveryModal({
                   {waitingAttendees.length > 0 && (
                     <button
                       type="button"
-                      onClick={() => admitAllAttendees(training.id)}
+                      onClick={handleAdmitAll}
                       className="text-xs font-bold text-[#38bdf8] hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <UserCheck className="w-3.5 h-3.5" /> Admit All
@@ -648,7 +906,7 @@ export default function VirtualTrainingDeliveryModal({
                         <div className="flex items-center gap-1.5 shrink-0">
                           <button
                             type="button"
-                            onClick={() => admitAttendee(training.id, att.id)}
+                            onClick={() => handleAdmitAttendee(att.id)}
                             className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                           >
                             <UserCheck className="w-3 h-3" /> Admit
@@ -794,8 +1052,10 @@ export default function VirtualTrainingDeliveryModal({
                     key={idx}
                     type="button"
                     onClick={() => {
-                      setCurrentSlideIndex(idx);
-                      setIsScreenSharing(false);
+                      handleSlideChange(idx);
+                      if (isScreenSharing) {
+                        handleToggleScreenShare();
+                      }
                     }}
                     className={`w-full text-left p-3 rounded-lg border transition cursor-pointer ${
                       currentSlideIndex === idx

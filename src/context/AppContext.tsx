@@ -94,6 +94,16 @@ export interface TrainingChatMessage {
   timestamp: string;
 }
 
+export interface TrainingLiveState {
+  isScreenSharing?: boolean;
+  shareType?: 'screen' | 'slides';
+  currentSlideIndex?: number;
+  hostMicOn?: boolean;
+  hostCamOn?: boolean;
+  screenSnapshot?: string; // base64 JPEG snapshot for instant display
+  updatedAt?: number;
+}
+
 export interface Training {
   id: string;
   title: string;
@@ -121,6 +131,7 @@ export interface Training {
   materials?: { title: string; url: string; size: string }[];
   attendees?: TrainingAttendee[];
   chatMessages?: TrainingChatMessage[];
+  liveState?: TrainingLiveState;
 }
 
 interface Scenarios {
@@ -217,6 +228,7 @@ interface AppContextType {
   admitAllAttendees: (trainingId: string) => void;
   toggleHandRaise: (trainingId: string, attendeeId: string) => void;
   sendTrainingMessage: (trainingId: string, message: Omit<TrainingChatMessage, 'id' | 'timestamp'>) => void;
+  updateTrainingLiveState: (trainingId: string, liveState: Partial<TrainingLiveState>) => void;
   bookmarkOpportunity: (oppId: string) => void;
 }
 
@@ -741,7 +753,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
               targetAudience: Array.isArray(t.targetAudience) ? t.targetAudience : (existing.targetAudience || []),
               curriculum: Array.isArray(t.curriculum) ? t.curriculum : (existing.curriculum || []),
               attendees: Array.isArray(t.attendees) ? t.attendees : (existing.attendees || []),
-              chatMessages: Array.isArray(t.chatMessages) ? t.chatMessages : (existing.chatMessages || [])
+              chatMessages: Array.isArray(t.chatMessages) ? t.chatMessages : (existing.chatMessages || []),
+              liveState: t.liveState !== undefined ? t.liveState : existing.liveState
             } as Training);
           });
           return Array.from(map.values());
@@ -754,10 +767,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   useEffect(() => {
     refreshTrainings(selectedSmeId);
-    // Periodic polling (every 8 seconds) so banker and SME across devices sync without manual page reload
+    // Fast polling (every 2.5s) for responsive cross-device live virtual training sync
     const interval = setInterval(() => {
       refreshTrainings(selectedSmeId);
-    }, 8000);
+    }, 2500);
     return () => clearInterval(interval);
   }, [refreshTrainings, selectedSmeId]);
 
@@ -1682,7 +1695,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
-  const syncLiveRoomToBackend = async (trainingId: string, updates: { status?: string; attendees?: any[]; chatMessages?: any[] }) => {
+  const syncLiveRoomToBackend = async (trainingId: string, updates: { status?: string; attendees?: any[]; chatMessages?: any[]; liveState?: TrainingLiveState }) => {
     try {
       await apiRequest(`/trainings/${trainingId}/live`, {
         method: 'PATCH',
@@ -1691,6 +1704,20 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     } catch (e) {
       // ignore
     }
+  };
+
+  const updateTrainingLiveState = (trainingId: string, liveState: Partial<TrainingLiveState>) => {
+    setTrainings(prev => prev.map(t => {
+      if (t.id === trainingId) {
+        const mergedLiveState = { ...(t.liveState || {}), ...liveState, updatedAt: Date.now() };
+        syncLiveRoomToBackend(trainingId, { liveState: mergedLiveState });
+        return {
+          ...t,
+          liveState: mergedLiveState
+        };
+      }
+      return t;
+    }));
   };
 
   const createTraining = async (training: Omit<Training, 'id' | 'participantsCount' | 'attended' | 'completed' | 'hasCertificate'>) => {
@@ -2033,6 +2060,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       admitAllAttendees,
       toggleHandRaise,
       sendTrainingMessage,
+      updateTrainingLiveState,
       bookmarkOpportunity
     }}>
       {children}

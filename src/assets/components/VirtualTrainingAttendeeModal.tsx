@@ -22,9 +22,12 @@ import {
   Hand,
   Sparkles,
   ExternalLink,
-  Printer
+  Printer,
+  Monitor,
+  Maximize2
 } from 'lucide-react';
 import { Training, useApp } from '../../context/AppContext';
+import { apiRequest } from '../../lib/api';
 
 interface VirtualTrainingAttendeeModalProps {
   training: Training;
@@ -42,6 +45,7 @@ export default function VirtualTrainingAttendeeModal({
     trainings,
     joinTraining,
     requestJoinLiveTraining,
+    admitAttendee,
     toggleHandRaise,
     sendTrainingMessage
   } = useApp();
@@ -52,6 +56,13 @@ export default function VirtualTrainingAttendeeModal({
   const myAttendeeRecord = attendees.find(a => a.id === activeSme.id);
   const isAdmitted = myAttendeeRecord?.status === 'admitted';
   const chatMessages = currentTraining.chatMessages || [];
+
+  // Screen Sharing & Video Stream State
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [liveSnapshot, setLiveSnapshot] = useState<string | null>(null);
+  const [isHostScreenSharing, setIsHostScreenSharing] = useState(false);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
 
   // Attendee Media States
   const [isMicOn, setIsMicOn] = useState(false);
@@ -137,6 +148,29 @@ export default function VirtualTrainingAttendeeModal({
     });
   }, [training.id, activeSme.id]);
 
+  // Request stream immediately whenever admitted
+  useEffect(() => {
+    if (isAdmitted) {
+      try {
+        const ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
+        ch.postMessage({
+          type: 'ATTENDEE_REQUEST_STREAM',
+          attendeeId: activeSme.id
+        });
+        ch.close();
+      } catch (e) {}
+
+      apiRequest(`/trainings/${training.id}/signal`, {
+        method: 'POST',
+        body: JSON.stringify({
+          from: activeSme.id,
+          to: 'host',
+          signal: { type: 'request_stream' }
+        })
+      }).catch(() => {});
+    }
+  }, [isAdmitted, training.id, activeSme.id]);
+
   // Session timer and live progression
   useEffect(() => {
     const timer = setInterval(() => {
@@ -155,6 +189,177 @@ export default function VirtualTrainingAttendeeModal({
       setIsHandRaised(!!myAttendeeRecord.handRaised);
     }
   }, [myAttendeeRecord?.handRaised]);
+
+  // Sync with currentTraining.liveState from AppContext (polled every 2.5s)
+  useEffect(() => {
+    const live = currentTraining.liveState;
+    if (live) {
+      setIsHostScreenSharing(!!live.isScreenSharing);
+      if (live.screenSnapshot) {
+        setLiveSnapshot(live.screenSnapshot);
+      }
+      if (live.currentSlideIndex !== undefined) {
+        setCurrentSlideIndex(live.currentSlideIndex);
+      }
+    }
+  }, [currentTraining.liveState]);
+
+  // BroadcastChannel and WebRTC listener for instant live streaming
+  useEffect(() => {
+    let ch: BroadcastChannel | null = null;
+    try {
+      ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
+      ch.onmessage = async (e) => {
+        const msg = e.data;
+        if (!msg) return;
+
+        if (msg.type === 'SCREEN_SHARE_STARTED') {
+          setIsHostScreenSharing(true);
+          ch?.postMessage({
+            type: 'ATTENDEE_REQUEST_STREAM',
+            attendeeId: activeSme.id
+          });
+          apiRequest(`/trainings/${training.id}/signal`, {
+            method: 'POST',
+            body: JSON.stringify({
+              from: activeSme.id,
+              to: 'host',
+              signal: { type: 'request_stream' }
+            })
+          }).catch(() => {});
+        } else if (msg.type === 'SCREEN_SHARE_STOPPED') {
+          setIsHostScreenSharing(false);
+          setLiveSnapshot(null);
+          setRemoteStream(null);
+          if (peerConnectionRef.current) {
+            peerConnectionRef.current.close();
+            peerConnectionRef.current = null;
+          }
+        } else if (msg.type === 'SCREEN_FRAME' && msg.frame) {
+          setIsHostScreenSharing(true);
+          setLiveSnapshot(msg.frame);
+        } else if (msg.type === 'SLIDE_CHANGED' && msg.slideIndex !== undefined) {
+          setCurrentSlideIndex(msg.slideIndex);
+        } else if (msg.type === 'OFFER' && (msg.to === activeSme.id || msg.to === 'all')) {
+          handleWebRTCOffer(msg.offer);
+        } else if (msg.type === 'ICE_CANDIDATE' && msg.to === activeSme.id && msg.candidate) {
+          if (peerConnectionRef.current) {
+            await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(msg.candidate));
+          }
+        }
+      };
+
+      // Request stream on mount
+      ch.postMessage({
+        type: 'ATTENDEE_REQUEST_STREAM',
+        attendeeId: activeSme.id
+      });
+    } catch (err) {}
+
+    // Polling WebRTC signals for cross-device
+    const signalPoll = setInterval(async () => {
+      try {
+        const res = await apiRequest(`/trainings/${training.id}/signal?peerId=${activeSme.id}`);
+        if (res && res.success && Array.isArray(res.data)) {
+          for (const item of res.data) {
+            if (item.signal?.type === 'offer') {
+              handleWebRTCOffer(item.signal.offer);
+            } else if (item.signal?.type === 'candidate' && item.signal.candidate) {
+              if (peerConnectionRef.current) {
+                await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(item.signal.candidate));
+              }
+            }
+          }
+        }
+      } catch (e) {}
+    }, 2000);
+
+    return () => {
+      ch?.close();
+      clearInterval(signalPoll);
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+        peerConnectionRef.current = null;
+      }
+    };
+  }, [training.id, activeSme.id]);
+
+  const handleWebRTCOffer = async (offer: any) => {
+    try {
+      if (peerConnectionRef.current) {
+        peerConnectionRef.current.close();
+      }
+
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+
+      pc.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          setRemoteStream(event.streams[0]);
+          setIsHostScreenSharing(true);
+        }
+      };
+
+      pc.onicecandidate = (event) => {
+        if (event.candidate) {
+          try {
+            const ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
+            ch.postMessage({
+              type: 'ICE_CANDIDATE',
+              from: activeSme.id,
+              to: 'host',
+              candidate: event.candidate
+            });
+            ch.close();
+          } catch (e) {}
+
+          apiRequest(`/trainings/${training.id}/signal`, {
+            method: 'POST',
+            body: JSON.stringify({
+              from: activeSme.id,
+              to: 'host',
+              signal: { type: 'candidate', candidate: event.candidate }
+            })
+          }).catch(() => {});
+        }
+      };
+
+      await pc.setRemoteDescription(new RTCSessionDescription(offer));
+      const answer = await pc.createAnswer();
+      await pc.setLocalDescription(answer);
+
+      try {
+        const ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
+        ch.postMessage({
+          type: 'ANSWER',
+          from: activeSme.id,
+          to: 'host',
+          answer
+        });
+        ch.close();
+      } catch (e) {}
+
+      await apiRequest(`/trainings/${training.id}/signal`, {
+        method: 'POST',
+        body: JSON.stringify({
+          from: activeSme.id,
+          to: 'host',
+          signal: { type: 'answer', answer }
+        })
+      });
+
+      peerConnectionRef.current = pc;
+    } catch (err) {
+      console.warn('Error handling WebRTC offer:', err);
+    }
+  };
+
+  useEffect(() => {
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    }
+  }, [remoteStream, isHostScreenSharing]);
 
   const handleToggleHand = () => {
     toggleHandRaise(training.id, activeSme.id);
@@ -294,8 +499,8 @@ export default function VirtualTrainingAttendeeModal({
                   <button
                     type="button"
                     onClick={() => {
-                      // Instantly admit self in context for instant interactive demo
-                      useApp;
+                      // Instantly admit self in context for testing and interactive demo
+                      admitAttendee(training.id, activeSme.id);
                     }}
                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-[#38bdf8] border border-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
                   >
@@ -303,15 +508,127 @@ export default function VirtualTrainingAttendeeModal({
                   </button>
                 </div>
               </div>
+            ) : (isHostScreenSharing || remoteStream || liveSnapshot) ? (
+              /* STATE 2A: LIVE SCREEN SHARE VIEWPORT */
+              <div className="w-full h-full bg-black flex flex-col justify-between relative overflow-hidden">
+                {/* Screen Share Video Stream / Snapshot */}
+                <div className="flex-1 w-full h-full relative flex items-center justify-center overflow-hidden bg-slate-950">
+                  {remoteStream ? (
+                    <video
+                      ref={(el) => {
+                        remoteVideoRef.current = el;
+                        if (el && el.srcObject !== remoteStream) {
+                          el.srcObject = remoteStream;
+                          el.play().catch(() => {});
+                        }
+                      }}
+                      autoPlay
+                      playsInline
+                      muted
+                      className="w-full h-full object-contain"
+                    />
+                  ) : liveSnapshot ? (
+                    <img
+                      src={liveSnapshot}
+                      alt="Host Live Screen Share"
+                      className="w-full h-full object-contain select-none"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
+                      <div className="w-16 h-16 rounded-2xl bg-[#0a66c2]/20 border border-[#0a66c2]/40 flex items-center justify-center shadow-lg">
+                        <Monitor className="w-8 h-8 text-[#38bdf8] animate-pulse" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold text-white">Connecting to Trainer's Screen...</h3>
+                        <p className="text-xs text-slate-400 mt-1 max-w-sm">
+                          Receiving real-time transmission from <span className="text-[#38bdf8] font-semibold">{training.speaker}</span>.
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        Synchronizing live display buffer...
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Overlaid Top Header */}
+                <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10 pointer-events-none">
+                  <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/80 shadow-lg pointer-events-auto">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                      <Radio className="w-3.5 h-3.5 text-red-400" /> Live Screen Share
+                    </span>
+                    <span className="text-slate-600">|</span>
+                    <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
+                      {training.speaker} is presenting
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pointer-events-auto">
+                    <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-md uppercase tracking-wider shadow">
+                      {remoteStream ? 'WebRTC HD P2P' : 'Live Snapshot 1080p'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Overlaid Bottom Status Bar */}
+                <div className="p-3 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent flex justify-between items-center text-xs text-slate-400 z-10">
+                  <span className="flex items-center gap-1.5 text-[11px]">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Elevata Encrypted Stream
+                  </span>
+                  <span className="text-[11px] text-slate-400">
+                    Live Broadcast · Synced with Trainer
+                  </span>
+                </div>
+
+                {/* Picture-In-Picture: Trainer Live Video & Attendee Preview */}
+                <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
+                  {/* Trainer Video Window */}
+                  <div className="w-36 sm:w-40 h-24 sm:h-28 bg-[#0a0f1d]/90 backdrop-blur-md border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl p-2 flex flex-col justify-between">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-bold text-slate-300 bg-black/60 px-1.5 py-0.5 rounded">
+                        Trainer (Speaker)
+                      </span>
+                      <Mic className="w-3 h-3 text-emerald-400" />
+                    </div>
+                    <div className="text-center my-auto">
+                      <div className="w-8 h-8 rounded-full bg-[#0a66c2] mx-auto flex items-center justify-center text-xs font-bold text-white">
+                        {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
+                      </div>
+                    </div>
+                    <div className="text-[9px] text-slate-300 truncate font-semibold text-center">
+                      {training.speaker}
+                    </div>
+                  </div>
+
+                  {/* My Attendee Camera Window */}
+                  <div className="w-36 sm:w-40 h-20 sm:h-24 bg-[#0d1424]/90 backdrop-blur-md border border-slate-700 rounded-xl overflow-hidden shadow-xl p-2 flex flex-col justify-between">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[9px] font-bold text-slate-400 bg-black/60 px-1.5 py-0.5 rounded">
+                        You ({activeSme.name})
+                      </span>
+                      {isMicOn ? <Mic className="w-2.5 h-2.5 text-emerald-400" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}
+                    </div>
+                    <div className="text-center my-auto">
+                      {isCamOn ? (
+                        <div className="text-[10px] text-slate-300 font-medium">Camera Active</div>
+                      ) : (
+                        <div className="text-[10px] text-slate-500">Camera Off</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
-              /* STATE 2: ADMITTED LIVE STREAM & SLIDES VIEWPORT */
+              /* STATE 2B: ADMITTED LIVE SLIDES VIEWPORT */
               <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white relative">
                 
                 {/* Stage Header */}
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
                     <span className="px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
-                      <Radio className="w-3 h-3" /> Host Screen Stream
+                      <Radio className="w-3 h-3" /> Host Slide Deck
                     </span>
                     <span className="text-xs text-slate-400">
                       Slide {currentSlideIndex + 1} of {presentationSlides.length}
