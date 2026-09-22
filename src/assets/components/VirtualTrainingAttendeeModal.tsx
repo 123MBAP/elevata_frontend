@@ -28,6 +28,14 @@ import {
 } from 'lucide-react';
 import { Training, useApp } from '../../context/AppContext';
 import { apiRequest } from '../../lib/api';
+import {
+  Room,
+  RoomEvent,
+  Track,
+  RemoteTrack,
+  RemoteTrackPublication,
+  RemoteParticipant
+} from 'livekit-client';
 
 interface VirtualTrainingAttendeeModalProps {
   training: Training;
@@ -68,6 +76,12 @@ export default function VirtualTrainingAttendeeModal({
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
+  const livekitRoomRef = useRef<Room | null>(null);
+  const [isLivekitConnected, setIsLivekitConnected] = useState(false);
+  const [remoteScreenTrack, setRemoteScreenTrack] = useState<RemoteTrack | null>(null);
+  const [remoteTrainerCameraTrack, setRemoteTrainerCameraTrack] = useState<RemoteTrack | null>(null);
+  const trainerVideoRef = useRef<HTMLVideoElement | null>(null);
+  const screenVideoRef = useRef<HTMLVideoElement | null>(null);
 
   // Attendee Media States
   const [isMicOn, setIsMicOn] = useState(false);
@@ -215,6 +229,167 @@ export default function VirtualTrainingAttendeeModal({
       return () => clearInterval(pollReq);
     }
   }, [isAdmitted, training.id, activeSme.id, remoteStream, liveSnapshot, liveCameraSnapshot]);
+
+  // Connect to LiveKit Cloud Room as SME Attendee
+  useEffect(() => {
+    let active = true;
+    const connectLiveKit = async () => {
+      try {
+        console.log('[LiveKit Attendee] Fetching attendee token for:', activeSme.id);
+        const res = await apiRequest(`/trainings/${training.id}/livekit-token`, {
+          method: 'POST',
+          body: JSON.stringify({
+            participantId: activeSme.id,
+            participantName: `${activeSme.ownerName} (${activeSme.name})`,
+            isHost: false
+          })
+        });
+
+        if (!active || !res || !res.success || !res.data?.token) {
+          console.warn('[LiveKit Attendee] Could not fetch token:', res);
+          return;
+        }
+
+        const { token, url } = res.data;
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true
+        });
+        livekitRoomRef.current = room;
+
+        room.on(RoomEvent.Connected, () => {
+          console.log('[LiveKit Attendee] Connected to LiveKit room:', room.name);
+          if (active) setIsLivekitConnected(true);
+        });
+
+        room.on(RoomEvent.Disconnected, () => {
+          console.log('[LiveKit Attendee] Disconnected from LiveKit room');
+          if (active) setIsLivekitConnected(false);
+        });
+
+        const handleIncomingTrack = (
+          track: RemoteTrack,
+          publication: RemoteTrackPublication,
+          participant: RemoteParticipant
+        ) => {
+          console.log('[LiveKit Attendee] Incoming track:', track.kind, publication.source, track.source, publication.trackName, participant.identity);
+
+          const isScreen =
+            publication.source === Track.Source.ScreenShare ||
+            track.source === Track.Source.ScreenShare ||
+            publication.trackName?.toLowerCase().includes('screen') ||
+            track.name?.toLowerCase().includes('screen');
+
+          if (isScreen) {
+            console.log('[LiveKit Attendee] >> ScreenShare track identified and activated <<');
+            setRemoteScreenTrack(track);
+            setIsHostScreenSharing(true);
+            setShareType('screen');
+            setAttendeeViewMode('presentation');
+            if (screenVideoRef.current) {
+              track.attach(screenVideoRef.current);
+            }
+          } else if (
+            publication.source === Track.Source.Camera ||
+            track.source === Track.Source.Camera ||
+            track.kind === Track.Kind.Video
+          ) {
+            console.log('[LiveKit Attendee] >> Trainer camera track identified and activated <<');
+            setRemoteTrainerCameraTrack(track);
+            if (trainerVideoRef.current) {
+              track.attach(trainerVideoRef.current);
+            }
+          } else if (track.kind === Track.Kind.Audio) {
+            console.log('[LiveKit Attendee] >> Audio track identified and attached <<');
+            const el = track.attach();
+            el.autoplay = true;
+            el.play().catch(() => {});
+          }
+        };
+
+        room.on(RoomEvent.TrackSubscribed, (track: RemoteTrack, publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+          console.log('[LiveKit Attendee] Track subscribed event:', track.kind, publication.source, participant.identity);
+          handleIncomingTrack(track, publication, participant);
+        });
+
+        room.on(RoomEvent.TrackPublished, (publication: RemoteTrackPublication, participant: RemoteParticipant) => {
+          console.log('[LiveKit Attendee] Track published event from', participant.identity, publication.source);
+          if (publication.track && publication.isSubscribed) {
+            handleIncomingTrack(publication.track, publication, participant);
+          }
+        });
+
+        room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, publication: RemoteTrackPublication) => {
+          console.log('[LiveKit Attendee] Track unsubscribed:', publication.source);
+          track.detach();
+          const isScreen =
+            publication.source === Track.Source.ScreenShare ||
+            track.source === Track.Source.ScreenShare ||
+            publication.trackName?.toLowerCase().includes('screen') ||
+            track.name?.toLowerCase().includes('screen');
+
+          if (isScreen) {
+            setRemoteScreenTrack(null);
+            setIsHostScreenSharing(false);
+            setShareType(undefined);
+            setAttendeeViewMode('speaker');
+          } else if (publication.source === Track.Source.Camera || track.source === Track.Source.Camera || track.kind === Track.Kind.Video) {
+            setRemoteTrainerCameraTrack(null);
+          }
+        });
+
+        room.on(RoomEvent.TrackMuted, (publication: RemoteTrackPublication) => {
+          if (publication.source === Track.Source.ScreenShare) {
+            setIsHostScreenSharing(false);
+          }
+        });
+
+        room.on(RoomEvent.TrackUnmuted, (publication: RemoteTrackPublication) => {
+          if (publication.source === Track.Source.ScreenShare) {
+            setIsHostScreenSharing(true);
+            setShareType('screen');
+            setAttendeeViewMode('presentation');
+          }
+        });
+
+        await room.connect(url, token);
+
+        // Process any tracks already published/subscribed by participants
+        room.remoteParticipants.forEach((participant) => {
+          participant.trackPublications.forEach((publication) => {
+            if (publication.isSubscribed && publication.track) {
+              handleIncomingTrack(publication.track, publication, participant);
+            }
+          });
+        });
+      } catch (err) {
+        console.warn('[LiveKit Attendee] LiveKit room initialization error:', err);
+      }
+    };
+
+    connectLiveKit();
+
+    return () => {
+      active = false;
+      if (livekitRoomRef.current) {
+        livekitRoomRef.current.disconnect();
+        livekitRoomRef.current = null;
+      }
+    };
+  }, [training.id, activeSme.id]);
+
+  // Synchronize LiveKit track attachments with DOM elements
+  useEffect(() => {
+    if (remoteScreenTrack && screenVideoRef.current) {
+      remoteScreenTrack.attach(screenVideoRef.current);
+    }
+  }, [remoteScreenTrack, attendeeViewMode, isHostScreenSharing]);
+
+  useEffect(() => {
+    if (remoteTrainerCameraTrack && trainerVideoRef.current) {
+      remoteTrainerCameraTrack.attach(trainerVideoRef.current);
+    }
+  }, [remoteTrainerCameraTrack, attendeeViewMode]);
 
   // Session timer and live progression
   useEffect(() => {
@@ -474,6 +649,30 @@ export default function VirtualTrainingAttendeeModal({
     return `${mins.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  const handleToggleAttendeeMic = async () => {
+    const nextState = !isMicOn;
+    setIsMicOn(nextState);
+    if (livekitRoomRef.current && livekitRoomRef.current.state === 'connected') {
+      try {
+        await livekitRoomRef.current.localParticipant.setMicrophoneEnabled(nextState);
+      } catch (e) {
+        console.warn('[LiveKit Attendee] Mic toggle error:', e);
+      }
+    }
+  };
+
+  const handleToggleAttendeeCam = async () => {
+    const nextState = !isCamOn;
+    setIsCamOn(nextState);
+    if (livekitRoomRef.current && livekitRoomRef.current.state === 'connected') {
+      try {
+        await livekitRoomRef.current.localParticipant.setCameraEnabled(nextState);
+      } catch (e) {
+        console.warn('[LiveKit Attendee] Cam toggle error:', e);
+      }
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-[#090d16] text-white flex flex-col font-sans overflow-hidden">
       {/* Top Header Bar */}
@@ -598,7 +797,19 @@ export default function VirtualTrainingAttendeeModal({
                   {attendeeViewMode === 'speaker' ? (
                     /* VIEW MODE A: FULL STAGE TRAINER CAMERA BROADCAST */
                     <div className="w-full h-full relative flex items-center justify-center bg-slate-950">
-                      {liveCameraSnapshot ? (
+                      {remoteTrainerCameraTrack ? (
+                        <video
+                          ref={(el) => {
+                            if (el && remoteTrainerCameraTrack) {
+                              remoteTrainerCameraTrack.attach(el);
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                      ) : liveCameraSnapshot ? (
                         <img
                           src={liveCameraSnapshot}
                           alt="Trainer Live Camera Feed"
@@ -652,7 +863,20 @@ export default function VirtualTrainingAttendeeModal({
                   ) : (isHostScreenSharing || attendeeViewMode === 'presentation') && shareType !== 'slides' ? (
                     /* VIEW MODE B: LIVE SCREEN SHARE VIEWPORT */
                     <div className="w-full h-full relative flex items-center justify-center bg-slate-950">
-                      {remoteStream ? (
+                      {remoteScreenTrack ? (
+                        <video
+                          ref={(el) => {
+                            screenVideoRef.current = el;
+                            if (el && remoteScreenTrack) {
+                              remoteScreenTrack.attach(el);
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-contain"
+                        />
+                      ) : remoteStream ? (
                         <div className="w-full h-full relative flex items-center justify-center">
                           <video
                             ref={(el) => {
@@ -891,7 +1115,7 @@ export default function VirtualTrainingAttendeeModal({
                     </div>
 
                     <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-md uppercase tracking-wider shadow hidden sm:inline-block">
-                      {remoteStream ? 'WebRTC HD P2P' : 'Live Snapshot HD'}
+                      {isLivekitConnected ? 'LiveKit Cloud SFU' : remoteStream ? 'WebRTC HD P2P' : 'Live Snapshot HD'}
                     </span>
                   </div>
                 </div>
@@ -925,7 +1149,20 @@ export default function VirtualTrainingAttendeeModal({
                     </div>
 
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
-                      {liveCameraSnapshot ? (
+                      {remoteTrainerCameraTrack ? (
+                        <video
+                          ref={(el) => {
+                            trainerVideoRef.current = el;
+                            if (el && remoteTrainerCameraTrack) {
+                              remoteTrainerCameraTrack.attach(el);
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover"
+                        />
+                      ) : liveCameraSnapshot ? (
                         <img
                           src={liveCameraSnapshot}
                           alt="Trainer Live Camera"
@@ -1010,7 +1247,7 @@ export default function VirtualTrainingAttendeeModal({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsMicOn(!isMicOn)}
+                onClick={handleToggleAttendeeMic}
                 className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
                   isMicOn ? 'bg-emerald-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                 }`}
@@ -1022,7 +1259,7 @@ export default function VirtualTrainingAttendeeModal({
 
               <button
                 type="button"
-                onClick={() => setIsCamOn(!isCamOn)}
+                onClick={handleToggleAttendeeCam}
                 className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
                   isCamOn ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-red-600 text-white'
                 }`}

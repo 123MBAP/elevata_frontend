@@ -22,6 +22,13 @@ import {
 } from 'lucide-react';
 import { Training, useApp } from '../../context/AppContext';
 import { apiRequest } from '../../lib/api';
+import {
+  Room,
+  RoomEvent,
+  VideoPresets,
+  Track,
+  LocalTrackPublication
+} from 'livekit-client';
 
 interface VirtualTrainingDeliveryModalProps {
   training: Training;
@@ -276,6 +283,8 @@ export default function VirtualTrainingDeliveryModal({
   const cameraStreamRef = useRef<MediaStream | null>(null);
   const cameraTrackRef = useRef<MediaStreamTrack | null>(null);
   const presenterCameraVideoRef = useRef<HTMLVideoElement | null>(null);
+  const livekitRoomRef = useRef<Room | null>(null);
+  const [isLivekitConnected, setIsLivekitConnected] = useState(false);
 
   // Keep screenStreamRef synchronized
   useEffect(() => {
@@ -384,6 +393,92 @@ export default function VirtualTrainingDeliveryModal({
       }
     };
   }, [training.speaker]);
+
+  // Connect to LiveKit Cloud Room as Presenter / Host
+  useEffect(() => {
+    let active = true;
+    const connectLiveKit = async () => {
+      try {
+        console.log('[LiveKit Host] Requesting presenter token for training:', training.id);
+        const res = await apiRequest(`/trainings/${training.id}/livekit-token`, {
+          method: 'POST',
+          body: JSON.stringify({
+            participantId: 'host',
+            participantName: training.speaker || 'Lead Credit Trainer',
+            isHost: true
+          })
+        });
+
+        if (!active || !res || !res.success || !res.data?.token) {
+          console.warn('[LiveKit Host] Token response error:', res);
+          return;
+        }
+
+        const { token, url } = res.data;
+        const room = new Room({
+          adaptiveStream: true,
+          dynacast: true,
+          videoCaptureDefaults: {
+            resolution: VideoPresets.h720.resolution
+          }
+        });
+        livekitRoomRef.current = room;
+
+        room.on(RoomEvent.Connected, () => {
+          console.log('[LiveKit Host] Successfully connected to LiveKit room:', room.name);
+          if (active) setIsLivekitConnected(true);
+        });
+
+        room.on(RoomEvent.Disconnected, () => {
+          console.log('[LiveKit Host] Disconnected from LiveKit room');
+          if (active) setIsLivekitConnected(false);
+        });
+
+        // When local tracks are published, attach them to our preview elements
+        room.on(RoomEvent.LocalTrackPublished, (publication: LocalTrackPublication) => {
+          if (publication.source === Track.Source.Camera && publication.track && presenterCameraVideoRef.current) {
+            publication.track.attach(presenterCameraVideoRef.current);
+          }
+          if (publication.source === Track.Source.ScreenShare && publication.track && screenVideoRef.current) {
+            publication.track.attach(screenVideoRef.current);
+          }
+        });
+
+        await room.connect(url, token);
+
+        // Publish presenter camera and mic if enabled
+        try {
+          await room.localParticipant.setCameraEnabled(isCamOn);
+          await room.localParticipant.setMicrophoneEnabled(isMicOn);
+        } catch (mediaErr) {
+          console.warn('[LiveKit Host] Physical webcam initial publish error, trying virtual stream:', mediaErr);
+          if (cameraStreamRef.current && cameraStreamRef.current.getVideoTracks()[0]) {
+            try {
+              await room.localParticipant.publishTrack(cameraStreamRef.current.getVideoTracks()[0], {
+                name: 'camera',
+                source: Track.Source.Camera
+              });
+              console.log('[LiveKit Host] Published virtual canvas camera track to LiveKit SFU');
+            } catch (canvasErr) {
+              console.warn('[LiveKit Host] Canvas publish error:', canvasErr);
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('[LiveKit Host] LiveKit room initialization failed:', err);
+      }
+    };
+
+    connectLiveKit();
+
+    return () => {
+      active = false;
+      if (livekitRoomRef.current) {
+        livekitRoomRef.current.disconnect();
+        livekitRoomRef.current = null;
+      }
+    };
+  }, [training.id]);
 
   // Establish or update WebRTC peer connection with an SME attendee
   const initiatePeerConnection = async (attendeeId: string, customStream?: MediaStream) => {
@@ -647,9 +742,18 @@ export default function VirtualTrainingDeliveryModal({
     });
   };
 
-  const handleToggleCamera = () => {
+  const handleToggleCamera = async () => {
     const nextState = !isCamOn;
     setIsCamOn(nextState);
+
+    if (livekitRoomRef.current && livekitRoomRef.current.state === 'connected') {
+      try {
+        await livekitRoomRef.current.localParticipant.setCameraEnabled(nextState);
+      } catch (e) {
+        console.warn('[LiveKit Host] toggle camera error:', e);
+      }
+    }
+
     if (cameraTrackRef.current) {
       cameraTrackRef.current.enabled = nextState;
     }
@@ -663,9 +767,18 @@ export default function VirtualTrainingDeliveryModal({
     });
   };
 
-  const handleToggleMic = () => {
+  const handleToggleMic = async () => {
     const nextState = !isMicOn;
     setIsMicOn(nextState);
+
+    if (livekitRoomRef.current && livekitRoomRef.current.state === 'connected') {
+      try {
+        await livekitRoomRef.current.localParticipant.setMicrophoneEnabled(nextState);
+      } catch (e) {
+        console.warn('[LiveKit Host] toggle mic error:', e);
+      }
+    }
+
     updateTrainingLiveState(training.id, {
       hostMicOn: nextState
     });
@@ -681,44 +794,74 @@ export default function VirtualTrainingDeliveryModal({
       await handleStopScreenShare();
     } else {
       try {
-        console.log("[Presenter] getDisplayMedia started");
-        if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
-          const stream = await navigator.mediaDevices.getDisplayMedia({
+        console.log("[Presenter] Starting screen sharing...");
+        let stream: MediaStream | null = null;
+        let screenTrack: MediaStreamTrack | null = null;
+        let localLkTrack: any = null;
+
+        // 1. Prioritize LiveKit SFU Screen Share
+        if (livekitRoomRef.current && livekitRoomRef.current.state === 'connected') {
+          console.log("[Presenter] Publishing screen via LiveKit SFU 1080p...");
+          const pub = await livekitRoomRef.current.localParticipant.setScreenShareEnabled(true, {
+            audio: false,
+            resolution: VideoPresets.h1080.resolution
+          });
+
+          if (pub) {
+            localLkTrack = pub.track || (pub as any).videoTrack || livekitRoomRef.current.localParticipant.getTrackPublication(Track.Source.ScreenShare)?.track;
+            if (localLkTrack) {
+              screenTrack = localLkTrack.mediaStreamTrack || localLkTrack.track;
+              if (screenTrack) {
+                stream = new MediaStream([screenTrack]);
+              }
+            }
+          }
+        }
+
+        // 2. Direct browser fallback if LiveKit did not produce a local MediaStream
+        if (!stream && navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+          console.log("[Presenter] Using browser getDisplayMedia fallback...");
+          stream = await navigator.mediaDevices.getDisplayMedia({
             video: true,
             audio: false
           });
+          screenTrack = stream.getVideoTracks()[0];
+        }
 
-          const screenTrack = stream.getVideoTracks()[0];
-          console.log("[Presenter] screen track obtained:", screenTrack?.id, screenTrack?.label);
+        const isLkSharing = !!(livekitRoomRef.current?.localParticipant?.isScreenShareEnabled);
 
-          setScreenStream(stream);
-          screenStreamRef.current = stream;
-          setIsScreenSharing(true);
-          startSnapshotLoop(stream);
-
-          if (screenVideoRef.current) {
-            screenVideoRef.current.srcObject = stream;
-            screenVideoRef.current.play().catch(() => {});
+        if (stream || isLkSharing) {
+          if (screenTrack) {
+            console.log("[Presenter] screen track active:", screenTrack.id, screenTrack.label);
+            screenTrack.onended = async () => {
+              console.log("[Presenter] screen sharing stopped via onended");
+              await handleStopScreenShare();
+            };
           }
 
-          // Full WebRTC renegotiation: send updated offer with the screen track to all connected attendees
-          for (const [attendeeId] of peerConnectionsRef.current.entries()) {
-            await initiatePeerConnection(attendeeId, stream);
+          if (localLkTrack) {
+            localLkTrack.on('ended', () => {
+              handleStopScreenShare();
+            });
           }
 
-          // Pre-connect to any admitted attendees not in peerConnectionsRef
-          admittedAttendees.forEach(att => {
-            if (!peerConnectionsRef.current.has(att.id)) {
-              initiatePeerConnection(att.id, stream);
+          if (stream) {
+            setScreenStream(stream);
+            screenStreamRef.current = stream;
+            startSnapshotLoop(stream);
+
+            if (screenVideoRef.current) {
+              screenVideoRef.current.srcObject = stream;
+              screenVideoRef.current.play().catch(() => {});
             }
-          });
 
-          // Handle browser's native stop sharing button
-          screenTrack.onended = async () => {
-            console.log("[Presenter] screen sharing stopped via onended");
-            await handleStopScreenShare();
-          };
+            // WebRTC renegotiation for P2P fallback attendees
+            for (const [attendeeId] of peerConnectionsRef.current.entries()) {
+              await initiatePeerConnection(attendeeId, stream);
+            }
+          }
 
+          setIsScreenSharing(true);
           broadcastChannelRef.current?.postMessage({
             type: 'SCREEN_SHARE_STARTED',
             trainingId: training.id
@@ -736,6 +879,16 @@ export default function VirtualTrainingDeliveryModal({
 
   const handleStopScreenShare = async () => {
     console.log("[Presenter] screen sharing stopped");
+
+    // 1. Stop LiveKit Screen Share
+    if (livekitRoomRef.current && livekitRoomRef.current.state === 'connected') {
+      try {
+        await livekitRoomRef.current.localParticipant.setScreenShareEnabled(false);
+      } catch (e) {
+        console.warn('[LiveKit Host] Error stopping screen share:', e);
+      }
+    }
+
     if (screenStreamRef.current) {
       screenStreamRef.current.getTracks().forEach(track => track.stop());
       screenStreamRef.current = null;
@@ -744,14 +897,13 @@ export default function VirtualTrainingDeliveryModal({
     setIsScreenSharing(false);
     stopSnapshotLoop();
 
-    // Restore presenter's camera track using the same RTCRtpSender
+    // Restore presenter's camera track using the same RTCRtpSender for P2P
     const cameraTrack = cameraTrackRef.current;
     if (cameraTrack) {
       for (const [attendeeId, pc] of peerConnectionsRef.current.entries()) {
         try {
           const sender = pc.getSenders().find(s => s.track?.kind === "video");
           if (sender) {
-            console.log(`[Presenter] restoring camera track for attendee ${attendeeId}`);
             await sender.replaceTrack(cameraTrack);
           }
         } catch (e) {
@@ -860,6 +1012,11 @@ export default function VirtualTrainingDeliveryModal({
                 {waitingAttendees.length} in waiting room
               </span>
             )}
+          </div>
+
+          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-sky-950/80 border border-sky-500/40 text-[#38bdf8] rounded-full text-[11px] font-bold uppercase tracking-wider">
+            <Radio className={`w-3 h-3 ${isLivekitConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
+            <span>{isLivekitConnected ? 'LiveKit Cloud SFU' : 'LiveKit Connecting...'}</span>
           </div>
         </div>
 
