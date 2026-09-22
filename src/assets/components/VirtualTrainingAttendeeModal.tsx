@@ -274,11 +274,11 @@ export default function VirtualTrainingAttendeeModal({
         ) => {
           console.log('[LiveKit Attendee] Incoming track:', track.kind, publication.source, track.source, publication.trackName, participant.identity);
 
+          const trackName = publication.trackName || (track as any).name || '';
           const isScreen =
             publication.source === Track.Source.ScreenShare ||
             track.source === Track.Source.ScreenShare ||
-            publication.trackName?.toLowerCase().includes('screen') ||
-            track.name?.toLowerCase().includes('screen');
+            trackName.toLowerCase().includes('screen');
 
           if (isScreen) {
             console.log('[LiveKit Attendee] >> ScreenShare track identified and activated <<');
@@ -322,11 +322,11 @@ export default function VirtualTrainingAttendeeModal({
         room.on(RoomEvent.TrackUnsubscribed, (track: RemoteTrack, publication: RemoteTrackPublication) => {
           console.log('[LiveKit Attendee] Track unsubscribed:', publication.source);
           track.detach();
+          const trackName = publication.trackName || (track as any).name || '';
           const isScreen =
             publication.source === Track.Source.ScreenShare ||
             track.source === Track.Source.ScreenShare ||
-            publication.trackName?.toLowerCase().includes('screen') ||
-            track.name?.toLowerCase().includes('screen');
+            trackName.toLowerCase().includes('screen');
 
           if (isScreen) {
             setRemoteScreenTrack(null);
@@ -338,13 +338,13 @@ export default function VirtualTrainingAttendeeModal({
           }
         });
 
-        room.on(RoomEvent.TrackMuted, (publication: RemoteTrackPublication) => {
+        room.on(RoomEvent.TrackMuted, (publication: any) => {
           if (publication.source === Track.Source.ScreenShare) {
             setIsHostScreenSharing(false);
           }
         });
 
-        room.on(RoomEvent.TrackUnmuted, (publication: RemoteTrackPublication) => {
+        room.on(RoomEvent.TrackUnmuted, (publication: any) => {
           if (publication.source === Track.Source.ScreenShare) {
             setIsHostScreenSharing(true);
             setShareType('screen');
@@ -586,6 +586,8 @@ export default function VirtualTrainingAttendeeModal({
           }
         };
       }
+
+      if (!pc) return;
 
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
