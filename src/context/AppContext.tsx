@@ -100,7 +100,8 @@ export interface TrainingLiveState {
   currentSlideIndex?: number;
   hostMicOn?: boolean;
   hostCamOn?: boolean;
-  screenSnapshot?: string; // base64 JPEG snapshot for instant display
+  screenSnapshot?: string; // base64 JPEG snapshot for instant screen display
+  cameraSnapshot?: string; // base64 JPEG snapshot for presenter camera
   updatedAt?: number;
 }
 

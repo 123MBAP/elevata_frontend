@@ -60,9 +60,14 @@ export default function VirtualTrainingAttendeeModal({
   // Screen Sharing & Video Stream State
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [liveSnapshot, setLiveSnapshot] = useState<string | null>(null);
+  const [liveCameraSnapshot, setLiveCameraSnapshot] = useState<string | null>(null);
   const [isHostScreenSharing, setIsHostScreenSharing] = useState(false);
+  const [shareType, setShareType] = useState<'screen' | 'slides' | undefined>(undefined);
+  const [isVideoReceivingFrames, setIsVideoReceivingFrames] = useState(false);
+  const [localAttendeeStream, setLocalAttendeeStream] = useState<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   const peerConnectionRef = useRef<RTCPeerConnection | null>(null);
+  const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
 
   // Attendee Media States
   const [isMicOn, setIsMicOn] = useState(false);
@@ -76,7 +81,38 @@ export default function VirtualTrainingAttendeeModal({
   const [progress, setProgress] = useState(0);
   const [showCertificate, setShowCertificate] = useState(false);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [attendeeViewMode, setAttendeeViewMode] = useState<'video' | 'slides'>('video');
+  const [attendeeViewMode, setAttendeeViewMode] = useState<'presentation' | 'speaker' | 'slides'>('presentation');
+
+  // Attendee local camera stream
+  useEffect(() => {
+    let active = true;
+    if (isCamOn) {
+      navigator.mediaDevices?.getUserMedia?.({ video: true, audio: false })
+        .then(stream => {
+          if (active) setLocalAttendeeStream(stream);
+          else stream.getTracks().forEach(t => t.stop());
+        })
+        .catch(() => {
+          // Camera permission not granted or device in use
+        });
+    } else {
+      if (localAttendeeStream) {
+        localAttendeeStream.getTracks().forEach(t => t.stop());
+        setLocalAttendeeStream(null);
+      }
+    }
+    return () => {
+      active = false;
+    };
+  }, [isCamOn]);
+
+  useEffect(() => {
+    return () => {
+      if (localAttendeeStream) {
+        localAttendeeStream.getTracks().forEach(t => t.stop());
+      }
+    };
+  }, [localAttendeeStream]);
 
   // Sample slides synced with host presentation
   const presentationSlides = [
@@ -149,28 +185,36 @@ export default function VirtualTrainingAttendeeModal({
     });
   }, [training.id, activeSme.id]);
 
+  const requestStreamFromHost = () => {
+    try {
+      broadcastChannelRef.current?.postMessage({
+        type: 'ATTENDEE_REQUEST_STREAM',
+        attendeeId: activeSme.id
+      });
+    } catch (e) {}
+
+    apiRequest(`/trainings/${training.id}/signal`, {
+      method: 'POST',
+      body: JSON.stringify({
+        from: activeSme.id,
+        to: 'host',
+        signal: { type: 'request_stream' }
+      })
+    }).catch(() => {});
+  };
+
   // Request stream immediately whenever admitted
   useEffect(() => {
     if (isAdmitted) {
-      try {
-        const ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
-        ch.postMessage({
-          type: 'ATTENDEE_REQUEST_STREAM',
-          attendeeId: activeSme.id
-        });
-        ch.close();
-      } catch (e) {}
-
-      apiRequest(`/trainings/${training.id}/signal`, {
-        method: 'POST',
-        body: JSON.stringify({
-          from: activeSme.id,
-          to: 'host',
-          signal: { type: 'request_stream' }
-        })
-      }).catch(() => {});
+      requestStreamFromHost();
+      const pollReq = setInterval(() => {
+        if (!remoteStream && !liveSnapshot && !liveCameraSnapshot) {
+          requestStreamFromHost();
+        }
+      }, 3500);
+      return () => clearInterval(pollReq);
     }
-  }, [isAdmitted, training.id, activeSme.id]);
+  }, [isAdmitted, training.id, activeSme.id, remoteStream, liveSnapshot, liveCameraSnapshot]);
 
   // Session timer and live progression
   useEffect(() => {
@@ -195,9 +239,20 @@ export default function VirtualTrainingAttendeeModal({
   useEffect(() => {
     const live = currentTraining.liveState;
     if (live) {
-      setIsHostScreenSharing(!!live.isScreenSharing);
+      if (live.isScreenSharing !== undefined) {
+        setIsHostScreenSharing(!!live.isScreenSharing);
+        if (live.isScreenSharing && attendeeViewMode === 'speaker') {
+          setAttendeeViewMode('presentation');
+        }
+      }
+      if (live.shareType !== undefined) {
+        setShareType(live.shareType);
+      }
       if (live.screenSnapshot) {
         setLiveSnapshot(live.screenSnapshot);
+      }
+      if (live.cameraSnapshot) {
+        setLiveCameraSnapshot(live.cameraSnapshot);
       }
       if (live.currentSlideIndex !== undefined) {
         setCurrentSlideIndex(live.currentSlideIndex);
@@ -210,6 +265,7 @@ export default function VirtualTrainingAttendeeModal({
     let ch: BroadcastChannel | null = null;
     try {
       ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
+      broadcastChannelRef.current = ch;
       ch.onmessage = async (e) => {
         const msg = e.data;
         if (!msg) return;
@@ -217,29 +273,24 @@ export default function VirtualTrainingAttendeeModal({
         if (msg.type === 'SCREEN_SHARE_STARTED') {
           console.log("[SME] SCREEN_SHARE_STARTED received");
           setIsHostScreenSharing(true);
-          if (!remoteStream && !peerConnectionRef.current) {
-            ch?.postMessage({
-              type: 'ATTENDEE_REQUEST_STREAM',
-              attendeeId: activeSme.id
-            });
-            apiRequest(`/trainings/${training.id}/signal`, {
-              method: 'POST',
-              body: JSON.stringify({
-                from: activeSme.id,
-                to: 'host',
-                signal: { type: 'request_stream' }
-              })
-            }).catch(() => {});
-          }
+          setShareType('screen');
+          setAttendeeViewMode('presentation');
+          requestStreamFromHost();
         } else if (msg.type === 'SCREEN_SHARE_STOPPED') {
           console.log("[SME] SCREEN_SHARE_STOPPED received, returning to presenter camera stream");
           setIsHostScreenSharing(false);
+          setShareType(undefined);
           setLiveSnapshot(null);
-          // Do not close peer connection or null out remoteStream: presenter restored camera track
+          setAttendeeViewMode('speaker');
         } else if (msg.type === 'SCREEN_FRAME' && msg.frame) {
           setLiveSnapshot(msg.frame);
+          setIsHostScreenSharing(true);
+          setShareType('screen');
+        } else if (msg.type === 'CAMERA_FRAME' && msg.frame) {
+          setLiveCameraSnapshot(msg.frame);
         } else if (msg.type === 'SLIDE_CHANGED' && msg.slideIndex !== undefined) {
           setCurrentSlideIndex(msg.slideIndex);
+          setShareType('slides');
         } else if (msg.type === 'OFFER' && (msg.to === activeSme.id || msg.to === 'all')) {
           console.log("[SME] WebRTC offer received via BroadcastChannel");
           handleWebRTCOffer(msg.offer);
@@ -256,10 +307,7 @@ export default function VirtualTrainingAttendeeModal({
       };
 
       // Request stream on mount
-      ch.postMessage({
-        type: 'ATTENDEE_REQUEST_STREAM',
-        attendeeId: activeSme.id
-      });
+      requestStreamFromHost();
     } catch (err) {}
 
     // Polling WebRTC signals for cross-device
@@ -298,85 +346,82 @@ export default function VirtualTrainingAttendeeModal({
 
   const handleWebRTCOffer = async (offer: any) => {
     try {
-      if (peerConnectionRef.current) {
-        peerConnectionRef.current.close();
-      }
+      let pc = peerConnectionRef.current;
+      const isNew = !pc || pc.connectionState === 'closed' || pc.connectionState === 'failed';
 
-      const pc = new RTCPeerConnection({
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-      });
-
-      pc.onconnectionstatechange = () => {
-        console.log("[SME] connection state:", pc.connectionState);
-      };
-      pc.oniceconnectionstatechange = () => {
-        console.log("[SME] ICE connection state:", pc.iceConnectionState);
-      };
-
-      pc.ontrack = (event) => {
-        console.log("[SME] remote track received:", event.track.id, event.track.kind);
-        const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
-        console.log("[SME] remote stream ID:", stream.id);
-        console.log("[SME] remote video track kind:", event.track.kind);
-        setRemoteStream(stream);
-
-        if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = stream;
-          remoteVideoRef.current.play().catch(e => console.warn("[SME] video play error:", e));
-          console.log("[SME] remote video element assigned");
+      if (isNew) {
+        if (pc) {
+          try { pc.close(); } catch (e) {}
         }
 
-        event.track.onunmute = () => {
-          console.log("[SME] remote track unmuted:", event.track.id);
+        pc = new RTCPeerConnection({
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        });
+        peerConnectionRef.current = pc;
+
+        pc.onconnectionstatechange = () => {
+          console.log("[SME] connection state:", pc!.connectionState);
+        };
+        pc.oniceconnectionstatechange = () => {
+          console.log("[SME] ICE connection state:", pc!.iceConnectionState);
+        };
+
+        pc.ontrack = (event) => {
+          console.log("[SME] remote track received:", event.track.id, event.track.kind);
+          const stream = (event.streams && event.streams[0]) ? event.streams[0] : new MediaStream([event.track]);
+          setRemoteStream(stream);
+          setIsVideoReceivingFrames(true);
+
           if (remoteVideoRef.current) {
             remoteVideoRef.current.srcObject = stream;
-            remoteVideoRef.current.play().catch(() => {});
+            remoteVideoRef.current.play().catch(e => console.warn("[SME] video play error:", e));
           }
-        };
-      };
 
-      pc.onicecandidate = (event) => {
-        if (event.candidate) {
-          console.log("[SME] ICE candidate generated:", event.candidate.candidate);
-          try {
-            const ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
-            ch.postMessage({
+          event.track.onunmute = () => {
+            console.log("[SME] remote track unmuted:", event.track.id);
+            setIsVideoReceivingFrames(true);
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = stream;
+              remoteVideoRef.current.play().catch(() => {});
+            }
+          };
+        };
+
+        pc.onicecandidate = (event) => {
+          if (event.candidate) {
+            console.log("[SME] ICE candidate generated:", event.candidate.candidate);
+            broadcastChannelRef.current?.postMessage({
               type: 'ICE_CANDIDATE',
               from: activeSme.id,
               to: 'host',
               candidate: event.candidate
             });
-            ch.close();
-          } catch (e) {}
 
-          apiRequest(`/trainings/${training.id}/signal`, {
-            method: 'POST',
-            body: JSON.stringify({
-              from: activeSme.id,
-              to: 'host',
-              signal: { type: 'candidate', candidate: event.candidate }
-            })
-          }).catch(() => {});
-        }
-      };
+            apiRequest(`/trainings/${training.id}/signal`, {
+              method: 'POST',
+              body: JSON.stringify({
+                from: activeSme.id,
+                to: 'host',
+                signal: { type: 'candidate', candidate: event.candidate }
+              })
+            }).catch(() => {});
+          }
+        };
+      }
 
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
 
-      try {
-        const ch = new BroadcastChannel(`elevata_training_live_${training.id}`);
-        ch.postMessage({
-          type: 'ANSWER',
-          from: activeSme.id,
-          to: 'host',
-          answer
-        });
-        ch.close();
-      } catch (e) {}
+      broadcastChannelRef.current?.postMessage({
+        type: 'ANSWER',
+        from: activeSme.id,
+        to: 'host',
+        answer
+      });
 
       await apiRequest(`/trainings/${training.id}/signal`, {
         method: 'POST',
@@ -386,8 +431,6 @@ export default function VirtualTrainingAttendeeModal({
           signal: { type: 'answer', answer }
         })
       });
-
-      peerConnectionRef.current = pc;
     } catch (err) {
       console.warn('[SME] Error handling WebRTC offer:', err);
     }
@@ -397,9 +440,8 @@ export default function VirtualTrainingAttendeeModal({
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
       remoteVideoRef.current.play().catch(() => {});
-      console.log("[SME] remote video element assigned via useEffect");
     }
-  }, [remoteStream, isHostScreenSharing]);
+  }, [remoteStream, isHostScreenSharing, attendeeViewMode]);
 
   const handleToggleHand = () => {
     toggleHandRaise(training.id, activeSme.id);
@@ -548,182 +590,308 @@ export default function VirtualTrainingAttendeeModal({
                   </button>
                 </div>
               </div>
-            ) : isHostScreenSharing ? (
-              /* STATE 2A: LIVE SCREEN SHARE VIEWPORT */
-              <div className="w-full h-full bg-black flex flex-col justify-between relative overflow-hidden">
-                {/* Screen Share Video Stream / Snapshot */}
+            ) : (
+              /* STATE 2: ADMITTED LIVE CLASSROOM VIEWPORT */
+              <div className="w-full h-full bg-[#060911] flex flex-col justify-between relative overflow-hidden">
+                {/* Main Visual Stage */}
                 <div className="flex-1 w-full h-full relative flex items-center justify-center overflow-hidden bg-slate-950">
-                  {remoteStream ? (
-                    <video
-                      ref={(el) => {
-                        remoteVideoRef.current = el;
-                        if (el && el.srcObject !== remoteStream) {
-                          el.srcObject = remoteStream;
-                          el.play().catch(() => {});
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-contain"
-                    />
-                  ) : liveSnapshot ? (
-                    <img
-                      src={liveSnapshot}
-                      alt="Host Live Screen Share"
-                      className="w-full h-full object-contain select-none"
-                    />
-                  ) : (
-                    <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-                      <div className="w-16 h-16 rounded-2xl bg-[#0a66c2]/20 border border-[#0a66c2]/40 flex items-center justify-center shadow-lg">
-                        <Monitor className="w-8 h-8 text-[#38bdf8] animate-pulse" />
-                      </div>
-                      <div>
-                        <h3 className="text-base font-bold text-white">Connecting to Trainer's Screen...</h3>
-                        <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                          Receiving real-time transmission from <span className="text-[#38bdf8] font-semibold">{training.speaker}</span>.
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        Synchronizing live display buffer...
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Overlaid Top Header */}
-                <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10 pointer-events-none">
-                  <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/80 shadow-lg pointer-events-auto">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
-                      <Radio className="w-3.5 h-3.5 text-red-400" /> Live Screen Share
-                    </span>
-                    <span className="text-slate-600">|</span>
-                    <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
-                      {training.speaker} is presenting
-                    </span>
-                  </div>
-
-                  <div className="flex items-center gap-2 pointer-events-auto">
-                    <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-md uppercase tracking-wider shadow">
-                      {remoteStream ? 'WebRTC HD P2P' : 'Live Snapshot 1080p'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Overlaid Bottom Status Bar */}
-                <div className="p-3 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent flex justify-between items-center text-xs text-slate-400 z-10">
-                  <span className="flex items-center gap-1.5 text-[11px]">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Elevata Encrypted Stream
-                  </span>
-                  <span className="text-[11px] text-slate-400">
-                    Live Broadcast · Synced with Trainer
-                  </span>
-                </div>
-
-                {/* Picture-In-Picture: Trainer Live Video & Attendee Preview */}
-                <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
-                  {/* Trainer Video Window */}
-                  <div className="w-36 sm:w-40 h-24 sm:h-28 bg-[#0a0f1d]/90 backdrop-blur-md border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl p-2 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold text-slate-300 bg-black/60 px-1.5 py-0.5 rounded">
-                        Trainer (Speaker)
-                      </span>
-                      <Mic className="w-3 h-3 text-emerald-400" />
-                    </div>
-                    <div className="text-center my-auto">
-                      <div className="w-8 h-8 rounded-full bg-[#0a66c2] mx-auto flex items-center justify-center text-xs font-bold text-white">
-                        {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
-                      </div>
-                    </div>
-                    <div className="text-[9px] text-slate-300 truncate font-semibold text-center">
-                      {training.speaker}
-                    </div>
-                  </div>
-
-                  {/* My Attendee Camera Window */}
-                  <div className="w-36 sm:w-40 h-20 sm:h-24 bg-[#0d1424]/90 backdrop-blur-md border border-slate-700 rounded-xl overflow-hidden shadow-xl p-2 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold text-slate-400 bg-black/60 px-1.5 py-0.5 rounded">
-                        You ({activeSme.name})
-                      </span>
-                      {isMicOn ? <Mic className="w-2.5 h-2.5 text-emerald-400" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}
-                    </div>
-                    <div className="text-center my-auto">
-                      {isCamOn ? (
-                        <div className="text-[10px] text-slate-300 font-medium">Camera Active</div>
+                  {attendeeViewMode === 'speaker' ? (
+                    /* VIEW MODE A: FULL STAGE TRAINER CAMERA BROADCAST */
+                    <div className="w-full h-full relative flex items-center justify-center bg-slate-950">
+                      {liveCameraSnapshot ? (
+                        <img
+                          src={liveCameraSnapshot}
+                          alt="Trainer Live Camera Feed"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : remoteStream ? (
+                        <video
+                          ref={(el) => {
+                            remoteVideoRef.current = el;
+                            if (el && el.srcObject !== remoteStream) {
+                              el.srcObject = remoteStream;
+                              el.play().catch(() => {});
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          muted
+                          onPlaying={() => setIsVideoReceivingFrames(true)}
+                          onLoadedMetadata={(e) => {
+                            if (e.currentTarget.videoWidth > 0) setIsVideoReceivingFrames(true);
+                          }}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <div className="text-[10px] text-slate-500">Camera Off</div>
+                        /* Ultra-clean animated studio presenter stage */
+                        <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-[#0e1628] via-[#090d18] to-[#04060c] space-y-4">
+                          <div className="relative">
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-[#0a66c2] to-[#0284c7] border-4 border-[#38bdf8] flex items-center justify-center shadow-2xl shadow-sky-500/20">
+                              <span className="text-3xl font-extrabold text-white tracking-wider">
+                                {training.speaker?.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() || 'TR'}
+                              </span>
+                            </div>
+                            <span className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center shadow">
+                              <Mic className="w-3.5 h-3.5 text-white" />
+                            </span>
+                          </div>
+
+                          <div className="space-y-1 max-w-md">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono uppercase tracking-wider">
+                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                              Presenter Live Audio &amp; Video
+                            </div>
+                            <h3 className="text-lg sm:text-xl font-bold text-white">{training.speaker}</h3>
+                            <p className="text-xs text-slate-400">
+                              {training.speakerRole || 'Lead Credit Instructor'} · {training.speakerOrg || 'Elevata Partner Academy'}
+                            </p>
+                          </div>
+                        </div>
                       )}
                     </div>
-                  </div>
-                </div>
-              </div>
-            ) : attendeeViewMode === 'video' ? (
-              /* STATE 2B: TRAINER LIVE CAMERA BROADCAST VIEWPORT */
-              <div className="w-full h-full bg-black flex flex-col justify-between relative overflow-hidden">
-                {/* Trainer Camera Video Stream */}
-                <div className="flex-1 w-full h-full relative flex items-center justify-center overflow-hidden bg-slate-950">
-                  {remoteStream ? (
-                    <video
-                      ref={(el) => {
-                        remoteVideoRef.current = el;
-                        if (el && el.srcObject !== remoteStream) {
-                          el.srcObject = remoteStream;
-                          el.play().catch(() => {});
-                        }
-                      }}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover"
-                    />
+                  ) : (isHostScreenSharing || attendeeViewMode === 'presentation') && shareType !== 'slides' ? (
+                    /* VIEW MODE B: LIVE SCREEN SHARE VIEWPORT */
+                    <div className="w-full h-full relative flex items-center justify-center bg-slate-950">
+                      {remoteStream ? (
+                        <div className="w-full h-full relative flex items-center justify-center">
+                          <video
+                            ref={(el) => {
+                              remoteVideoRef.current = el;
+                              if (el && el.srcObject !== remoteStream) {
+                                el.srcObject = remoteStream;
+                                el.play().catch(() => {});
+                              }
+                            }}
+                            autoPlay
+                            playsInline
+                            muted
+                            onPlaying={() => setIsVideoReceivingFrames(true)}
+                            onLoadedMetadata={(e) => {
+                              if (e.currentTarget.videoWidth > 0) setIsVideoReceivingFrames(true);
+                            }}
+                            className="w-full h-full object-contain"
+                          />
+                          {liveSnapshot && !isVideoReceivingFrames && (
+                            <img
+                              src={liveSnapshot}
+                              alt="Host Live Screen Share"
+                              className="absolute inset-0 w-full h-full object-contain select-none"
+                            />
+                          )}
+                        </div>
+                      ) : liveSnapshot ? (
+                        <img
+                          src={liveSnapshot}
+                          alt="Host Live Screen Share"
+                          className="w-full h-full object-contain select-none"
+                        />
+                      ) : (
+                        /* Fallback presentation slide deck when waiting for screen buffer */
+                        <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white">
+                          <div className="flex justify-between items-start">
+                            <div className="flex items-center gap-2">
+                              <span className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                                Live Screen Synced Deck
+                              </span>
+                              <span className="text-xs text-slate-400">
+                                Module {currentSlideIndex + 1} of {presentationSlides.length}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="space-y-5 max-w-2xl my-auto">
+                            <div>
+                              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                                {presentationSlides[currentSlideIndex].title}
+                              </h1>
+                              <p className="text-xs sm:text-sm text-[#38bdf8] font-medium mt-1">
+                                {presentationSlides[currentSlideIndex].subtitle}
+                              </p>
+                            </div>
+
+                            <div className="space-y-2.5 pt-1">
+                              {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
+                                <div key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200">
+                                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                  <span className="leading-relaxed">{pt}</span>
+                                </div>
+                              ))}
+                            </div>
+
+                            <div className="p-3 bg-[#141f38]/90 border border-[#233358] rounded-xl flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                                  {presentationSlides[currentSlideIndex].metricLabel}
+                                </span>
+                                <strong className="text-base font-mono font-bold text-emerald-400">
+                                  {presentationSlides[currentSlideIndex].metricValue}
+                                </strong>
+                              </div>
+                              <span className="text-xs text-slate-300 max-w-[200px] text-right">
+                                {presentationSlides[currentSlideIndex].metricNote}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex justify-between items-center text-xs text-slate-500 pt-3 border-t border-slate-800/80">
+                            <span>Elevata Virtual Academy · Credit Underwriting &amp; Capacity Program</span>
+                            <span className="text-emerald-400 font-semibold">● Broadcasting to {training.speaker} Session</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   ) : (
-                    <div className="flex flex-col items-center justify-center p-8 text-center space-y-4">
-                      <div className="w-20 h-20 rounded-full bg-[#0a66c2]/20 border border-[#0a66c2]/40 flex items-center justify-center shadow-lg">
-                        <div className="w-14 h-14 rounded-full bg-[#0a66c2] flex items-center justify-center text-xl font-bold text-white shadow">
-                          {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
+                    /* VIEW MODE C: INTERACTIVE SESSION SLIDE DECK */
+                    <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
+                            <Radio className="w-3 h-3" /> Host Slide Deck
+                          </span>
+                          <span className="text-xs text-slate-400">
+                            Slide {currentSlideIndex + 1} of {presentationSlides.length}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            disabled={currentSlideIndex === 0}
+                            onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={currentSlideIndex === presentationSlides.length - 1}
+                            onClick={() => setCurrentSlideIndex(prev => Math.min(presentationSlides.length - 1, prev + 1))}
+                            className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </button>
                         </div>
                       </div>
-                      <div>
-                        <h3 className="text-base font-bold text-white">{training.speaker}</h3>
-                        <p className="text-xs text-slate-400 mt-1 max-w-sm">
-                          Connecting to trainer's live video broadcast...
-                        </p>
+
+                      <div className="space-y-6 max-w-2xl my-auto">
+                        <div>
+                          <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
+                            {presentationSlides[currentSlideIndex].title}
+                          </h1>
+                          <p className="text-sm sm:text-base text-[#38bdf8] font-medium mt-1">
+                            {presentationSlides[currentSlideIndex].subtitle}
+                          </p>
+                        </div>
+
+                        <div className="space-y-3 pt-2">
+                          {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
+                            <div key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-200">
+                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                              <span className="leading-relaxed">{pt}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="p-4 bg-[#141f38] border border-[#233358] rounded-xl flex items-center justify-between">
+                          <div>
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                              {presentationSlides[currentSlideIndex].metricLabel}
+                            </span>
+                            <strong className="text-lg font-mono font-bold text-emerald-400">
+                              {presentationSlides[currentSlideIndex].metricValue}
+                            </strong>
+                          </div>
+                          <span className="text-xs text-slate-300 max-w-[220px] text-right">
+                            {presentationSlides[currentSlideIndex].metricNote}
+                          </span>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-2 text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        WebRTC video stream establishing...
+
+                      <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-800/80">
+                        <span>Elevata Virtual Academy · Live Interactive Transmission</span>
+                        <span>Audio &amp; Video synchronized</span>
                       </div>
                     </div>
                   )}
                 </div>
 
-                {/* Overlaid Top Header */}
+                {/* Overlaid Top Status Bar & View Switcher */}
                 <div className="absolute top-3 left-3 right-3 flex justify-between items-center z-10 pointer-events-none">
                   <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/80 shadow-lg pointer-events-auto">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
-                      <Radio className="w-3.5 h-3.5 text-emerald-400" /> Trainer Live Broadcast
-                    </span>
-                    <span className="text-slate-600">|</span>
-                    <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
-                      {training.speaker} is speaking
-                    </span>
+                    {isHostScreenSharing ? (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                        <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                          <Radio className="w-3.5 h-3.5 text-red-400" /> Live Screen Share
+                        </span>
+                        <span className="text-slate-600">|</span>
+                        <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
+                          {training.speaker} is presenting
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
+                          <Radio className="w-3.5 h-3.5 text-emerald-400" /> Trainer Live Broadcast
+                        </span>
+                        <span className="text-slate-600">|</span>
+                        <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
+                          {training.speaker} is speaking
+                        </span>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 pointer-events-auto">
-                    <button
-                      type="button"
-                      onClick={() => setAttendeeViewMode('slides')}
-                      className="px-3 py-1.5 bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-600/80 rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer"
-                    >
-                      <FileText className="w-3.5 h-3.5 text-[#38bdf8]" />
-                      <span>View Session Slides</span>
-                    </button>
-                    <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-md uppercase tracking-wider shadow">
-                      WebRTC HD P2P
+                    {/* View Switcher Buttons */}
+                    <div className="flex items-center bg-slate-900/90 backdrop-blur-md border border-slate-700 p-0.5 rounded-lg shadow-lg">
+                      <button
+                        type="button"
+                        onClick={() => setAttendeeViewMode('presentation')}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1.5 cursor-pointer ${
+                          attendeeViewMode === 'presentation'
+                            ? 'bg-[#0a66c2] text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Presentation / Screen View"
+                      >
+                        <Monitor className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Screen</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setAttendeeViewMode('speaker')}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1.5 cursor-pointer ${
+                          attendeeViewMode === 'speaker'
+                            ? 'bg-[#0a66c2] text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Trainer Camera Full Stage"
+                      >
+                        <Video className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Trainer Camera</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setAttendeeViewMode('slides')}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1.5 cursor-pointer ${
+                          attendeeViewMode === 'slides'
+                            ? 'bg-[#0a66c2] text-white'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Session Slides"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                        <span className="hidden sm:inline">Slides</span>
+                      </button>
+                    </div>
+
+                    <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-md uppercase tracking-wider shadow hidden sm:inline-block">
+                      {remoteStream ? 'WebRTC HD P2P' : 'Live Snapshot HD'}
                     </span>
                   </div>
                 </div>
@@ -734,130 +902,36 @@ export default function VirtualTrainingAttendeeModal({
                     <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Elevata Encrypted Stream
                   </span>
                   <span className="text-[11px] text-slate-400">
-                    Live Camera Feed · Synced with Trainer
+                    Live Session · Synced with Trainer
                   </span>
                 </div>
 
-                {/* Picture-In-Picture: Attendee Preview */}
+                {/* Picture-In-Picture Corner Windows */}
                 <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
-                  <div className="w-36 sm:w-40 h-20 sm:h-24 bg-[#0d1424]/90 backdrop-blur-md border border-slate-700 rounded-xl overflow-hidden shadow-xl p-2 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold text-slate-400 bg-black/60 px-1.5 py-0.5 rounded">
-                        You ({activeSme.name})
-                      </span>
-                      {isMicOn ? <Mic className="w-2.5 h-2.5 text-emerald-400" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}
-                    </div>
-                    <div className="text-center my-auto">
-                      {isCamOn ? (
-                        <div className="text-[10px] text-slate-300 font-medium">Camera Active</div>
-                      ) : (
-                        <div className="text-[10px] text-slate-500">Camera Off</div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              /* STATE 2C: ADMITTED LIVE SLIDES VIEWPORT */
-              <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white relative">
-                
-                {/* Stage Header */}
-                <div className="flex justify-between items-start">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
-                      <Radio className="w-3 h-3" /> Host Slide Deck
-                    </span>
-                    <span className="text-xs text-slate-400">
-                      Slide {currentSlideIndex + 1} of {presentationSlides.length}
-                    </span>
-                  </div>
-
-                  {/* Slide controls & Back to Video for attendee */}
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAttendeeViewMode('video')}
-                      className="px-3 py-1.5 bg-[#0a66c2]/80 hover:bg-[#0a66c2] text-xs font-semibold text-white border border-[#38bdf8]/40 rounded-lg flex items-center gap-1.5 shadow transition cursor-pointer"
-                    >
-                      <Video className="w-3.5 h-3.5 text-[#38bdf8]" />
-                      <span>Watch Trainer Video</span>
-                    </button>
-
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        disabled={currentSlideIndex === 0}
-                        onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
-                        className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                      </button>
-                      <button
-                        type="button"
-                        disabled={currentSlideIndex === presentationSlides.length - 1}
-                        onClick={() => setCurrentSlideIndex(prev => Math.min(presentationSlides.length - 1, prev + 1))}
-                        className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
-                      >
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Main Slide Content Stream */}
-                <div className="space-y-6 max-w-2xl my-auto">
-                  <div>
-                    <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
-                      {presentationSlides[currentSlideIndex].title}
-                    </h1>
-                    <p className="text-sm sm:text-base text-[#38bdf8] font-medium mt-1">
-                      {presentationSlides[currentSlideIndex].subtitle}
-                    </p>
-                  </div>
-
-                  <div className="space-y-3 pt-2">
-                    {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
-                      <div key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-200">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="leading-relaxed">{pt}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Metric Box */}
-                  <div className="p-4 bg-[#141f38] border border-[#233358] rounded-xl flex items-center justify-between">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        {presentationSlides[currentSlideIndex].metricLabel}
-                      </span>
-                      <strong className="text-lg font-mono font-bold text-emerald-400">
-                        {presentationSlides[currentSlideIndex].metricValue}
-                      </strong>
-                    </div>
-                    <span className="text-xs text-slate-300 max-w-[220px] text-right">
-                      {presentationSlides[currentSlideIndex].metricNote}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Footer Note */}
-                <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-800/80">
-                  <span>Elevata Virtual Academy · Live Interactive Transmission</span>
-                  <span>Audio &amp; Video synchronized</span>
-                </div>
-
-                {/* Picture-In-Picture: Trainer Live Video & Attendee Preview */}
-                <div className="absolute bottom-4 right-4 flex flex-col gap-2 z-20">
-                  {/* Trainer Video Window */}
-                  <div className="w-40 h-28 bg-[#0a0f1d] border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl p-2 flex flex-col justify-between relative">
+                  {/* Window 1: Trainer (Speaker) Live Camera PiP */}
+                  <div className="w-40 sm:w-44 h-28 sm:h-32 bg-[#0a0f1d] border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl p-2 flex flex-col justify-between relative group">
                     <div className="flex justify-between items-center z-10">
-                      <span className="text-[9px] font-bold text-slate-300 bg-black/60 px-1.5 py-0.5 rounded">
-                        Trainer (Speaker)
+                      <span className="text-[9px] font-bold text-slate-200 bg-black/70 px-1.5 py-0.5 rounded flex items-center gap-1">
+                        <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" /> Trainer
                       </span>
-                      <Mic className="w-3 h-3 text-emerald-400" />
+                      <button
+                        type="button"
+                        onClick={() => setAttendeeViewMode(attendeeViewMode === 'speaker' ? 'presentation' : 'speaker')}
+                        title="Swap to full stage"
+                        className="p-1 bg-black/60 hover:bg-slate-700 text-slate-300 hover:text-white rounded transition cursor-pointer"
+                      >
+                        <Maximize2 className="w-3 h-3" />
+                      </button>
                     </div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {remoteStream ? (
+
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+                      {liveCameraSnapshot ? (
+                        <img
+                          src={liveCameraSnapshot}
+                          alt="Trainer Live Camera"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : remoteStream ? (
                         <video
                           ref={(el) => {
                             if (el && el.srcObject !== remoteStream) {
@@ -871,30 +945,58 @@ export default function VirtualTrainingAttendeeModal({
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-8 h-8 rounded-full bg-[#0a66c2] mx-auto flex items-center justify-center text-xs font-bold text-white">
-                          {training.speaker?.split(' ').map(n=>n[0]).join('') || 'TR'}
+                        <div className="flex flex-col items-center">
+                          <div className="w-10 h-10 rounded-full bg-[#0a66c2] flex items-center justify-center text-sm font-bold text-white shadow-lg">
+                            {training.speaker?.split(' ').map(n=>n[0]).join('').slice(0,2) || 'TR'}
+                          </div>
+                          <span className="text-[10px] text-emerald-400 mt-1 font-semibold">Live Camera</span>
                         </div>
                       )}
                     </div>
-                    <div className="z-10 text-[9px] text-slate-300 truncate font-semibold text-center bg-black/60 py-0.5 rounded">
-                      {training.speaker}
+
+                    <div className="z-10 bg-slate-950/80 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] text-slate-200 truncate font-semibold flex items-center justify-between">
+                      <span className="truncate">{training.speaker}</span>
+                      <Mic className="w-3 h-3 text-emerald-400 shrink-0 ml-1" />
                     </div>
                   </div>
 
-                  {/* My Attendee Camera Window */}
-                  <div className="w-40 h-24 bg-[#0d1424] border border-slate-700 rounded-xl overflow-hidden shadow-xl p-2 flex flex-col justify-between">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-bold text-slate-400 bg-black/60 px-1.5 py-0.5 rounded">
+                  {/* Window 2: Attendee (You) Camera PiP */}
+                  <div className="w-40 sm:w-44 h-24 sm:h-28 bg-[#0d1424] border border-slate-700 rounded-xl overflow-hidden shadow-xl p-2 flex flex-col justify-between relative">
+                    <div className="flex justify-between items-center z-10">
+                      <span className="text-[9px] font-bold text-slate-300 bg-black/70 px-1.5 py-0.5 rounded truncate max-w-[110px]">
                         You ({activeSme.name})
                       </span>
                       {isMicOn ? <Mic className="w-2.5 h-2.5 text-emerald-400" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}
                     </div>
-                    <div className="text-center my-auto">
-                      {isCamOn ? (
-                        <div className="text-[10px] text-slate-300 font-medium">Camera Active</div>
+
+                    <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
+                      {isCamOn && localAttendeeStream ? (
+                        <video
+                          ref={(el) => {
+                            if (el && el.srcObject !== localAttendeeStream) {
+                              el.srcObject = localAttendeeStream;
+                              el.play().catch(() => {});
+                            }
+                          }}
+                          autoPlay
+                          playsInline
+                          muted
+                          className="w-full h-full object-cover scale-x-[-1]"
+                        />
+                      ) : isCamOn ? (
+                        <div className="text-center">
+                          <div className="w-8 h-8 rounded-full bg-emerald-600/80 mx-auto flex items-center justify-center text-xs font-bold text-white shadow">
+                            {activeSme.ownerName?.split(' ').map(n=>n[0]).join('').slice(0,2) || 'ME'}
+                          </div>
+                          <span className="text-[9px] text-emerald-400 mt-1 block font-medium">Camera Active</span>
+                        </div>
                       ) : (
-                        <div className="text-[10px] text-slate-500">Camera Off</div>
+                        <div className="text-[10px] text-slate-500 font-medium">Camera Muted</div>
                       )}
+                    </div>
+
+                    <div className="z-10 bg-slate-950/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] text-slate-300 truncate">
+                      {activeSme.ownerName}
                     </div>
                   </div>
                 </div>

@@ -29,53 +29,126 @@ interface VirtualTrainingDeliveryModalProps {
   onComplete?: () => void;
 }
 
-// Fallback high-performance canvas stream to ensure camera track always exists
-const createVirtualCameraStream = (speakerName: string): MediaStream => {
+// Fallback high-performance canvas stream to ensure camera track always exists and actively emits frames across WebRTC
+const createVirtualCameraStream = (speakerName: string, orgName?: string): MediaStream => {
   const canvas = document.createElement('canvas');
   canvas.width = 640;
   canvas.height = 360;
+  canvas.style.position = 'fixed';
+  canvas.style.left = '-9999px';
+  canvas.style.top = '-9999px';
+  canvas.style.width = '640px';
+  canvas.style.height = '360px';
+  canvas.style.opacity = '0';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.zIndex = '-9999';
+  document.body.appendChild(canvas);
+
   const ctx = canvas.getContext('2d');
   let frame = 0;
 
   const draw = () => {
     if (!ctx) return;
     frame++;
+
+    // High-tech dark gradient studio background
     const grad = ctx.createLinearGradient(0, 0, 640, 360);
-    grad.addColorStop(0, '#0c1527');
-    grad.addColorStop(1, '#050a14');
+    grad.addColorStop(0, '#090d18');
+    grad.addColorStop(0.5, '#0d1527');
+    grad.addColorStop(1, '#060910');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, 640, 360);
 
+    // Subtle background glow
+    ctx.save();
+    const glow = ctx.createRadialGradient(320, 130, 20, 320, 130, 140);
+    glow.addColorStop(0, 'rgba(10, 102, 194, 0.35)');
+    glow.addColorStop(1, 'rgba(10, 102, 194, 0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, 640, 360);
+    ctx.restore();
+
+    // Pulsing outer ring
+    const pulseRadius = 55 + Math.sin(frame * 0.08) * 3;
     ctx.beginPath();
-    ctx.arc(320, 140, 55, 0, Math.PI * 2);
-    ctx.fillStyle = '#0a66c2';
+    ctx.arc(320, 130, pulseRadius + 6, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Inner avatar circle
+    ctx.beginPath();
+    ctx.arc(320, 130, 52, 0, Math.PI * 2);
+    const circleGrad = ctx.createLinearGradient(270, 80, 370, 180);
+    circleGrad.addColorStop(0, '#0a66c2');
+    circleGrad.addColorStop(1, '#0284c7');
+    ctx.fillStyle = circleGrad;
     ctx.fill();
     ctx.lineWidth = 3;
     ctx.strokeStyle = '#38bdf8';
     ctx.stroke();
 
+    // Speaker Initials
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 32px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const initials = speakerName.split(' ').map(n => n[0]).join('').slice(0, 2) || 'TR';
-    ctx.fillText(initials, 320, 140);
+    const initials = speakerName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'TR';
+    ctx.fillText(initials, 320, 130);
 
+    // Animated voice wave bars below avatar
+    const barCount = 11;
+    const barWidth = 4;
+    const barSpacing = 4;
+    const startX = 320 - ((barCount * (barWidth + barSpacing)) / 2);
+    for (let i = 0; i < barCount; i++) {
+      const wave = Math.sin(frame * 0.15 + i * 0.6);
+      const height = Math.max(6, Math.abs(wave) * 22);
+      ctx.fillStyle = i % 2 === 0 ? '#10b981' : '#38bdf8';
+      ctx.fillRect(startX + i * (barWidth + barSpacing), 195 - height / 2, barWidth, height);
+    }
+
+    // Speaker Name
     ctx.font = 'bold 18px sans-serif';
     ctx.fillStyle = '#ffffff';
-    ctx.fillText(speakerName, 320, 225);
+    ctx.textAlign = 'center';
+    ctx.fillText(speakerName, 320, 226);
 
-    ctx.font = '13px sans-serif';
+    // Speaker Org / Role
+    ctx.font = '12px sans-serif';
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillText(orgName || 'Financial Institution Host', 320, 248);
+
+    // Live On-Air Pill
+    ctx.fillStyle = 'rgba(16, 185, 129, 0.15)';
+    ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect ? ctx.roundRect(220, 272, 200, 24, 12) : ctx.rect(220, 272, 200, 24);
+    ctx.fill();
+    ctx.stroke();
+
     ctx.fillStyle = '#10b981';
-    ctx.fillText('● Presenter Live Camera', 320, 255);
+    ctx.beginPath();
+    ctx.arc(238, 284, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.font = 'bold 11px sans-serif';
+    ctx.fillStyle = '#10b981';
+    ctx.fillText('PRESENTER LIVE HD', 324, 284);
   };
 
   draw();
-  const interval = setInterval(draw, 1000 / 15);
-  const stream = canvas.captureStream ? canvas.captureStream(15) : (canvas as any).mozCaptureStream(15);
+  const interval = setInterval(draw, 1000 / 25);
+  const stream = canvas.captureStream ? canvas.captureStream(25) : (canvas as any).mozCaptureStream(25);
   const vTrack = stream.getVideoTracks()[0];
   if (vTrack) {
-    vTrack.addEventListener('ended', () => clearInterval(interval));
+    vTrack.addEventListener('ended', () => {
+      clearInterval(interval);
+      try {
+        if (canvas.parentNode) canvas.parentNode.removeChild(canvas);
+      } catch (e) {}
+    });
   }
   return stream;
 };
@@ -195,6 +268,7 @@ export default function VirtualTrainingDeliveryModal({
   };
 
   const snapshotIntervalRef = useRef<any>(null);
+  const cameraSnapshotIntervalRef = useRef<any>(null);
   const broadcastChannelRef = useRef<BroadcastChannel | null>(null);
   const peerConnectionsRef = useRef<Map<string, RTCPeerConnection>>(new Map());
   const screenStreamRef = useRef<MediaStream | null>(null);
@@ -208,6 +282,59 @@ export default function VirtualTrainingDeliveryModal({
     screenStreamRef.current = screenStream;
   }, [screenStream]);
 
+  const startCameraSnapshotLoop = (stream: MediaStream) => {
+    if (cameraSnapshotIntervalRef.current) clearInterval(cameraSnapshotIntervalRef.current);
+
+    const hiddenCamVideo = document.createElement('video');
+    hiddenCamVideo.srcObject = stream;
+    hiddenCamVideo.muted = true;
+    hiddenCamVideo.playsInline = true;
+    hiddenCamVideo.play().catch(() => {});
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+
+    const captureCamFrame = () => {
+      const vid = (presenterCameraVideoRef.current && presenterCameraVideoRef.current.videoWidth > 0)
+        ? presenterCameraVideoRef.current
+        : hiddenCamVideo;
+      if (!vid || !vid.videoWidth || !vid.videoHeight) return;
+      const targetWidth = 480;
+      const targetHeight = Math.round((vid.videoHeight / vid.videoWidth) * targetWidth);
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      ctx?.drawImage(vid, 0, 0, targetWidth, targetHeight);
+      try {
+        const frameData = canvas.toDataURL('image/jpeg', 0.65);
+        broadcastChannelRef.current?.postMessage({
+          type: 'CAMERA_FRAME',
+          frame: frameData,
+          trainingId: training.id
+        });
+        updateTrainingLiveState(training.id, {
+          cameraSnapshot: frameData,
+          hostCamOn: true,
+          hostMicOn: true
+        });
+      } catch (e) {}
+    };
+
+    hiddenCamVideo.onloadedmetadata = () => {
+      setTimeout(captureCamFrame, 150);
+    };
+
+    setTimeout(captureCamFrame, 200);
+    setTimeout(captureCamFrame, 600);
+    cameraSnapshotIntervalRef.current = setInterval(captureCamFrame, 1800);
+  };
+
+  const stopCameraSnapshotLoop = () => {
+    if (cameraSnapshotIntervalRef.current) {
+      clearInterval(cameraSnapshotIntervalRef.current);
+      cameraSnapshotIntervalRef.current = null;
+    }
+  };
+
   // Initialize Presenter Camera Stream (real webcam with canvas fallback)
   useEffect(() => {
     let active = true;
@@ -220,11 +347,11 @@ export default function VirtualTrainingDeliveryModal({
             audio: false
           });
         } else {
-          stream = createVirtualCameraStream(training.speaker || 'Trainer');
+          stream = createVirtualCameraStream(training.speaker || 'Trainer', training.speakerOrg);
         }
       } catch (err) {
         console.warn('[Presenter] Physical webcam unavailable, initializing virtual presenter camera:', err);
-        stream = createVirtualCameraStream(training.speaker || 'Trainer');
+        stream = createVirtualCameraStream(training.speaker || 'Trainer', training.speakerOrg);
       }
 
       if (!active) return;
@@ -235,13 +362,23 @@ export default function VirtualTrainingDeliveryModal({
       }
       if (presenterCameraVideoRef.current) {
         presenterCameraVideoRef.current.srcObject = stream;
+        presenterCameraVideoRef.current.play().catch(() => {});
       }
+
+      startCameraSnapshotLoop(stream);
+
+      // Immediately connect to all already admitted attendees!
+      const currentAttendees = (training.attendees || []).filter(a => a.status === 'admitted');
+      currentAttendees.forEach(att => {
+        initiatePeerConnection(att.id, stream);
+      });
     };
 
     initCamera();
 
     return () => {
       active = false;
+      stopCameraSnapshotLoop();
       if (cameraStreamRef.current) {
         cameraStreamRef.current.getTracks().forEach(t => t.stop());
       }
@@ -291,6 +428,12 @@ export default function VirtualTrainingDeliveryModal({
         };
       }
 
+      // Ensure a media stream is ready to transmit
+      if (!cameraStreamRef.current && !screenStreamRef.current && !customStream) {
+        cameraStreamRef.current = createVirtualCameraStream(training.speaker || 'Trainer', training.speakerOrg);
+        startCameraSnapshotLoop(cameraStreamRef.current);
+      }
+
       // Determine active stream to transmit (screen share if active, else camera)
       const streamToSend = customStream || screenStreamRef.current || cameraStreamRef.current;
       if (!streamToSend) {
@@ -310,27 +453,29 @@ export default function VirtualTrainingDeliveryModal({
         }
       }
 
-      // Create and send WebRTC Offer
-      const offer = await pc!.createOffer();
-      await pc!.setLocalDescription(offer);
-      console.log(`[Presenter] offer created for ${attendeeId}`);
+      // Create and send WebRTC Offer if connection is in stable state
+      if (pc!.signalingState === 'stable') {
+        const offer = await pc!.createOffer();
+        await pc!.setLocalDescription(offer);
+        console.log(`[Presenter] offer created for ${attendeeId}`);
 
-      broadcastChannelRef.current?.postMessage({
-        type: 'OFFER',
-        from: 'host',
-        to: attendeeId,
-        offer
-      });
-
-      await apiRequest(`/trainings/${training.id}/signal`, {
-        method: 'POST',
-        body: JSON.stringify({
+        broadcastChannelRef.current?.postMessage({
+          type: 'OFFER',
           from: 'host',
           to: attendeeId,
-          signal: { type: 'offer', offer }
-        })
-      });
-      console.log(`[Presenter] offer sent to ${attendeeId}`);
+          offer
+        });
+
+        await apiRequest(`/trainings/${training.id}/signal`, {
+          method: 'POST',
+          body: JSON.stringify({
+            from: 'host',
+            to: attendeeId,
+            signal: { type: 'offer', offer }
+          })
+        });
+        console.log(`[Presenter] offer sent to ${attendeeId}`);
+      }
     } catch (err) {
       console.warn(`[Presenter] Error initiating WebRTC with ${attendeeId}:`, err);
     }
@@ -411,10 +556,20 @@ export default function VirtualTrainingDeliveryModal({
   const startSnapshotLoop = (stream: MediaStream) => {
     if (snapshotIntervalRef.current) clearInterval(snapshotIntervalRef.current);
 
+    // Create a video element attached to the DOM inside the viewport so Chromium actively decodes frames
     const hiddenVideo = document.createElement('video');
     hiddenVideo.srcObject = stream;
     hiddenVideo.muted = true;
     hiddenVideo.playsInline = true;
+    hiddenVideo.style.position = 'fixed';
+    hiddenVideo.style.bottom = '0px';
+    hiddenVideo.style.right = '0px';
+    hiddenVideo.style.width = '160px';
+    hiddenVideo.style.height = '90px';
+    hiddenVideo.style.opacity = '0.01';
+    hiddenVideo.style.pointerEvents = 'none';
+    hiddenVideo.style.zIndex = '99999';
+    document.body.appendChild(hiddenVideo);
     hiddenVideo.play().catch(() => {});
     hiddenVideoRef.current = hiddenVideo;
 
@@ -424,15 +579,17 @@ export default function VirtualTrainingDeliveryModal({
     const captureFrame = () => {
       const vid = (screenVideoRef.current && screenVideoRef.current.videoWidth > 0)
         ? screenVideoRef.current
-        : hiddenVideoRef.current;
+        : (hiddenVideoRef.current && hiddenVideoRef.current.videoWidth > 0)
+        ? hiddenVideoRef.current
+        : null;
       if (!vid || !vid.videoWidth || !vid.videoHeight) return;
-      const targetWidth = 854;
+      const targetWidth = 1024;
       const targetHeight = Math.round((vid.videoHeight / vid.videoWidth) * targetWidth);
       canvas.width = targetWidth;
       canvas.height = targetHeight;
       ctx?.drawImage(vid, 0, 0, targetWidth, targetHeight);
       try {
-        const frameData = canvas.toDataURL('image/jpeg', 0.6);
+        const frameData = canvas.toDataURL('image/jpeg', 0.7);
         broadcastChannelRef.current?.postMessage({
           type: 'SCREEN_FRAME',
           frame: frameData,
@@ -447,20 +604,34 @@ export default function VirtualTrainingDeliveryModal({
     };
 
     hiddenVideo.onloadedmetadata = () => {
-      setTimeout(captureFrame, 150);
+      hiddenVideo.play().catch(() => {});
+      captureFrame();
+      setTimeout(captureFrame, 100);
+    };
+    hiddenVideo.onloadeddata = () => {
+      captureFrame();
     };
 
-    setTimeout(captureFrame, 200);
+    captureFrame();
+    setTimeout(captureFrame, 100);
+    setTimeout(captureFrame, 300);
     setTimeout(captureFrame, 600);
     setTimeout(captureFrame, 1200);
-
-    snapshotIntervalRef.current = setInterval(captureFrame, 1500);
+    snapshotIntervalRef.current = setInterval(captureFrame, 800);
   };
 
   const stopSnapshotLoop = () => {
     if (snapshotIntervalRef.current) {
       clearInterval(snapshotIntervalRef.current);
       snapshotIntervalRef.current = null;
+    }
+    if (hiddenVideoRef.current) {
+      try {
+        if (hiddenVideoRef.current.parentNode) {
+          hiddenVideoRef.current.parentNode.removeChild(hiddenVideoRef.current);
+        }
+      } catch (e) {}
+      hiddenVideoRef.current = null;
     }
   };
 
@@ -473,6 +644,35 @@ export default function VirtualTrainingDeliveryModal({
     admitAllAttendees(training.id);
     waitingAttendees.forEach(att => {
       initiatePeerConnection(att.id);
+    });
+  };
+
+  const handleToggleCamera = () => {
+    const nextState = !isCamOn;
+    setIsCamOn(nextState);
+    if (cameraTrackRef.current) {
+      cameraTrackRef.current.enabled = nextState;
+    }
+    updateTrainingLiveState(training.id, {
+      hostCamOn: nextState
+    });
+    broadcastChannelRef.current?.postMessage({
+      type: 'HOST_CAMERA_TOGGLED',
+      enabled: nextState,
+      trainingId: training.id
+    });
+  };
+
+  const handleToggleMic = () => {
+    const nextState = !isMicOn;
+    setIsMicOn(nextState);
+    updateTrainingLiveState(training.id, {
+      hostMicOn: nextState
+    });
+    broadcastChannelRef.current?.postMessage({
+      type: 'HOST_MIC_TOGGLED',
+      enabled: nextState,
+      trainingId: training.id
     });
   };
 
@@ -498,18 +698,12 @@ export default function VirtualTrainingDeliveryModal({
 
           if (screenVideoRef.current) {
             screenVideoRef.current.srcObject = stream;
+            screenVideoRef.current.play().catch(() => {});
           }
 
-          // Replace track on existing peer connections or initiate if not yet established
-          for (const [attendeeId, pc] of peerConnectionsRef.current.entries()) {
-            const sender = pc.getSenders().find(s => s.track?.kind === "video");
-            if (sender && screenTrack) {
-              console.log(`[Presenter] screen track added/replaced for attendee ${attendeeId}`);
-              await sender.replaceTrack(screenTrack);
-            } else {
-              console.log(`[Presenter] no video sender on pc for ${attendeeId}, initiating peer connection`);
-              await initiatePeerConnection(attendeeId, stream);
-            }
+          // Full WebRTC renegotiation: send updated offer with the screen track to all connected attendees
+          for (const [attendeeId] of peerConnectionsRef.current.entries()) {
+            await initiatePeerConnection(attendeeId, stream);
           }
 
           // Pre-connect to any admitted attendees not in peerConnectionsRef
@@ -701,9 +895,16 @@ export default function VirtualTrainingDeliveryModal({
             {isScreenSharing && screenStream ? (
               <div className="w-full h-full relative bg-black flex items-center justify-center">
                 <video
-                  ref={screenVideoRef}
+                  ref={(el) => {
+                    screenVideoRef.current = el;
+                    if (el && screenStream && el.srcObject !== screenStream) {
+                      el.srcObject = screenStream;
+                      el.play().catch(() => {});
+                    }
+                  }}
                   autoPlay
                   playsInline
+                  muted
                   className="w-full h-full object-contain"
                 />
                 <div className="absolute top-4 left-4 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center gap-2">
@@ -881,7 +1082,7 @@ export default function VirtualTrainingDeliveryModal({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setIsMicOn(!isMicOn)}
+                onClick={handleToggleMic}
                 className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
                   isMicOn ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-red-600 text-white'
                 }`}
@@ -893,7 +1094,7 @@ export default function VirtualTrainingDeliveryModal({
 
               <button
                 type="button"
-                onClick={() => setIsCamOn(!isCamOn)}
+                onClick={handleToggleCamera}
                 className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
                   isCamOn ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-red-600 text-white'
                 }`}
