@@ -1,12 +1,14 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { formatRWF } from '../lib/mockData';
 import {
   ResponsiveContainer,
-  BarChart,
+  ComposedChart,
   Bar,
+  Line,
+  ReferenceLine,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -39,6 +41,7 @@ export default function SmeDashboard() {
   }, [user, navigate]);
 
   const { activeSme, scenarios, resetAll } = useApp();
+  const [chartView, setChartView] = useState<'performance' | 'cashflow'>('performance');
 
   let healthScore        = activeSme.healthScore;
   let currentBalance     = activeSme.currentBalance;
@@ -69,13 +72,32 @@ export default function SmeDashboard() {
       if (scenarios.salesDrop)      { revenue  = Math.round(revenue  * 0.80); inflow  = Math.round(inflow  * 0.80); }
       if (scenarios.expenseIncrease){ expenses = Math.round(expenses * 1.15); outflow = Math.round(outflow * 1.15); }
     }
-    return { month: item.month, Revenue: revenue, Expenses: expenses, Inflow: inflow, Outflow: outflow };
+    return {
+      month: item.month,
+      Revenue: revenue,
+      Expenses: expenses,
+      Profit: revenue - expenses,
+      Inflow: inflow,
+      Outflow: outflow,
+      NetCash: inflow - outflow
+    };
   });
 
-  const currentMonthData = chartData[chartData.length - 1] ?? { Inflow: 0, Outflow: 0 };
+  const currentMonthData = chartData[chartData.length - 1] ?? {
+    Revenue: 0,
+    Expenses: 0,
+    Profit: 0,
+    Inflow: 0,
+    Outflow: 0,
+    NetCash: 0
+  };
   const monthlyInflow    = currentMonthData.Inflow;
   const monthlyOutflow   = currentMonthData.Outflow;
   const netCashFlow      = monthlyInflow - monthlyOutflow;
+  const periodRevenue = chartData.reduce((sum, item) => sum + item.Revenue, 0);
+  const periodExpenses = chartData.reduce((sum, item) => sum + item.Expenses, 0);
+  const periodProfit = periodRevenue - periodExpenses;
+  const profitMargin = periodRevenue > 0 ? Math.round((periodProfit / periodRevenue) * 100) : 0;
 
   const scoreColor = (s: number) =>
     s >= 80 ? '#059669' : s >= 60 ? '#D97706' : '#DC2626';
@@ -209,7 +231,7 @@ export default function SmeDashboard() {
                     {healthTrend === 'up' ? 'increase' : healthTrend === 'down' ? 'decrease' : 'stable'}
                   </span>
                 </div>
-                <p className="text-xs text-gray-400">vs last quarter</p>
+                <p className="text-xs text-gray-400">revenue vs previous month</p>
               </div>
             </div>
 
@@ -302,24 +324,44 @@ export default function SmeDashboard() {
         <div className="xl:col-span-2">
           <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
             <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
+              <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900 font-heading">Revenue vs Operational Expenses</h3>
-                  <p className="text-xs text-gray-500 mt-0.5">Monthly history and trend (FRW)</p>
+                  <h3 className="text-sm font-bold text-slate-900 font-heading">Financial performance</h3>
+                  <p className="text-xs text-gray-500 mt-0.5">Live monthly records in Rwandan francs</p>
                 </div>
-                <div className="flex items-center space-x-4 text-xs font-semibold text-gray-500">
-                  <div className="flex items-center">
-                    <span className="w-3 h-3 bg-emerald-500 rounded mr-1.5"></span>
-                    <span>Revenue</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className="w-3 h-3 bg-slate-300 rounded mr-1.5"></span>
-                    <span>Expenses</span>
-                  </div>
+                <div className="inline-flex w-full rounded-xl bg-slate-100 p-1 sm:w-auto">
+                  <button
+                    onClick={() => setChartView('performance')}
+                    className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition sm:flex-none ${chartView === 'performance' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Profitability
+                  </button>
+                  <button
+                    onClick={() => setChartView('cashflow')}
+                    className={`flex-1 rounded-lg px-3 py-1.5 text-[11px] font-semibold transition sm:flex-none ${chartView === 'cashflow' ? 'bg-white text-blue-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                  >
+                    Cash flow
+                  </button>
                 </div>
               </div>
 
-              <div className="h-72 w-full">
+              <div className="grid grid-cols-2 gap-3 py-4 sm:grid-cols-4">
+                {[
+                  { label: 'Revenue', value: periodRevenue, tone: 'text-blue-700' },
+                  { label: 'Expenses', value: periodExpenses, tone: 'text-rose-600' },
+                  { label: 'Net profit', value: periodProfit, tone: periodProfit >= 0 ? 'text-emerald-600' : 'text-rose-600' },
+                  { label: 'Margin', value: `${profitMargin}%`, tone: profitMargin >= 0 ? 'text-slate-900' : 'text-rose-600' }
+                ].map((metric) => (
+                  <div key={metric.label} className="rounded-xl bg-slate-50 px-3 py-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{metric.label}</p>
+                    <p className={`mt-1 truncate text-xs font-bold sm:text-sm ${metric.tone}`}>
+                      {typeof metric.value === 'number' ? formatRWF(metric.value) : metric.value}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="h-72 w-full sm:h-80">
                 {chartData.length === 0 ? (
                   <div className="h-full rounded-xl border border-dashed border-slate-200 bg-slate-50/70 flex flex-col items-center justify-center px-6 text-center">
                     <Activity className="w-8 h-8 text-slate-300 mb-3" />
@@ -328,34 +370,63 @@ export default function SmeDashboard() {
                   </div>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#94A3B8', fontSize: 10, fontFamily: 'monospace' }}
-                    />
-                    <YAxis
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#94A3B8', fontSize: 10, fontFamily: 'monospace' }}
-                      tickFormatter={(val) => `${(val / 1000000).toFixed(1)}M`}
-                    />
-                    <Tooltip
-                      formatter={(value: any) => [formatRWF(value), '']}
-                      contentStyle={{
-                        backgroundColor: '#0F172A',
-                        border: 'none',
-                        borderRadius: '6px',
-                        color: '#F9FAFB',
-                        fontSize: '11px',
-                        fontFamily: 'monospace'
-                      }}
-                    />
-                    <Bar dataKey="Revenue" fill="#10B981" radius={[2, 2, 0, 0]} barSize={20} />
-                    <Bar dataKey="Expenses" fill="#94A3B8" radius={[2, 2, 0, 0]} barSize={20} />
-                    </BarChart>
+                    <ComposedChart data={chartData} margin={{ top: 12, right: 8, left: -12, bottom: 0 }}>
+                      <defs>
+                        <linearGradient id="dashboardPrimaryBar" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#2563EB" stopOpacity={0.95} />
+                          <stop offset="100%" stopColor="#60A5FA" stopOpacity={0.72} />
+                        </linearGradient>
+                        <linearGradient id="dashboardSecondaryBar" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#94A3B8" stopOpacity={0.9} />
+                          <stop offset="100%" stopColor="#CBD5E1" stopOpacity={0.65} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="#E2E8F0" strokeDasharray="4 4" vertical={false} />
+                      <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 10 }} dy={8} />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: '#94A3B8', fontSize: 10 }}
+                        tickFormatter={(value) => Math.abs(value) >= 1000000 ? `${(value / 1000000).toFixed(1)}M` : `${Math.round(value / 1000)}K`}
+                      />
+                      <Tooltip
+                        cursor={{ fill: '#EFF6FF', opacity: 0.7 }}
+                        formatter={(value: number | string, name: string) => [formatRWF(Number(value) || 0), name]}
+                        contentStyle={{
+                          backgroundColor: '#0F172A',
+                          border: '1px solid #1E293B',
+                          borderRadius: '12px',
+                          boxShadow: '0 14px 30px rgba(15,23,42,.18)',
+                          color: '#F8FAFC',
+                          fontSize: '11px'
+                        }}
+                        labelStyle={{ color: '#CBD5E1', fontWeight: 700, marginBottom: 6 }}
+                      />
+                      <ReferenceLine y={0} stroke="#CBD5E1" />
+                      <Bar
+                        dataKey={chartView === 'performance' ? 'Revenue' : 'Inflow'}
+                        name={chartView === 'performance' ? 'Revenue' : 'Cash inflow'}
+                        fill="url(#dashboardPrimaryBar)"
+                        radius={[5, 5, 0, 0]}
+                        maxBarSize={28}
+                      />
+                      <Bar
+                        dataKey={chartView === 'performance' ? 'Expenses' : 'Outflow'}
+                        name={chartView === 'performance' ? 'Expenses' : 'Cash outflow'}
+                        fill="url(#dashboardSecondaryBar)"
+                        radius={[5, 5, 0, 0]}
+                        maxBarSize={28}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey={chartView === 'performance' ? 'Profit' : 'NetCash'}
+                        name={chartView === 'performance' ? 'Net profit' : 'Net cash flow'}
+                        stroke="#059669"
+                        strokeWidth={2.5}
+                        dot={{ r: 3, fill: '#FFFFFF', stroke: '#059669', strokeWidth: 2 }}
+                        activeDot={{ r: 5, fill: '#059669', stroke: '#FFFFFF', strokeWidth: 2 }}
+                      />
+                    </ComposedChart>
                   </ResponsiveContainer>
                 )}
               </div>
