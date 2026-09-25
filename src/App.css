@@ -31,3 +31,76 @@ h1, h2, h3, h4, h5, h6, .font-heading {
 .font-mono {
     font-family: 'JetBrains Mono', monospace !important;
 }
+
+/* Compact, consistent form controls across desktop and mobile screens. */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+select {
+    height: 2.5rem !important;
+    min-height: 2.5rem;
+    border-radius: 0.625rem !important;
+    border-color: #cbd5e1 !important;
+    background-color: #fff;
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.25rem;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+textarea {
+    min-height: 5.5rem;
+    border-radius: 0.625rem !important;
+    border-color: #cbd5e1 !important;
+    padding: 0.625rem 0.75rem !important;
+    font-size: 0.875rem !important;
+    line-height: 1.45;
+    color: #0f172a;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+    resize: vertical;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):hover,
+select:hover,
+textarea:hover {
+    border-color: #94a3b8 !important;
+}
+
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):focus,
+select:focus,
+textarea:focus {
+    border-color: #2563eb !important;
+    outline: none !important;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 0.12) !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+    color: #94a3b8 !important;
+}
+
+input[type='password'] {
+    padding-right: 3rem !important;
+}
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+    cursor: not-allowed;
+    background-color: #f8fafc;
+    color: #94a3b8;
+}
+
+@media (max-width: 640px) {
+    input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']),
+    select {
+        height: 2.625rem !important;
+        min-height: 2.625rem;
+        font-size: 1rem !important; /* Prevents automatic zoom on iOS. */
+    }
+
+    textarea {
+        font-size: 1rem !important;
+    }
+}

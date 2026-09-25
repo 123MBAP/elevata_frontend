@@ -22,7 +22,9 @@ import {
   Warehouse,
   BadgeAlert,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Plus,
+  CalendarDays
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 
@@ -85,10 +87,48 @@ export default function SmeDashboard() {
       ? 'bg-amber-50 text-amber-700 border border-amber-200'
       : 'bg-red-50 text-red-700 border border-red-200';
 
-
+  const today = new Intl.DateTimeFormat('en-RW', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long'
+  }).format(new Date());
 
   return (
-    <div className="space-y-5 bg-gray-50 min-h-screen p-5">
+    <div className="space-y-5 min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-3 sm:p-5 lg:p-6">
+      <section className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white px-4 py-5 shadow-[0_12px_40px_rgba(15,23,42,0.06)] sm:px-6 sm:py-6">
+        <div className="pointer-events-none absolute -right-16 -top-24 h-56 w-56 rounded-full bg-blue-100/70 blur-3xl" />
+        <div className="pointer-events-none absolute right-28 top-10 h-32 w-32 rounded-full bg-emerald-100/60 blur-3xl" />
+        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <div className="mb-2 flex items-center gap-2 text-xs font-semibold text-slate-500">
+              <CalendarDays className="h-3.5 w-3.5 text-blue-600" />
+              <span>{today}</span>
+            </div>
+            <h1 className="truncate text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
+              {activeSme.id ? activeSme.name : 'Your financial workspace'}
+            </h1>
+            <p className="mt-1 max-w-2xl text-xs leading-relaxed text-slate-500 sm:text-sm">
+              Monitor cash flow, inventory health, credit readiness, and business risks from one live workspace.
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            <button
+              onClick={() => navigate('/activities')}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-600/20"
+            >
+              <Plus className="h-4 w-4" />
+              Record activity
+            </button>
+            <button
+              onClick={() => navigate('/reports')}
+              className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-slate-300 hover:bg-slate-50 focus:outline-none focus:ring-4 focus:ring-slate-200"
+            >
+              View reports
+              <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* ── Scenario banner ── */}
       {(scenarios.salesDrop || scenarios.expenseIncrease || scenarios.loanDelay) && (
@@ -118,11 +158,11 @@ export default function SmeDashboard() {
       )}
 
       {/* ── Top 3 cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
 
         {/* Business health */}
-        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-slate-50/20 transition duration-150">
-          <CardContent className="p-6 flex flex-col justify-between h-full">
+        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
+          <CardContent className="p-5 sm:p-6 flex flex-col justify-between h-full">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider font-heading">Business Health</h3>
@@ -174,15 +214,15 @@ export default function SmeDashboard() {
             </div>
 
             <div className="mt-auto pt-3 border-t border-gray-100 flex justify-between text-xs text-gray-500">
-              <span>Industry avg: 71/100</span>
-              <span className="font-semibold text-gray-700">Top 15% in sector</span>
+              <span>Based on recorded activity</span>
+              <span className="font-semibold text-gray-700">{activeSme.sector}</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Cash reserves */}
-        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-slate-50/20 transition duration-150">
-          <CardContent className="p-6 flex flex-col justify-between h-full">
+        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)]">
+          <CardContent className="p-5 sm:p-6 flex flex-col justify-between h-full">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider font-heading">Cash Reserves</h3>
@@ -221,8 +261,8 @@ export default function SmeDashboard() {
         </Card>
 
         {/* Credit capability */}
-        <Card className="bg-white border border-gray-200 shadow-sm hover:shadow-md hover:bg-slate-50/20 transition duration-150">
-          <CardContent className="p-6 flex flex-col justify-between h-full">
+        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.08)] md:col-span-2 xl:col-span-1">
+          <CardContent className="p-5 sm:p-6 flex flex-col justify-between h-full">
             <div className="flex justify-between items-center mb-4">
               <div>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider font-heading">Credit Capability</h3>
@@ -256,12 +296,12 @@ export default function SmeDashboard() {
       </div>
 
       {/* ── Mid: chart + inventory ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
 
         {/* Revenue vs Expenses chart */}
-        <div className="lg:col-span-2">
-          <Card className="bg-white border border-gray-200 shadow-sm">
-            <CardContent className="p-6">
+        <div className="xl:col-span-2">
+          <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6 gap-3">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900 font-heading">Revenue vs Operational Expenses</h3>
@@ -324,8 +364,8 @@ export default function SmeDashboard() {
         </div>
 
         {/* Inventory status */}
-        <Card className="bg-white border border-gray-200 shadow-sm flex flex-col justify-between">
-          <CardContent className="p-6 h-full flex flex-col justify-between">
+        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05)] flex flex-col justify-between">
+          <CardContent className="p-4 sm:p-6 h-full flex flex-col justify-between">
             <div>
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-gray-100">
                 <h3 className="text-sm font-bold text-slate-900 font-heading">Inventory Status</h3>
@@ -336,6 +376,13 @@ export default function SmeDashboard() {
               <p className="text-xs text-gray-500 mb-4">Stock alert levels and days of runway</p>
 
               <div className="space-y-3.5">
+                {activeSme.inventoryItems.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center">
+                    <Warehouse className="mx-auto h-7 w-7 text-slate-300" />
+                    <p className="mt-2 text-xs font-semibold text-slate-700">No inventory recorded</p>
+                    <p className="mt-1 text-[11px] text-slate-500">Add products to monitor stock and reorder levels.</p>
+                  </div>
+                )}
                 {activeSme.inventoryItems.map((item) => (
                   <div key={item.id} className="p-3 border border-gray-100 rounded-xl hover:bg-slate-50/50 transition">
                     <div className="flex justify-between items-start">
@@ -390,8 +437,8 @@ export default function SmeDashboard() {
       </div>
 
       {/* ── AI Risk alerts ── */}
-      <Card className="bg-white border border-gray-200 shadow-sm">
-        <CardContent className="p-6">
+      <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.05)]">
+        <CardContent className="p-4 sm:p-6">
           <div className="flex items-center space-x-3 mb-4 pb-3 border-b border-gray-100">
             <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
               <BadgeAlert className="w-5 h-5" />
@@ -403,6 +450,13 @@ export default function SmeDashboard() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
+            {activeSme.riskAlerts.length === 0 && (
+              <div className="md:col-span-3 rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-8 text-center">
+                <BadgeAlert className="mx-auto h-7 w-7 text-slate-300" />
+                <p className="mt-2 text-sm font-semibold text-slate-700">No risk alerts available</p>
+                <p className="mt-1 text-xs text-slate-500">Alerts will appear as financial and inventory activity is recorded.</p>
+              </div>
+            )}
             {activeSme.riskAlerts.map((alert) => (
               <div
                 key={alert.id}
