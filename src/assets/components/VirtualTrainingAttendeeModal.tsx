@@ -1256,41 +1256,41 @@ export default function VirtualTrainingAttendeeModal({
               <button
                 type="button"
                 onClick={handleToggleAttendeeMic}
-                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                className={`px-3 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
                   isMicOn ? 'bg-emerald-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                 }`}
                 title={isMicOn ? 'Mute Microphone' : 'Unmute Microphone'}
               >
-                {isMicOn ? <Mic className="w-4 h-4" /> : <MicOff className="w-4 h-4 text-slate-400" />}
+                {isMicOn ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5 text-slate-400" />}
                 <span className="hidden sm:inline">{isMicOn ? 'Mute' : 'Unmute'}</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleToggleAttendeeCam}
-                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition cursor-pointer ${
+                className={`px-3 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
                   isCamOn ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-red-600 text-white'
                 }`}
                 title={isCamOn ? 'Stop Camera' : 'Start Camera'}
               >
-                {isCamOn ? <Video className="w-4 h-4 text-[#38bdf8]" /> : <VideoOff className="w-4 h-4 text-white" />}
+                {isCamOn ? <Video className="w-3.5 h-3.5 text-[#38bdf8]" /> : <VideoOff className="w-3.5 h-3.5 text-white" />}
                 <span className="hidden sm:inline">{isCamOn ? 'Camera' : 'Start Video'}</span>
               </button>
             </div>
 
-            {/* Center Controls: Raise Hand */}
+            {/* Center Controls: Raise Hand - Zero Emojis */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleToggleHand}
-                className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow cursor-pointer ${
+                className={`px-4 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition shadow-sm cursor-pointer ${
                   isHandRaised
-                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-extrabold animate-bounce'
+                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
                 }`}
               >
-                <span className="text-base">✋</span>
-                <span>{isHandRaised ? 'Hand Raised!' : 'Raise Hand'}</span>
+                <Hand className={`w-3.5 h-3.5 ${isHandRaised ? 'text-slate-950' : 'text-amber-400'}`} />
+                <span>{isHandRaised ? 'Hand Raised' : 'Raise Hand'}</span>
               </button>
             </div>
 
@@ -1299,22 +1299,22 @@ export default function VirtualTrainingAttendeeModal({
               <button
                 type="button"
                 onClick={() => setActiveTab('chat')}
-                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  activeTab === 'chat' ? 'bg-[#0a66c2] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                className={`px-3 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  activeTab === 'chat' ? 'bg-[#0a66c2] text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
               >
-                <MessageSquare className="w-4 h-4" />
+                <MessageSquare className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Q&amp;A</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setActiveTab('materials')}
-                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
-                  activeTab === 'materials' ? 'bg-[#0a66c2] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                className={`px-3 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  activeTab === 'materials' ? 'bg-[#0a66c2] text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
               >
-                <FileText className="w-4 h-4" />
+                <FileText className="w-3.5 h-3.5" />
                 <span className="hidden sm:inline">Materials</span>
               </button>
             </div>

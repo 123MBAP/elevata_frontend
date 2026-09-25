@@ -18,7 +18,8 @@ import {
   UserCheck,
   Radio,
   Clock,
-  ShieldCheck
+  ShieldCheck,
+  Hand
 } from 'lucide-react';
 import { Training, useApp } from '../../context/AppContext';
 import { apiRequest } from '../../lib/api';
@@ -1473,7 +1474,7 @@ export default function VirtualTrainingDeliveryModal({
                           {att.avatar || att.name.charAt(0)}
                           {att.handRaised && (
                             <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[9px] font-extrabold animate-bounce">
-                              ✋
+                              <Hand className="w-2.5 h-2.5 text-slate-950" />
                             </span>
                           )}
                         </div>

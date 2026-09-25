@@ -46,6 +46,7 @@ import {
 import logo from '../assets/images/elevata_logo.png';
 import SelectOpportunityTypeModal, { OpportunityType as ModalOpportunityType } from '../assets/components/SelectOpportunityTypeModal';
 import PublishOpportunityForm from '../assets/components/PublishOpportunityForm';
+import ScheduleTrainingModal from '../assets/components/ScheduleTrainingModal';
 import FormattedText from '../assets/components/ui/FormattedText';
 import VirtualTrainingDeliveryModal from '../assets/components/VirtualTrainingDeliveryModal';
 import {
@@ -102,7 +103,6 @@ export default function OpportunityPublisher() {
   const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
   const [selectedOppType, setSelectedOppType] = useState<ModalOpportunityType>('loan');
   const [selectedOppCategory, setSelectedOppCategory] = useState('Loan');
-  
 
 
   // Database-backed portfolio preview. Empty portfolios remain empty.
@@ -133,15 +133,9 @@ export default function OpportunityPublisher() {
     };
   }), [smes]);
 
-  // Training Form State
+  // Training Form State (reusing unified ScheduleTrainingModal)
   const [isTrainingModalOpen, setIsTrainingModalOpen] = useState(false);
-  const [trTitle, setTrTitle] = useState('');
-  const [trDescription, setTrDescription] = useState('');
-  const [trDate, setTrDate] = useState('2026-08-15');
-  const [trTime, setTrTime] = useState('10:00 AM - 12:00 PM');
-  const [trSpeaker, setTrSpeaker] = useState('Dr. Agnes Kalibata (Director, AgroGrow)');
-  const [trLink, setTrLink] = useState('https://zoom.us/j/elevata-training-live');
-  const [trAudience, setTrAudience] = useState<string[]>(['Agriculture', 'Low Readiness SMEs']);
+  const [trainingPrefill, setTrainingPrefill] = useState<Partial<any> | null>(null);
 
   // Selected Opportunity for detailed view/analytics
   const [selectedOppId, setSelectedOppId] = useState<string>('');
@@ -161,50 +155,36 @@ export default function OpportunityPublisher() {
   // Categories helper
   const categories = ['All', 'Loan', 'Grant', 'Savings Product', 'Investment', 'Training', 'Insurance', 'Business Advisory'];
 
-
-
   // Action: Create Training from Gap Analysis
   const handleCreateTrainingFromGap = (missingRequirement: string, count: number) => {
-    setTrTitle(`Masterclass: Preparing ${missingRequirement} for Financing`);
-    setTrDescription(`A specialized capacity building workshop scheduled for the ${count} SMEs lacking completed ${missingRequirement.toLowerCase()} files to qualify for the ${selectedOpp.title} program.`);
-    setTrDate('2026-08-22');
-    setTrTime('09:00 AM - 11:30 AM');
-    setTrSpeaker('Dr. Agnes Kalibata (Director, AgroGrow)');
-    setTrAudience(['Low Readiness SMEs', ...selectedOpp.sectors]);
+    setTrainingPrefill({
+      title: `Masterclass: Preparing ${missingRequirement} for Financing`,
+      description: `A specialized capacity building workshop scheduled for the ${count} SMEs lacking completed ${missingRequirement.toLowerCase()} files to qualify for the ${selectedOpp.title} program.`,
+      date: '2026-08-22',
+      time: '09:00 AM - 11:30 AM',
+      speaker: 'Dr. Agnes Kalibata (Director, AgroGrow)',
+      targetAudience: ['Low Readiness SMEs', ...selectedOpp.sectors],
+      opportunityId: selectedOpp.id,
+      opportunityTitle: selectedOpp.title
+    });
     setIsTrainingModalOpen(true);
   };
 
   // Action: Create Training for Specific Opportunity
   const handleCreateTrainingForOpp = (opp: typeof opportunities[0]) => {
-    setTrTitle(`Capacity Building: Qualifying for ${opp.title}`);
-    setTrDescription(`A specialized training program organized by ${opp.institution} to guide SMEs on eligibility requirements, credit compliance checks, and document compilation to successfully unlock financing under the "${opp.title}" opportunity.`);
-    setTrDate('2026-08-25');
-    setTrTime('10:00 AM - 12:30 PM');
-    setTrSpeaker('Bank Credit Officer & Elevata Consultants');
-    setTrAudience(['Low Readiness SMEs', ...opp.sectors]);
-    setIsTrainingModalOpen(true);
-  };
-
-  // Handle Virtual Training Submission
-  const handleTrainingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!trTitle || !trSpeaker || !trDate || !trLink) {
-      triggerToast('Please fill in all training fields', 'info');
-      return;
-    }
-    createTraining({
-      title: trTitle,
-      description: trDescription,
-      date: trDate,
-      time: trTime,
-      speaker: trSpeaker,
-      meetingLink: trLink,
-      targetAudience: trAudience
+    setTrainingPrefill({
+      title: `Capacity Building: Qualifying for ${opp.title}`,
+      description: `A specialized training program organized by ${opp.institution} to guide SMEs on eligibility requirements, credit compliance checks, and document compilation to successfully unlock financing under the "${opp.title}" opportunity.`,
+      date: '2026-08-25',
+      time: '10:00 AM - 12:30 PM',
+      speaker: 'Bank Credit Officer & Elevata Consultants',
+      speakerOrg: opp.institution,
+      targetAudience: ['Low Readiness SMEs', ...opp.sectors],
+      opportunityId: opp.id,
+      opportunityTitle: opp.title,
+      meetingLink: 'https://meet.elevata.rw/live-capacity'
     });
-    triggerToast(`Virtual Training session scheduled for targeting gap.`);
-    setIsTrainingModalOpen(false);
-    setTrTitle('');
-    setTrDescription('');
+    setIsTrainingModalOpen(true);
   };
 
   // KPI Calculations
@@ -359,7 +339,10 @@ export default function OpportunityPublisher() {
         <div className="flex items-center gap-3 shrink-0">
           <button
             type="button"
-            onClick={() => setIsTrainingModalOpen(true)}
+            onClick={() => {
+              setTrainingPrefill(null);
+              setIsTrainingModalOpen(true);
+            }}
             className="flex items-center justify-center space-x-1.5 px-4 py-2 rounded-full border border-[#666666] bg-white hover:bg-[#f3f2f0] text-xs font-semibold text-[#181818] transition-colors"
           >
             <Video className="w-3.5 h-3.5 text-[#5e5e5e]" />
@@ -844,8 +827,7 @@ export default function OpportunityPublisher() {
             </Link>
             <button
               onClick={() => {
-                setTrTitle('');
-                setTrDescription('');
+                setTrainingPrefill(null);
                 setIsTrainingModalOpen(true);
               }}
               className="px-4 py-1.5 bg-white hover:bg-[#f3f2f0] border border-[#666666] rounded-full text-xs font-semibold text-[#181818] transition-colors shadow-2xs"
@@ -968,118 +950,18 @@ export default function OpportunityPublisher() {
         }}
       />
 
-      {/* CREATE TRAINING MODAL */}
-      {isTrainingModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-          <form onSubmit={handleTrainingSubmit} className="w-full max-w-md rounded-[10px] bg-white border border-[#e0e0e0] shadow-[0_4px_24px_rgba(0,0,0,0.12)] overflow-hidden animate-in zoom-in-95 duration-150">
-            <div className="px-6 py-4 border-b border-[#e0e0e0] bg-white flex justify-between items-center">
-              <div className="flex items-center gap-2.5">
-                <img src={logo} alt="Elevata" className="h-7 w-7 object-contain" />
-                <div>
-                  <h3 className="text-sm font-bold text-[#181818]">Schedule Virtual Capacity Session</h3>
-                  <p className="text-[11px] text-[#5e5e5e] mt-0.5">Addressing SME eligibility matching gaps</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsTrainingModalOpen(false)}
-                className="p-1.5 text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0] rounded-full transition-colors"
-                aria-label="Close modal"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4 text-xs bg-white">
-              <div>
-                <label className="mb-1 block text-[13px] font-medium text-[#181818]">Training Title</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Masterclass: Preparing Tax Clearance & Financials"
-                  value={trTitle}
-                  onChange={e => setTrTitle(e.target.value)}
-                  className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-[13px] font-medium text-[#181818]">Speaker / Host</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Dr. Agnes Kalibata"
-                  value={trSpeaker}
-                  onChange={e => setTrSpeaker(e.target.value)}
-                  className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
-                  required
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3.5">
-                <div>
-                  <label className="mb-1 block text-[13px] font-medium text-[#181818]">Date</label>
-                  <input
-                    type="date"
-                    value={trDate}
-                    onChange={e => setTrDate(e.target.value)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-[13px] font-medium text-[#181818]">Time</label>
-                  <input
-                    type="text"
-                    value={trTime}
-                    onChange={e => setTrTime(e.target.value)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="mb-1 block text-[13px] font-medium text-[#181818]">Meeting Link</label>
-                <input
-                  type="text"
-                  value={trLink}
-                  onChange={e => setTrLink(e.target.value)}
-                  className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="mb-1 block text-[13px] font-medium text-[#181818]">Description Abstract</label>
-                <textarea
-                  placeholder="Describe workshop goals..."
-                  rows={3}
-                  value={trDescription}
-                  onChange={e => setTrDescription(e.target.value)}
-                  className="w-full rounded-[4px] border border-[#666666] bg-white p-3 text-[13px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] leading-relaxed"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-[#f3f2f0] border-t border-[#e0e0e0] flex justify-end gap-2.5 shrink-0">
-              <button
-                type="button"
-                onClick={() => setIsTrainingModalOpen(false)}
-                className="flex h-10 items-center justify-center rounded-full border border-[#666666] bg-white px-5 text-[14px] font-semibold text-[#181818] transition-colors hover:bg-[#f3f2f0]"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="flex h-10 items-center justify-center rounded-full bg-[#0a66c2] px-6 text-[14px] font-bold text-white transition-colors hover:bg-[#004182] shadow-xs border-none"
-              >
-                Schedule Session
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
+      {/* SCHEDULE VIRTUAL TRAINING MASTERCLASS MODAL (SHARED REUSABLE FORM) */}
+      <ScheduleTrainingModal
+        isOpen={isTrainingModalOpen}
+        onClose={() => {
+          setIsTrainingModalOpen(false);
+          setTrainingPrefill(null);
+        }}
+        initialData={trainingPrefill}
+        onSuccess={(title) => {
+          triggerToast(`Virtual Training "${title}" scheduled successfully.`);
+        }}
+      />
 
       {/* LIVE VIRTUAL TRAINING DELIVERY MODAL (HOST / TRAINER WORKSPACE) */}
       {activeDeliveryTraining && (
