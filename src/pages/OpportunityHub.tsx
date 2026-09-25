@@ -1526,7 +1526,7 @@ export default function OpportunityHub() {
                             ) : (
                               <>
                                 <p className="text-[9px] text-slate-400 pl-5.5">
-                                  Accepts PDF, JPG, PNG, CSV, XLSX (Max 10MB)
+                                  PDF, images, Office, CSV/text, audio or MP4/WebM · Max 10 MB
                                 </p>
                                 {applyErrors[doc] && (
                                   <p className="text-[9px] font-semibold text-rose-600 pl-5.5">{applyErrors[doc]}</p>
@@ -1557,7 +1557,7 @@ export default function OpportunityHub() {
                                 <span>Attach Document</span>
                                 <input
                                   type="file"
-                                  accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx"
+                                  accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif,.csv,.txt,.rtf,.json,.xml,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.mp3,.wav,.ogg,.mp4,.webm"
                                   onChange={(e) => handleFileUpload(doc, e)}
                                   className="hidden"
                                 />

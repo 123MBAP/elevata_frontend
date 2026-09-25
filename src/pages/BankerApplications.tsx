@@ -37,7 +37,7 @@ interface DocumentDetail {
   issueDate: string;
   expiryDate: string;
   fileSize: string;
-  fileType: 'PDF' | 'XLSX' | 'DOCX';
+  fileType: string;
   status: 'Verified' | 'Pending Verification' | 'Attached';
   verifiedBy: string;
   summary: string;
@@ -61,6 +61,7 @@ export default function BankerApplications() {
   // Document preview modal state
   const [previewDoc, setPreviewDoc] = useState<DocumentDetail | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewText, setPreviewText] = useState<string | null>(null);
   const [documentLoading, setDocumentLoading] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -115,6 +116,9 @@ export default function BankerApplications() {
     try {
       const blob = await apiFile(document.downloadUrl);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
+      const isTextDocument = document.mimeType?.startsWith('text/')
+        || ['application/json', 'application/xml', 'application/rtf'].includes(document.mimeType || '');
+      setPreviewText(isTextDocument ? await blob.text() : null);
       setPreviewUrl(URL.createObjectURL(blob));
       setPreviewDoc(document);
     } catch (error: unknown) {
@@ -122,6 +126,13 @@ export default function BankerApplications() {
     } finally {
       setDocumentLoading(false);
     }
+  };
+
+  const closeDocumentPreview = () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    setPreviewText(null);
+    setPreviewDoc(null);
   };
 
   const handleDownloadDocument = async (document: DocumentDetail) => {
@@ -201,7 +212,7 @@ export default function BankerApplications() {
   const getSubmittedDocuments = (app: Application): DocumentDetail[] => {
     return (app.documents || []).map((document) => {
       const extension = document.fileName.split('.').pop()?.toUpperCase();
-      const fileType: DocumentDetail['fileType'] = extension === 'XLSX' ? 'XLSX' : extension === 'DOCX' ? 'DOCX' : 'PDF';
+      const fileType = extension || 'FILE';
       const size = document.sizeBytes >= 1024 * 1024
         ? `${(document.sizeBytes / (1024 * 1024)).toFixed(1)} MB`
         : `${Math.max(1, Math.round(document.sizeBytes / 1024))} KB`;
@@ -1125,7 +1136,7 @@ export default function BankerApplications() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setPreviewDoc(null)}
+                  onClick={closeDocumentPreview}
                   className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
                 >
                   <X className="w-4 h-4" />
@@ -1143,11 +1154,25 @@ export default function BankerApplications() {
                   <div className="flex h-[60vh] items-center justify-center overflow-auto rounded-lg border border-slate-200 bg-white p-4">
                     <img src={previewUrl} alt={previewDoc.name} className="max-h-full max-w-full object-contain" />
                   </div>
+                ) : previewText !== null ? (
+                  <div className="h-[60vh] overflow-auto rounded-lg border border-slate-200 bg-white p-4">
+                    <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-slate-700">{previewText}</pre>
+                  </div>
+                ) : previewUrl && previewDoc.mimeType?.startsWith('audio/') ? (
+                  <div className="flex h-64 items-center justify-center rounded-lg border border-slate-200 bg-white p-6">
+                    <audio src={previewUrl} controls className="w-full max-w-lg" />
+                  </div>
+                ) : previewUrl && previewDoc.mimeType?.startsWith('video/') ? (
+                  <div className="flex h-[60vh] items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-950 p-2">
+                    <video src={previewUrl} controls className="max-h-full max-w-full rounded-md" />
+                  </div>
                 ) : (
-                  <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white text-center">
+                  <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white px-6 text-center">
                     <FileText className="mb-3 h-10 w-10 text-slate-300" />
-                    <p className="text-xs font-bold text-slate-700">Preview is not available for this file type.</p>
-                    <p className="mt-1 text-[10px] text-slate-500">Download the original {previewDoc.fileType} file to review it.</p>
+                    <p className="text-xs font-bold text-slate-700">{previewDoc.fileType} document attached securely</p>
+                    <p className="mt-1 max-w-sm text-[10px] leading-relaxed text-slate-500">
+                      Browsers cannot safely render this format inline. Review the verified file details, then download the original document to open it in its native application.
+                    </p>
                   </div>
                 )}
               </div>
@@ -1166,7 +1191,7 @@ export default function BankerApplications() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPreviewDoc(null)}
+                    onClick={closeDocumentPreview}
                     className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg text-xs transition border border-slate-200"
                   >
                     Close
