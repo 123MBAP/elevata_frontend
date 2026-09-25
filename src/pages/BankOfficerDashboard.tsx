@@ -31,11 +31,7 @@ export default function BankOfficerDashboard() {
   const {
     smes,
     selectedSmeId,
-    setSelectedSmeId,
-    approveLoan,
-    rejectLoan,
-    requestFieldVisit,
-    loanSimulation
+    setSelectedSmeId
   } = useApp();
 
   const navigate = useNavigate();
@@ -72,25 +68,10 @@ export default function BankOfficerDashboard() {
       'Lending Capacity': Math.round(sme.borrowingCapacity / 1000000)
     })), [smes]);
 
-  const handleApprove = () => {
-    if (!highlightedSme) return;
-    const amount = highlightedSme.borrowingCapacity > 0 ? highlightedSme.borrowingCapacity : loanSimulation.amount;
-    const period = highlightedSme.borrowingCapacity > 0 ? 12 : loanSimulation.period;
-    const rate   = highlightedSme.borrowingCapacity > 0 ? 14 : loanSimulation.rate;
-    approveLoan(highlightedSme.id, amount, period, rate);
-    showToast('success', `Loan of ${formatRWF(amount)} approved for ${highlightedSme.name}.`);
-  };
-
-  const handleReject = () => {
-    if (!highlightedSme) return;
-    rejectLoan(highlightedSme.id);
-    showToast('danger', `Loan application for ${highlightedSme.name} rejected.`);
-  };
+  const handleApplications = () => navigate('/banker/applications');
 
   const handleAudit = () => {
-    if (!highlightedSme) return;
-    requestFieldVisit(highlightedSme.id);
-    showToast('warning', `Field inspection requested for ${highlightedSme.name}.`);
+    showToast('warning', 'Field-audit requests are unavailable because no persistence API is configured.');
   };
 
   const handleMonitor = () => navigate('/');
@@ -280,10 +261,10 @@ export default function BankOfficerDashboard() {
 
               <div className="space-y-2">
                 <button
-                  onClick={handleApprove}
+                  onClick={handleApplications}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition"
                 >
-                  <Check className="w-4 h-4" /> Approve loan
+                  <Check className="w-4 h-4" /> Review applications
                 </button>
                 <button
                   onClick={handleMonitor}
@@ -298,10 +279,10 @@ export default function BankOfficerDashboard() {
                   <FileSearch className="w-4 h-4" /> Request audit
                 </button>
                 <button
-                  onClick={handleReject}
+                  onClick={handleApplications}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white hover:bg-red-50 text-red-600 text-sm font-semibold rounded-lg border border-gray-200 transition"
                 >
-                  <XCircle className="w-4 h-4" /> Reject application
+                  <XCircle className="w-4 h-4" /> Open decision workflow
                 </button>
               </div>
 

@@ -26,7 +26,10 @@ import {
   Trash2,
   AlertCircle,
   Check,
-  Loader2
+  Loader2,
+  Mail,
+  Phone,
+  Globe
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 import FormattedText from '../assets/components/ui/FormattedText';
@@ -39,7 +42,6 @@ export default function OpportunityHub() {
     trainings,
     activeSme,
     applyForOpportunity,
-    joinTraining,
     bookmarkOpportunity,
     bookmarkedOpportunities
   } = useApp();
@@ -57,24 +59,12 @@ export default function OpportunityHub() {
   // AI Assistant Chat state (simulated)
   const [chatInput, setChatInput] = useState('');
   const [chatHistory, setChatHistory] = useState<Array<{ sender: 'user' | 'ai'; text: string }>>([
-    { sender: 'ai', text: 'Hi Marie! I can answer any questions about this opportunity. Ask me about interest rates, deadlines, or required files.' }
+    { sender: 'ai', text: 'Hello! I can answer questions about the selected opportunity, including its deadline and required files.' }
   ]);
   const [isTyping, setIsTyping] = useState(false);
 
   // Training Center Modal
   const [activeLiveTraining, setActiveLiveTraining] = useState<Training | null>(null);
-  const [trainingProgress, setTrainingProgress] = useState(0);
-  const [trainingEnded, setTrainingEnded] = useState(false);
-  const [trainingQuestions, setTrainingQuestions] = useState<Array<{ id: string; author: string; avatar: string; text: string }>>([]);
-  const [newQuestionText, setNewQuestionText] = useState('');
-  const [webinarTimer, setWebinarTimer] = useState<any>(null);
-
-  // User notifications checklist
-  const [notifications] = useState([
-    { id: 1, title: 'New Opportunity', desc: 'BPR Bank posted a "Business Expansion Loan" matching your profile.', time: '2 hours ago', read: false },
-    { id: 2, title: 'Training Invitation', desc: 'Join the "Financial Readiness & Tax Compliance" webinar tomorrow.', time: '1 day ago', read: false },
-    { id: 3, title: 'Application Approved', desc: 'Your application for "Women-Led Tech Venture Fund" has been accepted.', time: '3 days ago', read: true }
-  ]);
 
   // Toast / Status banner
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -110,8 +100,8 @@ export default function OpportunityHub() {
   const scoredOpportunities = useMemo(() => {
     return opportunities.map(opp => {
       let score = 0;
-      let reasons: string[] = [];
-      let missing: string[] = [];
+      const reasons: string[] = [];
+      const missing: string[] = [];
 
       // Sector Match
       const sectorMatch = opp.sectors.includes(activeSme.sector);
@@ -122,8 +112,8 @@ export default function OpportunityHub() {
         missing.push(`Targeted sectors are ${opp.sectors.join(', ')}`);
       }
 
-      // Revenue Match (Marie's Kigali Fresh Mart has approx 5.8M monthly)
-      const monthlyRevenue = activeSme.monthlyData[activeSme.monthlyData.length - 1]?.revenue || 4000000;
+      // Revenue Match
+      const monthlyRevenue = activeSme.monthlyData[activeSme.monthlyData.length - 1]?.revenue ?? 0;
       if (monthlyRevenue >= opp.minRevenue) {
         score += 30;
         reasons.push('Monthly turnover satisfies criteria');
@@ -175,11 +165,11 @@ export default function OpportunityHub() {
   const [applyAmount, setApplyAmount] = useState<string>('5000000');
   const [applyPurpose, setApplyPurpose] = useState<string>('Working Capital & Inventory Purchase');
   const [applyTerm, setApplyTerm] = useState<string>('24');
-  const [applyPhone, setApplyPhone] = useState<string>('+250 788 123 456');
-  const [applyEmail, setApplyEmail] = useState<string>(activeSme.email || 'marie@kigalifresh.rw');
+  const [applyPhone, setApplyPhone] = useState<string>('');
+  const [applyEmail, setApplyEmail] = useState<string>(activeSme.email || '');
   const [applyNotes, setApplyNotes] = useState<string>('');
   const [applyAgreed, setApplyAgreed] = useState<boolean>(true);
-  const [uploadedDocs, setUploadedDocs] = useState<Record<string, { fileName: string; fileSize: string; uploadedAt: string }>>({});
+  const [uploadedDocs, setUploadedDocs] = useState<Record<string, { file: File; fileName: string; fileSize: string; uploadedAt: string }>>({});
   const [isSubmittingApp, setIsSubmittingApp] = useState<boolean>(false);
   const [applyErrors, setApplyErrors] = useState<Record<string, string>>({});
 
@@ -194,35 +184,17 @@ export default function OpportunityHub() {
       setApplyAmount('2500000');
     }
 
-    // Auto-populate documents if already uploaded in readiness
-    const initialDocs: Record<string, { fileName: string; fileSize: string; uploadedAt: string }> = {};
-    if (taxClearanceUploaded) {
-      initialDocs['Tax Clearance'] = {
-        fileName: 'RRA_Tax_Clearance_Q3_2026.pdf',
-        fileSize: '1.2 MB',
-        uploadedAt: 'Verified today'
-      };
-    }
-    if (auditedStatementsUploaded) {
-      initialDocs['Financial Statements'] = {
-        fileName: 'Audited_Financial_Ledger_2026.pdf',
-        fileSize: '3.4 MB',
-        uploadedAt: 'Verified today'
-      };
-    }
-    if (profileCompleted) {
-      initialDocs['Business Registration Certificate'] = {
-        fileName: 'RDB_Business_Registration.pdf',
-        fileSize: '890 KB',
-        uploadedAt: 'Verified on Elevata'
-      };
-    }
-    setUploadedDocs(initialDocs);
+    setUploadedDocs({});
   };
 
   const handleFileUpload = (docName: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 10 * 1024 * 1024) {
+        setApplyErrors(prev => ({ ...prev, [docName]: 'File must be 10 MB or smaller.' }));
+        e.target.value = '';
+        return;
+      }
       const sizeStr = file.size > 1024 * 1024 
         ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
         : `${Math.round(file.size / 1024)} KB`;
@@ -230,6 +202,7 @@ export default function OpportunityHub() {
       setUploadedDocs(prev => ({
         ...prev,
         [docName]: {
+          file,
           fileName: file.name,
           fileSize: sizeStr,
           uploadedAt: 'Just now'
@@ -256,7 +229,7 @@ export default function OpportunityHub() {
     });
   };
 
-  const handleSubmitApplication = (e: React.FormEvent) => {
+  const handleSubmitApplication = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!applyingOpp) return;
 
@@ -291,14 +264,30 @@ export default function OpportunityHub() {
     }
 
     setIsSubmittingApp(true);
-    setTimeout(() => {
-      applyForOpportunity(applyingOpp.id, activeSme.id);
+    try {
+      await applyForOpportunity({
+        opportunityId: applyingOpp.id,
+        requestedAmount: Number(applyAmount),
+        purpose: applyPurpose,
+        termMonths: Number(applyTerm),
+        contactPhone: applyPhone,
+        contactEmail: applyEmail,
+        notes: applyNotes,
+        documents: Object.fromEntries(
+          Object.entries(uploadedDocs).map(([documentType, upload]) => [documentType, upload.file])
+        )
+      });
       setIsSubmittingApp(false);
       const title = applyingOpp.title;
       setApplyingOpp(null);
       triggerToast(`Application submitted successfully for "${title}"!`);
       setActiveTab('applications');
-    }, 800);
+    } catch (error: unknown) {
+      setIsSubmittingApp(false);
+      const message = error instanceof Error ? error.message : 'Unable to submit the application.';
+      setApplyErrors({ submit: message });
+      triggerToast(message);
+    }
   };
 
   // Chatbot Q&A simulation
@@ -316,15 +305,19 @@ export default function OpportunityHub() {
       const textLower = userMsg.toLowerCase();
       
       if (textLower.includes('rate') || textLower.includes('interest')) {
-        response = `The BPR Business Expansion Loan features a 12% p.a. fixed interest rate. There is also a 3 months grace period on principal repayments.`;
+        response = selectedOpp.loanRate
+          ? `The published interest rate is ${selectedOpp.loanRate}% per year${selectedOpp.loanGrace ? ` with a ${selectedOpp.loanGrace}-month grace period` : ''}.`
+          : 'The publisher has not specified an interest rate for this opportunity.';
       } else if (textLower.includes('deadline') || textLower.includes('when')) {
         response = `The deadline for this opportunity is ${selectedOpp.deadline}. I recommend submitting your file 3 days prior.`;
       } else if (textLower.includes('document') || textLower.includes('file') || textLower.includes('upload')) {
         response = `You will need: ${selectedOpp.requiredDocs.join(', ')}. Currently, your tax compliance matches!`;
       } else if (textLower.includes('collateral') || textLower.includes('land')) {
-        response = `No land collateral is required for this program, but you must register your stock ledger to Elevata's digital collateral system.`;
+        response = selectedOpp.collateralRequired
+          ? `Collateral is required${selectedOpp.collateralType ? `: ${selectedOpp.collateralType}` : ''}.`
+          : 'The published requirements do not require collateral.';
       } else {
-        response = `Great question! The maximum funding is ${selectedOpp.maxFunding}. Your current cashflow trend (+8.5%) and business health score (${activeSme.healthScore}) make you a strong candidate for approval.`;
+        response = `The maximum published funding is ${selectedOpp.maxFunding}. Your current profile match is ${selectedOpp.matchPercent}%; the publisher makes the final eligibility decision.`;
       }
 
       setChatHistory(prev => [...prev, { sender: 'ai', text: response }]);
@@ -369,10 +362,10 @@ export default function OpportunityHub() {
             </span>
           </div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight font-heading">
-            Welcome back, {activeSme.ownerName.split(' ')[0]}!
+            {activeSme.ownerName ? `Welcome back, ${activeSme.ownerName.split(' ')[0]}!` : 'Welcome to Opportunity Hub'}
           </h1>
           <p className="text-xs text-slate-500 max-w-xl font-sans">
-            AI matched <strong className="text-slate-900 font-bold">{scoredOpportunities.filter(o => o.matchPercent >= 60).length} financial opportunities</strong> matching your retail business profile today.
+            AI matched <strong className="text-slate-900 font-bold">{scoredOpportunities.filter(o => o.matchPercent >= 60).length} financial opportunities</strong> against your current business profile.
           </p>
         </div>
 
@@ -475,22 +468,14 @@ export default function OpportunityHub() {
                     <Bell className="w-3.5 h-3.5 text-slate-400" /> Notifications Feed
                   </span>
                   <span className="bg-rose-50 text-rose-600 font-mono text-[9px] font-bold px-1.5 py-0.5 rounded border border-rose-100">
-                    {notifications.filter(n => !n.read).length} new
+                    0 new
                   </span>
                 </div>
 
                 <div className="space-y-2.5 pt-3 max-h-48 overflow-y-auto pr-1">
-                  {notifications.map(n => (
-                    <div key={n.id} className={`p-2.5 rounded-lg border text-xs space-y-0.5 ${
-                      n.read ? 'bg-slate-50 border-slate-100 text-slate-500' : 'bg-indigo-50/10 border-indigo-100/50 text-slate-800'
-                    }`}>
-                      <div className="flex justify-between items-center">
-                        <span className="font-bold text-slate-900">{n.title}</span>
-                        <span className="text-[8px] text-slate-400 font-mono">{n.time}</span>
-                      </div>
-                      <p className="text-[10px] leading-relaxed">{n.desc}</p>
-                    </div>
-                  ))}
+                  <div className="rounded-lg border border-dashed border-slate-200 p-4 text-center text-[10px] text-slate-400">
+                    No notifications yet.
+                  </div>
                 </div>
               </div>
             </CardContent>
@@ -627,6 +612,13 @@ export default function OpportunityHub() {
                   </div>
                 </div>
               ))}
+              {filteredMarketplace.length === 0 && (
+                <div className="md:col-span-2 lg:col-span-3 rounded-xl border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
+                  {opportunities.length === 0
+                    ? 'No opportunities have been published yet.'
+                    : 'No opportunities match the current filters.'}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -848,6 +840,11 @@ export default function OpportunityHub() {
                   </div>
                 );
               })}
+              {trainings.length === 0 && (
+                <div className="md:col-span-2 lg:col-span-3 rounded-xl border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
+                  No training sessions have been scheduled yet.
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -861,7 +858,7 @@ export default function OpportunityHub() {
             </div>
 
             <div className="space-y-3">
-              {applications.filter(app => app.smeId === activeSme.id).map(app => (
+              {applications.map(app => (
                 <div key={app.id} className="p-4 border border-slate-200 bg-white rounded-lg space-y-3">
                   <div className="flex justify-between items-start gap-4">
                     <div>
@@ -903,13 +900,18 @@ export default function OpportunityHub() {
                   </div>
                 </div>
               ))}
+              {applications.length === 0 && (
+                <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
+                  No applications submitted yet.
+                </div>
+              )}
             </div>
           </div>
         )}
       </div>
       {selectedOpp && (() => {
-        const activeSmeLocation = activeSme.id === 'sme-2' ? 'Northern Province' : activeSme.id === 'sme-4' ? 'Western Province' : 'Kigali';
-        const activeSmeAnnualRevenue = activeSme.monthlyData.reduce((sum, item) => sum + item.revenue, 0) * 2;
+        const activeSmeLocation = 'Not provided';
+        const activeSmeAnnualRevenue = activeSme.monthlyData.reduce((sum, item) => sum + item.revenue, 0);
         const activeSmeMonthlyRevenue = activeSme.monthlyData[activeSme.monthlyData.length - 1]?.revenue || 0;
         const minMonthly = selectedOpp.minMonthlyRevenue || Math.round(selectedOpp.minRevenue / 12);
 
@@ -949,6 +951,22 @@ export default function OpportunityHub() {
                   <p className="text-[10px] text-slate-400">Published by {selectedOpp.institution} · Deadline: {selectedOpp.deadline}</p>
                 </div>
 
+                <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#0a66c2]">Verified financial institution</span>
+                      <p className="mt-1 text-xs font-bold text-slate-900">{selectedOpp.publisher?.institutionName || selectedOpp.institution}</p>
+                      {selectedOpp.publisher?.representativeName && <p className="text-[10px] text-slate-500">Contact: {selectedOpp.publisher.representativeName}</p>}
+                    </div>
+                    <ShieldCheck className="h-5 w-5 shrink-0 text-[#057642]" />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {selectedOpp.publisher?.phone && <a href={`tel:${selectedOpp.publisher.phone}`} className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm"><Phone className="h-3 w-3 text-[#0a66c2]" />{selectedOpp.publisher.phone}</a>}
+                    {selectedOpp.publisher?.email && <a href={`mailto:${selectedOpp.publisher.email}`} className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm"><Mail className="h-3 w-3 text-[#0a66c2]" />Email officer</a>}
+                    {selectedOpp.publisher?.website && <a href={selectedOpp.publisher.website} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm"><Globe className="h-3 w-3 text-[#0a66c2]" />Website</a>}
+                  </div>
+                </div>
+
                 {selectedOpp.sectors.includes('Agriculture') && (
                   <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
                     <div className="h-10 w-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
@@ -981,19 +999,19 @@ export default function OpportunityHub() {
                       <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
                         <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Interest Rate</span>
                         <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
-                          {selectedOpp.loanRate ? `${selectedOpp.loanRate}% p.a. fixed` : '12% p.a. fixed'}
+                          {selectedOpp.loanRate ? `${selectedOpp.loanRate}% p.a. fixed` : 'Not specified'}
                         </span>
                       </div>
                       <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
                         <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Repayment Term</span>
                         <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
-                          {selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : '24 Months'}
+                          {selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : 'Not specified'}
                         </span>
                       </div>
                       <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
                         <span className="text-slate-400 block text-[8px] tracking-wider uppercase font-semibold">Grace Period</span>
                         <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
-                          {selectedOpp.loanGrace ? `${selectedOpp.loanGrace} Months` : '3 Months'}
+                          {selectedOpp.loanGrace ? `${selectedOpp.loanGrace} Months` : 'Not specified'}
                         </span>
                       </div>
                       <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
@@ -1097,8 +1115,8 @@ export default function OpportunityHub() {
                           {
                             name: 'Business Age',
                             req: selectedOpp.minAge === 0 ? 'Any' : `${selectedOpp.minAge}+ Years`,
-                            val: `${activeSme.age || 3} Years`,
-                            met: (activeSme.age || 3) >= selectedOpp.minAge
+                            val: `${activeSme.age} Years`,
+                            met: activeSme.age >= selectedOpp.minAge
                           },
                           {
                             name: 'Business Health Score',
@@ -1116,7 +1134,7 @@ export default function OpportunityHub() {
                             name: 'Geographical Scope',
                             req: selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'All districts',
                             val: activeSmeLocation,
-                            met: !selectedOpp.eligLocations || selectedOpp.eligLocations.length === 0 || selectedOpp.eligLocations.includes(activeSmeLocation)
+                            met: !selectedOpp.eligLocations || selectedOpp.eligLocations.length === 0
                           }
                         ].map((chk, idx) => (
                           <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
@@ -1506,9 +1524,14 @@ export default function OpportunityHub() {
                                 <span className="text-slate-400">· {uploadedInfo.uploadedAt}</span>
                               </p>
                             ) : (
-                              <p className="text-[9px] text-slate-400 pl-5.5">
-                                Accepts PDF, JPG, PNG (Max 10MB)
-                              </p>
+                              <>
+                                <p className="text-[9px] text-slate-400 pl-5.5">
+                                  Accepts PDF, JPG, PNG, CSV, XLSX (Max 10MB)
+                                </p>
+                                {applyErrors[doc] && (
+                                  <p className="text-[9px] font-semibold text-rose-600 pl-5.5">{applyErrors[doc]}</p>
+                                )}
+                              </>
                             )}
                           </div>
 
@@ -1587,6 +1610,11 @@ export default function OpportunityHub() {
               </div>
 
               {/* Footer */}
+              {applyErrors.submit && (
+                <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-[10px] font-semibold">
+                  {applyErrors.submit}
+                </div>
+              )}
               <div className="pt-3 border-t border-slate-150 flex justify-between items-center shrink-0">
                 <button
                   type="button"

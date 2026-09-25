@@ -30,7 +30,7 @@ interface PublishOpportunityFormProps {
   oppType: OpportunityType;
   oppCategory: string;
   onCancel: () => void;
-  onPublish: (data: any) => void;
+  onPublish: (data: any) => Promise<void>;
   onChangeType: () => void;
   availableCategories: { id: string; businessType: string }[];
   simulatedCandidates: {
@@ -254,7 +254,7 @@ export default function PublishOpportunityForm({
   };
 
   // Submit Handler
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSubmit = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
 
     const newErrors: Record<string, string> = {};
@@ -298,7 +298,7 @@ export default function PublishOpportunityForm({
     const finalDeadline = oppDeadline || '2026-10-31';
     const finalSectors = oppSectors && oppSectors.length > 0 ? oppSectors : ['All Sectors'];
 
-    onPublish({
+    await onPublish({
       title: finalTitle,
       institution: finalInstitution,
       category: oppCategory,

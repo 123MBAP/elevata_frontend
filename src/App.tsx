@@ -8,7 +8,7 @@ import SmeAdvisor from './pages/SmeAdvisor';
 import BankOfficerDashboard from './pages/BankOfficerDashboard';
 import Inventory from './pages/Inventory';
 import Sales from './pages/Sales';
-import Reports from './pages/Reports';
+import Reports from './pages/ReportsWorkspace';
 import TechAdvisor from './pages/TechAdvisor';
 import BusinessStartAdvisor from './pages/BusinessStartAdvisor';
 import LoginPage from './pages/LoginPage';

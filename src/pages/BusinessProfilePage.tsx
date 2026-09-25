@@ -1,30 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import {
   Building2,
-  Briefcase,
-  User,
-  Mail,
-  Phone,
-  MapPin,
   Cpu,
   Coins,
   Users,
   Target,
-  Sparkles,
   Save,
   CheckCircle,
   AlertCircle,
   Plus,
   Trash2,
   ShieldCheck,
-  Globe,
   TrendingUp,
   Edit3,
-  X,
-  Layers,
-  DollarSign,
-  PieChart,
-  FileText
+  X
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/api';
@@ -44,7 +33,6 @@ export default function BusinessProfilePage() {
 
   const [activeTab, setActiveTab] = useState<'general' | 'equipment' | 'balance' | 'workforce' | 'strategy'>('general');
   const [isEditing, setIsEditing] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -55,41 +43,32 @@ export default function BusinessProfilePage() {
     ownerName: '',
     email: '',
     phone: '',
-    businessType: 'Retail & Consumer Goods',
-    province: 'Kigali City',
-    district: 'Gasabo',
-    sector: 'Kimironko',
-    cell: 'Kibagabaga',
-    village: 'Nyirabwana',
-    knownPlace: 'Near Kimironko Market & Commercial Hub',
-    latitude: '-1.9441',
-    longitude: '30.1265',
-
-    equipments: [
-      { id: 'eq_1', name: 'Cloud POS Terminal & Barcode Scanner', category: 'Technology', value: 650000, condition: 'Operational' },
-      { id: 'eq_2', name: 'Commercial Grade Refrigerator & Cold Shelf', category: 'Storage', value: 2400000, condition: 'Operational' },
-      { id: 'eq_3', name: 'Delivery Motorcycle (150cc)', category: 'Logistics', value: 1800000, condition: 'Operational' },
-      { id: 'eq_4', name: 'Diesel Backup Generator (5kVA)', category: 'Power', value: 1200000, condition: 'Operational' }
-    ] as EquipmentItem[],
-
-    currentAssets: 8500000,
-    fixedAssets: 9500000,
-    shortTermLiabilities: 1800000,
-    longTermLiabilities: 1700000,
-    monthlyTurnover: 4200000,
-    grossMarginPercentage: 28,
-
-    fullTimeEmployees: 4,
-    partTimeEmployees: 2,
-    monthlyPayroll: 750000,
-    keyRoles: 'Store Manager, 2 Sales Cashiers, Logistics Rider, Part-time Accountant',
-
-    businessStage: 'Growth / Scaling',
-    targetMarket: 'Retail Consumers, Local Offices & Small Catering Businesses',
-    primaryProducts: 'Fast-Moving Packaged Goods, Groceries, Fresh Produce',
-    operationalChallenges: 'Working capital constraints for bulk inventory orders and transport logistics costs',
-    strategicGoals: 'Expand inventory capacity, secure a 5,000,000 RWF working capital facility, and onboard new B2B accounts',
-    digitizationLevel: 'Medium (POS & Mobile Money enabled)'
+    businessType: '',
+    province: '',
+    district: '',
+    sector: '',
+    cell: '',
+    village: '',
+    knownPlace: '',
+    latitude: '',
+    longitude: '',
+    equipments: [] as EquipmentItem[],
+    currentAssets: 0,
+    fixedAssets: 0,
+    shortTermLiabilities: 0,
+    longTermLiabilities: 0,
+    monthlyTurnover: 0,
+    grossMarginPercentage: 0,
+    fullTimeEmployees: 0,
+    partTimeEmployees: 0,
+    monthlyPayroll: 0,
+    keyRoles: '',
+    businessStage: '',
+    targetMarket: '',
+    primaryProducts: '',
+    operationalChallenges: '',
+    strategicGoals: '',
+    digitizationLevel: ''
   });
 
   // Financial Institution Form State
@@ -98,43 +77,35 @@ export default function BusinessProfilePage() {
     representativeName: '',
     email: '',
     phone: '',
-    category: 'Commercial Bank',
-    operatingScope: 'National (Rwanda)',
-    licenseNumber: 'BNR-FI-2024-8849',
-    website: 'https://www.elevata.com'
+    category: '',
+    operatingScope: '',
+    licenseNumber: '',
+    website: ''
   });
 
   // Backup state for cancelation
-  const [initialSmeData, setInitialSmeData] = useState<any>(null);
-  const [initialFiData, setInitialFiData] = useState<any>(null);
+  const [initialSmeData, setInitialSmeData] = useState<typeof smeForm | null>(null);
+  const [initialFiData, setInitialFiData] = useState<typeof fiForm | null>(null);
 
   // Dynamic business categories from DB
-  const [availableCategories, setAvailableCategories] = useState<string[]>([
-    'Retail Shop', 'Wholesale', 'Restaurant', 'Hotel', 'Agriculture', 'Manufacturing',
-    'Construction', 'Transport', 'Education', 'Healthcare', 'ICT', 'Finance',
-    'Pharmacy', 'Salon', 'Fashion', 'Electronics', 'Hardware Store', 'Supermarket',
-    'Stationery', 'Printing', 'Retail & Consumer Goods', 'Other'
-  ]);
+  const [availableCategories, setAvailableCategories] = useState<string[]>([]);
 
   // Fetch registered user, business details, and categories
   useEffect(() => {
     const loadCategories = async () => {
       try {
         const res = await apiRequest('/categories');
-        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const names = res.data.map((c: any) => c.businessType || c.cat_name).filter(Boolean);
-          if (names.length > 0) {
-            setAvailableCategories(prev => Array.from(new Set([...names, ...prev])));
-          }
+        if (res?.success && Array.isArray(res.data?.categories)) {
+          const names = res.data.categories.map((category: { businessType?: string; cat_name?: string }) => category.businessType || category.cat_name).filter(Boolean) as string[];
+          setAvailableCategories(Array.from(new Set(names)));
         }
-      } catch (e) {
-        // Fallback silently
+      } catch (error) {
+        console.warn('Unable to load business categories:', error);
       }
     };
     loadCategories();
 
     const loadProfileData = async () => {
-      setLoading(true);
       try {
         if (isFI) {
           const res = await apiRequest('/users/profile');
@@ -142,14 +113,14 @@ export default function BusinessProfilePage() {
             const u = res.data.user;
             const fi = u.financialInstitution || {};
             const loadedFi = {
-              institutionName: fi.institutionName || 'Elevata Partner Bank',
-              representativeName: fi.representativeName || u.ownerName || 'Chief Credit Officer',
+              institutionName: fi.institutionName || '',
+              representativeName: fi.representativeName || '',
               email: u.email || '',
-              phone: u.phone || '+250 788 000 111',
-              category: fi.category || 'Commercial Bank',
-              operatingScope: fi.operatingScope || 'National (Rwanda)',
-              licenseNumber: fi.licenseNumber || 'BNR-FI-2024-8849',
-              website: fi.website || 'https://www.elevata.com'
+              phone: u.phone || '',
+              category: fi.category || '',
+              operatingScope: fi.operatingScope || '',
+              licenseNumber: fi.licenseNumber || '',
+              website: fi.website || ''
             };
             setFiForm(loadedFi);
             setInitialFiData(loadedFi);
@@ -162,52 +133,44 @@ export default function BusinessProfilePage() {
             const op = b.operational || {};
 
             const loadedSme = {
-              businessName: b.businessName || 'Kigali Fresh Mart Ltd',
-              ownerName: b.ownerName || 'Patrick Mugisha',
-              email: user?.email || 'sme@elevata.com',
-              phone: user?.phone || '+250 788 123 456',
-              businessType: b.businessType || 'Retail & Consumer Goods',
-              province: b.province || 'Kigali City',
-              district: b.district || 'Gasabo',
-              sector: b.sector || 'Kimironko',
-              cell: b.cell || 'Kibagabaga',
-              village: b.village || 'Nyirabwana',
-              knownPlace: b.knownPlace || 'Near Kimironko Market & Commercial Hub',
-              latitude: b.latitude ? String(b.latitude) : '-1.9441',
-              longitude: b.longitude ? String(b.longitude) : '30.1265',
-
-              equipments: op.equipments && op.equipments.length > 0 ? op.equipments : [
-                { id: 'eq_1', name: 'Cloud POS Terminal & Barcode Scanner', category: 'Technology', value: 650000, condition: 'Operational' },
-                { id: 'eq_2', name: 'Commercial Grade Refrigerator & Cold Shelf', category: 'Storage', value: 2400000, condition: 'Operational' },
-                { id: 'eq_3', name: 'Delivery Motorcycle (150cc)', category: 'Logistics', value: 1800000, condition: 'Operational' },
-                { id: 'eq_4', name: 'Diesel Backup Generator (5kVA)', category: 'Power', value: 1200000, condition: 'Operational' }
-              ],
-              currentAssets: op.currentAssets ?? 8500000,
-              fixedAssets: op.fixedAssets ?? 9500000,
-              shortTermLiabilities: op.shortTermLiabilities ?? 1800000,
-              longTermLiabilities: op.longTermLiabilities ?? 1700000,
-              monthlyTurnover: op.monthlyTurnover ?? 4200000,
-              grossMarginPercentage: op.grossMarginPercentage ?? 28,
-              fullTimeEmployees: op.fullTimeEmployees ?? 4,
-              partTimeEmployees: op.partTimeEmployees ?? 2,
-              monthlyPayroll: op.monthlyPayroll ?? 750000,
-              keyRoles: op.roles ? (Array.isArray(op.roles) ? op.roles.join(', ') : op.roles) : 'Store Manager, 2 Sales Cashiers, Logistics Rider, Part-time Accountant',
-              businessStage: op.businessStage || 'Growth / Scaling',
-              targetMarket: op.targetMarket || 'Retail Consumers, Local Offices & Small Catering Businesses',
-              primaryProducts: op.primaryProducts || 'Fast-Moving Packaged Goods, Groceries, Fresh Produce',
-              operationalChallenges: op.operationalChallenges || 'Working capital constraints for bulk inventory orders and transport logistics costs',
-              strategicGoals: op.strategicGoals || 'Expand inventory capacity, secure a 5,000,000 RWF working capital facility, and onboard new B2B accounts',
-              digitizationLevel: op.digitizationLevel || 'Medium (POS & Mobile Money enabled)'
+              businessName: b.businessName || '',
+              ownerName: b.ownerName || '',
+              email: user?.email || '',
+              phone: user?.phone || '',
+              businessType: b.businessType || '',
+              province: b.province || '',
+              district: b.district || '',
+              sector: b.sector || '',
+              cell: b.cell || '',
+              village: b.village || '',
+              knownPlace: b.knownPlace || '',
+              latitude: b.latitude ? String(b.latitude) : '',
+              longitude: b.longitude ? String(b.longitude) : '',
+              equipments: Array.isArray(op.equipments) ? op.equipments : [],
+              currentAssets: op.currentAssets ?? 0,
+              fixedAssets: op.fixedAssets ?? 0,
+              shortTermLiabilities: op.shortTermLiabilities ?? 0,
+              longTermLiabilities: op.longTermLiabilities ?? 0,
+              monthlyTurnover: op.monthlyTurnover ?? 0,
+              grossMarginPercentage: op.grossMarginPercentage ?? 0,
+              fullTimeEmployees: op.fullTimeEmployees ?? 0,
+              partTimeEmployees: op.partTimeEmployees ?? 0,
+              monthlyPayroll: op.monthlyPayroll ?? 0,
+              keyRoles: op.roles ? (Array.isArray(op.roles) ? op.roles.join(', ') : op.roles) : '',
+              businessStage: op.businessStage || '',
+              targetMarket: op.targetMarket || '',
+              primaryProducts: op.primaryProducts || '',
+              operationalChallenges: op.operationalChallenges || '',
+              strategicGoals: op.strategicGoals || '',
+              digitizationLevel: op.digitizationLevel || ''
             };
 
             setSmeForm(loadedSme);
             setInitialSmeData(loadedSme);
           }
         }
-      } catch (err: any) {
-        console.error('Failed to load profile details:', err);
-      } finally {
-        setLoading(false);
+      } catch (error: unknown) {
+        console.error('Failed to load profile details:', error);
       }
     };
 
@@ -245,7 +208,7 @@ export default function BusinessProfilePage() {
     }));
   };
 
-  const handleEquipmentChange = (id: string, field: keyof EquipmentItem, value: any) => {
+  const handleEquipmentChange = (id: string, field: keyof EquipmentItem, value: EquipmentItem[keyof EquipmentItem]) => {
     setSmeForm((prev) => ({
       ...prev,
       equipments: prev.equipments.map((item) =>
@@ -325,8 +288,8 @@ export default function BusinessProfilePage() {
         setSuccessMessage('Business Profile and operational intelligence updated successfully.');
       }
       setIsEditing(false);
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Failed to save profile. Please check the fields and try again.');
+    } catch (error: unknown) {
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to save profile. Please check the fields and try again.');
     } finally {
       setSaving(false);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -336,7 +299,7 @@ export default function BusinessProfilePage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans pb-16">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#eaf2ff] via-white to-emerald-50 border border-blue-100 rounded-2xl p-6 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
@@ -344,7 +307,7 @@ export default function BusinessProfilePage() {
             </h1>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
               isFI
-                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                ? 'bg-blue-50 text-[#0a66c2] border-blue-200'
                 : 'bg-emerald-50 text-emerald-700 border-emerald-200'
             }`}>
               {isFI ? 'Credit Institution' : smeForm.businessType || 'SME Business'}
@@ -362,7 +325,7 @@ export default function BusinessProfilePage() {
           {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
+              className="px-4 py-2 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
             >
               <Edit3 className="w-4 h-4" />
               <span>Edit Profile</span>
@@ -380,7 +343,7 @@ export default function BusinessProfilePage() {
               <button
                 onClick={handleSaveProfile}
                 disabled={saving}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+                className="px-5 py-2 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 <span>{saving ? 'Saving...' : 'Save Changes'}</span>
@@ -471,7 +434,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('general')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'general'
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-[#0a66c2] text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -483,7 +446,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('equipment')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'equipment'
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-[#0a66c2] text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -495,7 +458,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('balance')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'balance'
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-[#0a66c2] text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -507,7 +470,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('workforce')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'workforce'
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-[#0a66c2] text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -519,7 +482,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('strategy')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'strategy'
-                  ? 'bg-slate-900 text-white'
+                  ? 'bg-[#0a66c2] text-white'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -1127,7 +1090,7 @@ export default function BusinessProfilePage() {
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-purple-600" />
+                <Building2 className="w-4 h-4 text-[#0a66c2]" />
                 Institutional Accreditation & Licensing
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">

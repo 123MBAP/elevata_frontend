@@ -184,8 +184,10 @@ export default function ElevataBotPage() {
           message: text.trim(),
           history: historyPayload,
           context: {
-            activeSmeName: activeSme?.name,
-            activeSmeSector: activeSme?.sector,
+            activeSmeName: user?.business?.businessName || activeSme?.name,
+            activeSmeSector: user?.business?.businessType || activeSme?.sector,
+            institutionName: user?.financialInstitution?.institutionName,
+            representativeName: user?.financialInstitution?.representativeName,
             activeSmeRevenue: activeSme?.monthlyData ? activeSme.monthlyData.reduce((sum, d) => sum + d.revenue, 0) : undefined,
             activeSmeCreditScore: activeSme?.healthScore
           }
@@ -210,11 +212,12 @@ export default function ElevataBotPage() {
       } else {
         throw new Error('Received unexpected response format');
       }
-    } catch (err: any) {
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Unable to connect to AI Assistant. Please check connection and try again.';
       const errorReply: ChatMessage = {
         id: `msg_${Date.now() + 1}`,
         role: 'assistant',
-        content: `**Error:** ${err.message || 'Unable to connect to AI Assistant. Please check connection and try again.'}`,
+        content: `**Error:** ${message}`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
@@ -252,7 +255,7 @@ export default function ElevataBotPage() {
       ];
 
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-slate-50 font-sans -m-3 md:-m-6 overflow-hidden">
+    <div className="flex h-[calc(100vh-80px)] bg-[#f3f2f0] font-sans -m-3 md:-m-6 overflow-hidden">
       {/* =========================================================================
           LEFT SIDEBAR: Conversation History & New Chat (ChatGPT Style)
       ========================================================================== */}
@@ -265,7 +268,7 @@ export default function ElevataBotPage() {
         <div className="p-3.5 border-b border-gray-100 flex items-center gap-2">
           <button
             onClick={startNewChat}
-            className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-xl text-xs font-bold transition shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl text-xs font-bold transition shadow-sm"
           >
             <Plus className="w-4 h-4" />
             <span>New Chat</span>
@@ -287,14 +290,14 @@ export default function ElevataBotPage() {
                 onClick={() => setActiveChatId(chat.id)}
                 className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs cursor-pointer transition ${
                   chat.id === activeChatId
-                    ? 'bg-emerald-50 text-emerald-900 font-bold border border-emerald-200'
+                    ? 'bg-[#eaf2ff] text-[#004182] font-bold border border-blue-200'
                     : 'text-slate-700 hover:bg-slate-100 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
                   <MessageSquare
                     className={`w-3.5 h-3.5 shrink-0 ${
-                      chat.id === activeChatId ? 'text-emerald-600' : 'text-slate-400'
+                      chat.id === activeChatId ? 'text-[#0a66c2]' : 'text-slate-400'
                     }`}
                   />
                   <span className="truncate">{chat.title}</span>
@@ -315,7 +318,7 @@ export default function ElevataBotPage() {
 
         {/* Bottom Sidebar User Summary */}
         <div className="p-3 border-t border-gray-200 bg-slate-50 flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold">
+          <div className="w-7 h-7 rounded-lg bg-[#057642] text-white flex items-center justify-center text-xs font-bold">
             <Bot className="w-4 h-4" />
           </div>
           <div className="truncate">
@@ -332,7 +335,7 @@ export default function ElevataBotPage() {
       ========================================================================== */}
       <main className="flex-1 flex flex-col min-w-0 bg-white relative h-full">
         {/* Top Header Bar */}
-        <header className="h-14 border-b border-gray-200 px-4 flex items-center justify-between bg-white shrink-0">
+        <header className="h-14 border-b border-blue-100 px-4 flex items-center justify-between bg-gradient-to-r from-white to-blue-50 shrink-0">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -365,7 +368,7 @@ export default function ElevataBotPage() {
           {currentMessages.length === 0 ? (
             /* Empty State / Welcome Screen */
             <div className="h-full flex flex-col items-center justify-center max-w-2xl mx-auto text-center space-y-6 py-8">
-              <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-sm">
+              <div className="w-12 h-12 rounded-2xl bg-[#eaf2ff] border border-blue-200 flex items-center justify-center text-[#0a66c2] shadow-sm">
                 <Bot className="w-6 h-6" />
               </div>
 
@@ -386,13 +389,13 @@ export default function ElevataBotPage() {
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(item.prompt)}
-                    className="p-3.5 rounded-xl border border-gray-200 bg-slate-50/70 hover:bg-emerald-50/70 hover:border-emerald-200 transition text-left group flex items-start justify-between gap-2"
+                    className="p-3.5 rounded-xl border border-gray-200 bg-white hover:bg-[#eaf2ff] hover:border-blue-200 transition text-left group flex items-start justify-between gap-2 shadow-sm"
                   >
                     <div>
-                      <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-900">{item.title}</p>
+                      <p className="text-xs font-bold text-slate-800 group-hover:text-[#004182]">{item.title}</p>
                       <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{item.prompt}</p>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-600 shrink-0 mt-0.5" />
+                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0a66c2] shrink-0 mt-0.5" />
                   </button>
                 ))}
               </div>
@@ -406,7 +409,7 @@ export default function ElevataBotPage() {
                   className={`flex gap-3.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#057642] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                       <Bot className="w-4 h-4" />
                     </div>
                   )}
@@ -414,7 +417,7 @@ export default function ElevataBotPage() {
                   <div
                     className={`max-w-[85%] rounded-2xl p-4 shadow-sm relative group text-xs md:text-sm ${
                       msg.role === 'user'
-                        ? 'bg-slate-900 text-white rounded-tr-none'
+                        ? 'bg-[#0a66c2] text-white rounded-tr-none'
                         : 'bg-white text-slate-800 border border-gray-200 rounded-tl-none'
                     }`}
                   >
@@ -453,7 +456,7 @@ export default function ElevataBotPage() {
               {/* Typing indicator */}
               {loading && (
                 <div className="flex gap-3.5 items-center">
-                  <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-[#057642] text-white flex items-center justify-center shrink-0 shadow-sm">
                     <Bot className="w-4 h-4" />
                   </div>
                   <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-2">
@@ -479,7 +482,7 @@ export default function ElevataBotPage() {
             }}
             className="max-w-3xl mx-auto"
           >
-            <div className="relative flex items-center border border-gray-200 focus-within:border-emerald-500 focus-within:ring-1 focus-within:ring-emerald-500 rounded-2xl bg-slate-50 px-4 py-2 transition shadow-sm">
+            <div className="relative flex items-center border border-gray-200 focus-within:border-[#0a66c2] focus-within:ring-1 focus-within:ring-[#0a66c2] rounded-2xl bg-white px-4 py-2 transition shadow-sm">
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -502,7 +505,7 @@ export default function ElevataBotPage() {
               <button
                 type="submit"
                 disabled={!inputMessage.trim() || loading}
-                className="absolute right-3 p-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed"
+                className="absolute right-3 p-2 bg-[#0a66c2] hover:bg-[#004182] disabled:bg-slate-200 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed"
                 title="Send message"
               >
                 <Send className="w-3.5 h-3.5" />

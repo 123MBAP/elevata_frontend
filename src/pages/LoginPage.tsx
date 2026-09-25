@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Check } from 'lucide-react';
+import { AlertCircle, Check, Eye, EyeOff } from 'lucide-react';
 import logo from '../assets/images/elevata_logo.png';
 
 export default function LoginPage() {
@@ -103,15 +103,17 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-16 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-12 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-[14px] font-semibold text-[#0a66c2] transition-colors hover:text-[#004182] hover:underline"
+                className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full text-[#5e5e5e] transition-colors hover:bg-[#eaf2ff] hover:text-[#0a66c2] focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/30"
                 aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-pressed={showPassword}
+                title={showPassword ? 'Hide password' : 'Show password'}
               >
-                {showPassword ? 'Hide' : 'Show'}
+                {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
               </button>
             </div>
           </div>

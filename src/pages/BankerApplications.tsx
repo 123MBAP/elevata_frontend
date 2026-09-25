@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { useApp, Application, Opportunity } from '../context/AppContext';
-import { formatRWF, SmeProfile } from '../lib/mockData';
+import { useState, useMemo, useEffect } from 'react';
+import { useApp, Application } from '../context/AppContext';
+import { formatRWF } from '../lib/mockData';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Button } from '../assets/components/ui/button';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,7 +12,6 @@ import {
   XCircle,
   Clock,
   ChevronRight,
-  ClipboardList,
   AlertCircle,
   Check,
   Sparkles,
@@ -21,23 +20,13 @@ import {
   ShieldCheck,
   Eye,
   Download,
-  Landmark,
-  User,
-  Mail,
-  Phone,
-  MapPin,
   Coins,
-  Calendar,
-  Layers,
-  Percent,
   X,
-  ArrowUpRight,
   CheckSquare,
   FileCheck,
-  Info,
-  Sliders,
-  DollarSign
+  Sliders
 } from 'lucide-react';
+import { apiFile } from '../lib/api';
 
 interface DocumentDetail {
   id: string;
@@ -52,10 +41,13 @@ interface DocumentDetail {
   status: 'Verified' | 'Pending Verification' | 'Attached';
   verifiedBy: string;
   summary: string;
+  mimeType?: string;
+  fileName?: string;
+  downloadUrl?: string;
 }
 
 export default function BankerApplications() {
-  const { applications, opportunities, smes, updateApplicationStatus, approveLoan, rejectLoan } = useApp();
+  const { applications, opportunities, smes, updateApplicationStatus } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -65,10 +57,11 @@ export default function BankerApplications() {
   const [activeReviewTab, setActiveReviewTab] = useState<'overview' | 'metrics' | 'documents' | 'eligibility'>('overview');
   const [reviewStatus, setReviewStatus] = useState<Application['status']>('Under Review');
   const [reviewFeedback, setReviewFeedback] = useState('');
-  const [directDisburse, setDirectDisburse] = useState(false);
 
   // Document preview modal state
   const [previewDoc, setPreviewDoc] = useState<DocumentDetail | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [documentLoading, setDocumentLoading] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -84,12 +77,12 @@ export default function BankerApplications() {
 
   const selectedSme = useMemo(() => {
     if (!selectedApp) return null;
-    return smes.find(s => s.id === selectedApp.smeId) || smes[0];
+    return smes.find(s => s.id === selectedApp.smeId) || null;
   }, [selectedApp, smes]);
 
   const selectedOpp = useMemo(() => {
     if (!selectedApp) return null;
-    return opportunities.find(o => o.id === selectedApp.opportunityId) || opportunities[0];
+    return opportunities.find(o => o.id === selectedApp.opportunityId) || null;
   }, [selectedApp, opportunities]);
 
   // Open review helper
@@ -98,29 +91,57 @@ export default function BankerApplications() {
     setActiveReviewTab('overview');
     setReviewStatus(app.status);
     setReviewFeedback(app.feedback || '');
-    setDirectDisburse(app.status === 'Approved');
   };
 
   // Submit review feedback
-  const handleSubmitReview = (e: React.FormEvent) => {
+  const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAppId || !selectedApp) return;
 
-    updateApplicationStatus(selectedAppId, reviewStatus, reviewFeedback);
-
-    // If approved and direct disburse is checked, trigger loan balance crediting
-    if (reviewStatus === 'Approved' && directDisburse && selectedSme) {
-      const oppAmount = selectedOpp?.maxFunding ? parseInt(selectedOpp.maxFunding.replace(/[^0-9]/g, '')) || 5000000 : 5000000;
-      const rate = selectedOpp?.loanRate || 12;
-      const term = selectedOpp?.loanTerm || 24;
-      approveLoan(selectedSme.id, Math.min(oppAmount, 10000000), term, rate);
-    } else if (reviewStatus === 'Rejected' && selectedSme) {
-      rejectLoan(selectedSme.id);
+    try {
+      await updateApplicationStatus(selectedAppId, reviewStatus, reviewFeedback);
+    } catch (error: unknown) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to save this decision.');
+      return;
     }
 
     triggerToast(`Application #${selectedApp.id} updated to "${reviewStatus}" successfully.`);
     setSelectedAppId(null);
   };
+
+  const handleOpenDocument = async (document: DocumentDetail) => {
+    if (!document.downloadUrl) return;
+    setDocumentLoading(true);
+    try {
+      const blob = await apiFile(document.downloadUrl);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl(URL.createObjectURL(blob));
+      setPreviewDoc(document);
+    } catch (error: unknown) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to open this document.');
+    } finally {
+      setDocumentLoading(false);
+    }
+  };
+
+  const handleDownloadDocument = async (document: DocumentDetail) => {
+    if (!document.downloadUrl) return;
+    try {
+      const blob = await apiFile(document.downloadUrl);
+      const url = URL.createObjectURL(blob);
+      const link = window.document.createElement('a');
+      link.href = url;
+      link.download = document.fileName || document.name;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error: unknown) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to download this document.');
+    }
+  };
+
+  useEffect(() => () => {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+  }, [previewUrl]);
 
   // Quick preset feedback templates
   const applyPresetFeedback = (status: Application['status'], feedbackText: string) => {
@@ -177,80 +198,37 @@ export default function BankerApplications() {
     }
   };
 
-  // Generate dynamic submitted documents dossier for the selected SME/Opportunity
-  const getSubmittedDocuments = (app: Application, sme: SmeProfile | null, opp: Opportunity | null): DocumentDetail[] => {
-    const oppDocs = opp?.requiredDocs && opp.requiredDocs.length > 0
-      ? opp.requiredDocs
-      : ['Business Registration Certificate', 'Tax Clearance Certificate', '3-Month Financial Statements'];
-
-    return oppDocs.map((docTitle, index) => {
-      const lower = docTitle.toLowerCase();
-      let issuer = 'Rwanda Development Board (RDB)';
-      let docNumber = `RGB-${Math.floor(100000 + index * 45231)}`;
-      let fileSize = '1.8 MB';
-      let fileType: 'PDF' | 'XLSX' | 'DOCX' = 'PDF';
-      let category = 'Legal Registration';
-      let summary = 'Official registered enterprise registration & corporate article dossier.';
-
-      if (lower.includes('tax') || lower.includes('rra') || lower.includes('clearance')) {
-        issuer = 'Rwanda Revenue Authority (RRA)';
-        docNumber = `RRA-TC-${Math.floor(202600 + index * 991)}`;
-        fileSize = '1.2 MB';
-        category = 'Fiscal Compliance';
-        summary = 'Verified compliance certificate demonstrating zero outstanding arrears for preceding fiscal quarters.';
-      } else if (lower.includes('financial') || lower.includes('statement') || lower.includes('ledger') || lower.includes('audit')) {
-        issuer = 'Certified Public Accountant / Elevata Engine';
-        docNumber = `FS-AUD-${Math.floor(882000 + index * 123)}`;
-        fileSize = '3.4 MB';
-        fileType = 'XLSX';
-        category = 'Financial Accounts';
-        summary = 'Itemized monthly revenue, expense breakdown, gross profit margins, and cash reconciliation.';
-      } else if (lower.includes('bank') || lower.includes('cash flow') || lower.includes('projection')) {
-        issuer = 'Commercial Bank of Rwanda / BPR';
-        docNumber = `STMT-BPR-${Math.floor(551200 + index * 441)}`;
-        fileSize = '2.1 MB';
-        category = 'Banking Records';
-        summary = 'Consecutive 90-day bank transactional inflow/outflow statements showing healthy liquid buffers.';
-      } else if (lower.includes('plan') || lower.includes('pitch') || lower.includes('deck')) {
-        issuer = 'Applicant Management Team';
-        docNumber = `BP-VER-${Math.floor(331000 + index * 777)}`;
-        fileSize = '4.6 MB';
-        category = 'Business Strategy';
-        summary = 'Detailed 3-year growth forecast, unit economics model, and capital allocation plan.';
-      } else if (lower.includes('cooperative') || lower.includes('sacco')) {
-        issuer = 'Rwanda Cooperative Agency (RCA)';
-        docNumber = `RCA-COP-${Math.floor(412000 + index * 555)}`;
-        fileSize = '1.5 MB';
-        category = 'Cooperative License';
-        summary = 'Valid registration status as an accredited cooperative aggregation hub.';
-      } else if (lower.includes('id') || lower.includes('identity')) {
-        issuer = 'National Identification Agency (NIDA)';
-        docNumber = `NIDA-${Math.floor(1198000000 + index * 987)}`;
-        fileSize = '950 KB';
-        category = 'Identity Verification';
-        summary = 'Biometric smart national ID card of the designated majority shareholder / business owner.';
-      }
+  const getSubmittedDocuments = (app: Application): DocumentDetail[] => {
+    return (app.documents || []).map((document) => {
+      const extension = document.fileName.split('.').pop()?.toUpperCase();
+      const fileType: DocumentDetail['fileType'] = extension === 'XLSX' ? 'XLSX' : extension === 'DOCX' ? 'DOCX' : 'PDF';
+      const size = document.sizeBytes >= 1024 * 1024
+        ? `${(document.sizeBytes / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.max(1, Math.round(document.sizeBytes / 1024))} KB`;
 
       return {
-        id: `doc-${app.id}-${index}`,
-        name: docTitle,
-        category,
-        issuer,
-        docNumber,
-        issueDate: '2026-01-15',
-        expiryDate: '2026-12-31',
-        fileSize,
+        id: document.id,
+        name: document.documentType,
+        category: 'SME Submitted Document',
+        issuer: app.smeName,
+        docNumber: document.id.slice(0, 12).toUpperCase(),
+        issueDate: new Date(document.uploadedAt).toLocaleDateString(),
+        expiryDate: 'Not specified',
+        fileSize: size,
         fileType,
-        status: 'Verified',
-        verifiedBy: 'Elevata Digital Registry Bridge',
-        summary
+        status: 'Attached',
+        verifiedBy: 'Pending bank officer review',
+        summary: `Original file: ${document.fileName}`,
+        mimeType: document.mimeType,
+        fileName: document.fileName,
+        downloadUrl: document.downloadUrl
       };
     });
   };
 
   const activeDocumentsList = useMemo(() => {
     if (!selectedApp) return [];
-    return getSubmittedDocuments(selectedApp, selectedSme, selectedOpp);
+    return getSubmittedDocuments(selectedApp);
   }, [selectedApp, selectedSme, selectedOpp]);
 
   // Compute monthly financials for selected SME
@@ -425,7 +403,7 @@ export default function BankerApplications() {
               {filteredApplications.map((app, index) => {
                 const matchedSme = smes.find(s => s.id === app.smeId);
                 const matchedOpp = opportunities.find(o => o.id === app.opportunityId);
-                const docs = getSubmittedDocuments(app, matchedSme || null, matchedOpp || null);
+                const docs = getSubmittedDocuments(app);
 
                 return (
                   <tr key={app.id} className="hover:bg-slate-50/70 transition">
@@ -483,7 +461,7 @@ export default function BankerApplications() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-1 text-[9.5px] font-bold text-emerald-700">
                           <CheckSquare className="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span>{docs.length} Docs Verified</span>
+                          <span>{docs.length} Docs Submitted</span>
                         </div>
                         <div className="flex flex-wrap gap-1">
                           {docs.slice(0, 2).map((d, i) => (
@@ -845,7 +823,7 @@ export default function BankerApplications() {
                       </div>
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
                         <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
-                        {activeDocumentsList.length} of {activeDocumentsList.length} Verified (100%)
+                        {activeDocumentsList.length} original file{activeDocumentsList.length === 1 ? '' : 's'} submitted
                       </span>
                     </div>
 
@@ -883,7 +861,8 @@ export default function BankerApplications() {
                           <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                             <button
                               type="button"
-                              onClick={() => setPreviewDoc(doc)}
+                              onClick={() => handleOpenDocument(doc)}
+                              disabled={documentLoading}
                               className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[10.5px] transition flex items-center gap-1 border border-slate-200"
                             >
                               <Eye className="w-3.5 h-3.5 text-slate-500" />
@@ -891,7 +870,7 @@ export default function BankerApplications() {
                             </button>
                             <button
                               type="button"
-                              onClick={() => triggerToast(`Downloading ${doc.name} (${doc.fileSize})...`)}
+                              onClick={() => handleDownloadDocument(doc)}
                               className="p-1.5 bg-slate-50 hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg border border-slate-200 transition"
                               title="Download File"
                             >
@@ -1040,7 +1019,7 @@ export default function BankerApplications() {
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
-                      onClick={() => applyPresetFeedback('Approved', 'Approved. All criteria and verified documentation meet bank credit policy standards. Funds scheduled for direct account credit.')}
+                      onClick={() => applyPresetFeedback('Approved', 'Approved. All criteria and verified documentation meet bank credit policy standards. Disbursement must be completed in the institution system.')}
                       className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[9.5px] font-bold transition"
                     >
                       Approve (Standard)
@@ -1069,29 +1048,19 @@ export default function BankerApplications() {
                     </label>
                     <select
                       value={reviewStatus}
-                      onChange={(e) => {
-                        const val = e.target.value as Application['status'];
-                        setReviewStatus(val);
-                        if (val === 'Approved') setDirectDisburse(true);
-                      }}
+                      onChange={(e) => setReviewStatus(e.target.value as Application['status'])}
                       className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white text-slate-900 focus:ring-1 focus:ring-emerald-500 focus:outline-none font-bold"
                       required
                     >
                       <option value="Under Review">Under Review (Pending)</option>
-                      <option value="Approved">Approved (Grant &amp; Disburse)</option>
+                      <option value="Approved">Approved</option>
                       <option value="Rejected">Rejected (Decline Application)</option>
                     </select>
 
                     {reviewStatus === 'Approved' && (
-                      <label className="flex items-center gap-2 pt-1.5 cursor-pointer select-none">
-                        <input
-                          type="checkbox"
-                          checked={directDisburse}
-                          onChange={(e) => setDirectDisburse(e.target.checked)}
-                          className="rounded text-emerald-600"
-                        />
-                        <span className="text-[10px] text-emerald-700 font-bold">Auto-disburse to SME balance</span>
-                      </label>
+                      <p className="pt-1.5 text-[10px] text-amber-700 font-semibold">
+                        This records the application decision only. Disbursement is unavailable in Elevata.
+                      </p>
                     )}
                   </div>
 
@@ -1163,67 +1132,37 @@ export default function BankerApplications() {
                 </button>
               </div>
 
-              {/* Document Body (Simulated Official Document Viewer) */}
-              <div className="p-6 overflow-y-auto space-y-4 text-xs font-sans">
-                {/* Official Header Banner */}
-                <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-center">
-                  <div className="flex justify-center items-center gap-1.5 text-slate-800 font-heading font-extrabold text-xs uppercase tracking-wider">
-                    <Landmark className="w-4 h-4 text-emerald-600" />
-                    <span>Republic of Rwanda · {previewDoc.issuer}</span>
+              <div className="min-h-0 flex-1 bg-slate-100 p-3">
+                {previewUrl && previewDoc.mimeType === 'application/pdf' ? (
+                  <iframe
+                    src={previewUrl}
+                    title={previewDoc.name}
+                    className="h-[60vh] w-full rounded-lg border border-slate-200 bg-white"
+                  />
+                ) : previewUrl && previewDoc.mimeType?.startsWith('image/') ? (
+                  <div className="flex h-[60vh] items-center justify-center overflow-auto rounded-lg border border-slate-200 bg-white p-4">
+                    <img src={previewUrl} alt={previewDoc.name} className="max-h-full max-w-full object-contain" />
                   </div>
-                  <div className="text-[10px] text-slate-500 font-mono">
-                    Electronic Document Verification Network (EDVN)
+                ) : (
+                  <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white text-center">
+                    <FileText className="mb-3 h-10 w-10 text-slate-300" />
+                    <p className="text-xs font-bold text-slate-700">Preview is not available for this file type.</p>
+                    <p className="mt-1 text-[10px] text-slate-500">Download the original {previewDoc.fileType} file to review it.</p>
                   </div>
-                  <div className="inline-flex items-center gap-1 bg-emerald-100/70 text-emerald-800 text-[9px] font-extrabold px-2.5 py-0.5 rounded-full border border-emerald-200">
-                    <CheckCircle className="w-3 h-3 text-emerald-600" />
-                    DIGITALLY SIGNED &amp; VERIFIED AUTHENTIC
-                  </div>
-                </div>
-
-                {/* Metadata Grid */}
-                <div className="grid grid-cols-2 gap-3 p-3 bg-white border border-slate-150 rounded-xl text-[10.5px]">
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase font-mono block">Certificate Number</span>
-                    <strong className="text-slate-900 font-mono font-bold">{previewDoc.docNumber}</strong>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase font-mono block">Document Category</span>
-                    <strong className="text-slate-900 font-bold">{previewDoc.category}</strong>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase font-mono block">Issue / Effective Date</span>
-                    <strong className="text-slate-700 font-mono">{previewDoc.issueDate}</strong>
-                  </div>
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase font-mono block">Valid Through</span>
-                    <strong className="text-slate-700 font-mono">{previewDoc.expiryDate}</strong>
-                  </div>
-                </div>
-
-                {/* Content Extract Abstract */}
-                <div className="p-4 border border-slate-200 rounded-xl bg-slate-50/50 space-y-2">
-                  <span className="text-[9.5px] font-bold text-slate-500 uppercase tracking-wider block">
-                    Document Verification Abstract
-                  </span>
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
-                    This certifies that the enterprise identified as <strong>{selectedApp?.smeName}</strong> has duly fulfilled all regulatory filing mandates with <strong>{previewDoc.issuer}</strong> for the current assessment period. The electronic payload cryptographic signature has been validated against national business registries.
-                  </p>
-                </div>
+                )}
               </div>
 
               {/* Document Modal Footer */}
               <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                <span className="text-[9.5px] text-slate-400 font-mono">
-                  SHA-256: 8f4b...39e1 (Verified)
-                </span>
+                <span className="text-[9.5px] text-slate-400 font-mono">{previewDoc.fileName}</span>
                 <div className="flex gap-2">
                   <button
                     type="button"
-                    onClick={() => triggerToast(`Downloaded copy of ${previewDoc.name}`)}
+                    onClick={() => handleDownloadDocument(previewDoc)}
                     className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>Download PDF</span>
+                    <span>Download Original</span>
                   </button>
                   <button
                     type="button"

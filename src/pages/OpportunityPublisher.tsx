@@ -61,30 +61,6 @@ import { Card, CardContent } from '../assets/components/ui/card';
 
 type OpportunityType = 'loan' | 'grant' | 'fintech' | 'insurance' | 'training' | 'guarantee' | 'savings' | 'other';
 
-const DEFAULT_CATEGORIES = [
-  { id: 'cat-1', businessType: 'Retail Shop' },
-  { id: 'cat-2', businessType: 'Wholesale' },
-  { id: 'cat-3', businessType: 'Restaurant' },
-  { id: 'cat-4', businessType: 'Hotel' },
-  { id: 'cat-5', businessType: 'Agriculture' },
-  { id: 'cat-6', businessType: 'Manufacturing' },
-  { id: 'cat-7', businessType: 'Construction' },
-  { id: 'cat-8', businessType: 'Transport' },
-  { id: 'cat-9', businessType: 'Education' },
-  { id: 'cat-10', businessType: 'Healthcare' },
-  { id: 'cat-11', businessType: 'ICT' },
-  { id: 'cat-12', businessType: 'Finance' },
-  { id: 'cat-13', businessType: 'Pharmacy' },
-  { id: 'cat-14', businessType: 'Salon' },
-  { id: 'cat-15', businessType: 'Fashion' },
-  { id: 'cat-16', businessType: 'Electronics' },
-  { id: 'cat-17', businessType: 'Hardware Store' },
-  { id: 'cat-18', businessType: 'Supermarket' },
-  { id: 'cat-19', businessType: 'Stationery' },
-  { id: 'cat-20', businessType: 'Printing' },
-  { id: 'cat-21', businessType: 'Other' }
-];
-
 export default function OpportunityPublisher() {
   const {
     opportunities,
@@ -96,24 +72,22 @@ export default function OpportunityPublisher() {
   } = useApp();
 
   // Dynamic business categories from DB
-  const [availableCategories, setAvailableCategories] = useState<{ id: string; businessType: string }[]>(DEFAULT_CATEGORIES);
+  const [availableCategories, setAvailableCategories] = useState<{ id: string; businessType: string }[]>([]);
   const [activeDeliveryTraining, setActiveDeliveryTraining] = useState<typeof trainings[0] | null>(null);
 
   useEffect(() => {
     async function loadCategories() {
       try {
         const res = await apiRequest('/categories');
-        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const formatted = res.data.map((c: any) => ({
+        if (res?.success && Array.isArray(res.data?.categories)) {
+          const formatted = res.data.categories.map((c: any) => ({
             id: c.id,
             businessType: c.businessType || c.cat_name
           })).filter((c: any) => c.businessType);
-          if (formatted.length > 0) {
-            setAvailableCategories(formatted);
-          }
+          setAvailableCategories(formatted);
         }
       } catch (e) {
-        // Fallback silently
+        console.warn('Unable to load business categories:', e);
       }
     }
     loadCategories();
@@ -131,59 +105,33 @@ export default function OpportunityPublisher() {
   
 
 
-  // Step 10: AI Match Preview & Suitability Simulator Data
-  const simulatedMatches = useMemo(() => {
-    return [
-      {
-        name: 'Green Harvest Ltd',
-        sector: 'Agriculture',
-        matchPercent: 94,
-        status: 'Highly Qualified',
-        checks: [
-          { label: 'Agriculture sector', pass: true },
-          { label: '3 years operating history', pass: true },
-          { label: 'Revenue meets requirement', pass: true },
-          { label: 'Strong cash flow', pass: true },
-          { label: 'Location eligible', pass: true },
-          { label: 'Business profile complete', pass: true }
-        ],
-        missing: ['Updated tax clearance'],
-        readiness: 'Financing Ready',
-        action: 'Upload updated tax clearance and proceed with application.'
-      },
-      {
-        name: "Marie's Kigali Fresh Mart",
-        sector: 'Retail',
-        matchPercent: 78,
-        status: 'Needs Minor Improvements',
-        checks: [
-          { label: 'Retail sector', pass: true },
-          { label: 'Kigali location', pass: true },
-          { label: 'Revenue meets requirement', pass: true },
-          { label: 'Current inventory levels stable', pass: true },
-          { label: 'Missing requirements dossier', pass: false }
-        ],
-        missing: ['Audited Financial Statements', 'Cooperative Certificate'],
-        readiness: 'Needs Prep',
-        action: 'Submit financial statements to unlock full match score.'
-      },
-      {
-        name: 'David Transport Services',
-        sector: 'Logistics',
-        matchPercent: 42,
-        status: 'Needs Preparation',
-        checks: [
-          { label: 'Sector mismatch', pass: false },
-          { label: 'High overhead fuel costs', pass: false },
-          { label: 'Operating history under 12 months', pass: false },
-          { label: 'Debt service coverage below limits', pass: false }
-        ],
-        missing: ['Collateral Documents', 'Tax Returns', 'Business Plan'],
-        readiness: 'Unqualified',
-        action: 'Schedule advisory consultation or complete Record-Keeping training.'
-      }
+  // Database-backed portfolio preview. Empty portfolios remain empty.
+  const portfolioCandidates = useMemo(() => smes.map((sme) => {
+    const hasTransactions = sme.sales.length > 0 || sme.monthlyData.length > 0;
+    const hasInventory = sme.inventoryItems.length > 0;
+    const hasContact = Boolean(sme.email);
+    const checks = [
+      { label: 'Business profile available', pass: Boolean(sme.name && sme.ownerName) },
+      { label: 'Financial activity recorded', pass: hasTransactions },
+      { label: 'Inventory records available', pass: hasInventory },
+      { label: 'Business contact available', pass: hasContact }
     ];
-  }, []);
+    const passed = checks.filter((check) => check.pass).length;
+    const matchPercent = Math.round((passed / checks.length) * 100);
+    const missing = checks.filter((check) => !check.pass).map((check) => check.label);
+    return {
+      name: sme.name,
+      sector: sme.sector,
+      matchPercent,
+      status: matchPercent >= 75 ? 'Profile Ready' : 'Profile Incomplete',
+      checks,
+      missing,
+      readiness: matchPercent >= 75 ? 'Ready for criteria review' : 'Needs profile data',
+      action: missing.length > 0
+        ? `Complete: ${missing.join(', ')}.`
+        : 'Review this business against the opportunity criteria.'
+    };
+  }), [smes]);
 
   // Training Form State
   const [isTrainingModalOpen, setIsTrainingModalOpen] = useState(false);
@@ -196,7 +144,7 @@ export default function OpportunityPublisher() {
   const [trAudience, setTrAudience] = useState<string[]>(['Agriculture', 'Low Readiness SMEs']);
 
   // Selected Opportunity for detailed view/analytics
-  const [selectedOppId, setSelectedOppId] = useState<string>('opp-1');
+  const [selectedOppId, setSelectedOppId] = useState<string>('');
 
   // Toast / notification state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
@@ -355,14 +303,18 @@ export default function OpportunityPublisher() {
           oppType={selectedOppType}
           oppCategory={selectedOppCategory}
           onCancel={() => setViewMode('dashboard')}
-          onPublish={(data) => {
-            publishOpportunity(data);
-            triggerToast(`"${data.title}" published successfully! AI matches simulated and active.`);
-            setViewMode('dashboard');
+          onPublish={async (data) => {
+            try {
+              await publishOpportunity(data);
+              triggerToast(`"${data.title}" published successfully.`);
+              setViewMode('dashboard');
+            } catch (error) {
+              triggerToast(error instanceof Error ? error.message : 'Unable to publish this opportunity.', 'info');
+            }
           }}
           onChangeType={() => setIsTypeModalOpen(true)}
           availableCategories={availableCategories}
-          simulatedCandidates={simulatedMatches}
+          simulatedCandidates={portfolioCandidates}
           formatRWF={formatRWF}
         />
 

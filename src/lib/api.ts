@@ -114,3 +114,22 @@ export async function apiRequest(path: string, options: RequestInit = {}): Promi
     throw error;
   }
 }
+
+export async function apiFile(path: string): Promise<Blob> {
+  const headers = new Headers();
+  const accessToken = localStorage.getItem('elevata_access_token');
+  if (accessToken) headers.set('Authorization', `Bearer ${accessToken}`);
+
+  const response = await fetch(`${BASE_URL}${path}`, { headers });
+  if (!response.ok) {
+    let message = 'Unable to open this document.';
+    try {
+      const error = await response.json();
+      message = error.message || message;
+    } catch {
+      // The server may return an empty/non-JSON error response.
+    }
+    throw new Error(message);
+  }
+  return response.blob();
+}

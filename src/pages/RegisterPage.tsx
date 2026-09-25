@@ -84,30 +84,6 @@ const RWANDA_ADDRESSES: Record<string, Record<string, Record<string, Record<stri
   }
 };
 
-const DEFAULT_BUSINESS_TYPES = [
-  'Retail Shop',
-  'Wholesale',
-  'Restaurant',
-  'Hotel',
-  'Agriculture',
-  'Manufacturing',
-  'Construction',
-  'Transport',
-  'Education',
-  'Healthcare',
-  'ICT',
-  'Finance',
-  'Pharmacy',
-  'Salon',
-  'Fashion',
-  'Electronics',
-  'Hardware Store',
-  'Supermarket',
-  'Stationery',
-  'Printing',
-  'Other'
-];
-
 const FI_CATEGORIES = [
   'Commercial Bank',
   'Microfinance Institution',
@@ -130,20 +106,18 @@ export default function RegisterPage() {
   const navigate = useNavigate();
 
   // Dynamic business categories from DB
-  const [businessTypes, setBusinessTypes] = useState<string[]>(DEFAULT_BUSINESS_TYPES);
+  const [businessTypes, setBusinessTypes] = useState<string[]>([]);
 
   useEffect(() => {
     async function loadCategories() {
       try {
         const res = await apiRequest('/categories');
-        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const names = res.data.map((c: any) => c.businessType || c.cat_name).filter(Boolean);
-          if (names.length > 0) {
-            setBusinessTypes(names);
-          }
+        if (res?.success && Array.isArray(res.data?.categories)) {
+          const names = res.data.categories.map((c: any) => c.businessType || c.cat_name).filter(Boolean);
+          setBusinessTypes(names);
         }
       } catch (e) {
-        // Fallback to default categories silently
+        console.warn('Unable to load business categories:', e);
       }
     }
     loadCategories();
@@ -625,15 +599,17 @@ export default function RegisterPage() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-16 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-12 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 text-[14px] font-semibold text-[#0a66c2] transition-colors hover:text-[#004182] hover:underline"
+                    className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full text-[#5e5e5e] transition-colors hover:bg-[#eaf2ff] hover:text-[#0a66c2] focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/30"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    title={showPassword ? 'Hide password' : 'Show password'}
                   >
-                    {showPassword ? 'Hide' : 'Show'}
+                    {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
                   </button>
                 </div>
               </div>
@@ -649,15 +625,17 @@ export default function RegisterPage() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-16 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-12 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-3 text-[14px] font-semibold text-[#0a66c2] transition-colors hover:text-[#004182] hover:underline"
+                    className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full text-[#5e5e5e] transition-colors hover:bg-[#eaf2ff] hover:text-[#0a66c2] focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/30"
                     aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    aria-pressed={showConfirmPassword}
+                    title={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                   >
-                    {showConfirmPassword ? 'Hide' : 'Show'}
+                    {showConfirmPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
                   </button>
                 </div>
               </div>
