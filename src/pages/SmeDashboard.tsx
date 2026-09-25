@@ -70,7 +70,7 @@ export default function SmeDashboard() {
     return { month: item.month, Revenue: revenue, Expenses: expenses, Inflow: inflow, Outflow: outflow };
   });
 
-  const currentMonthData = chartData[chartData.length - 1];
+  const currentMonthData = chartData[chartData.length - 1] ?? { Inflow: 0, Outflow: 0 };
   const monthlyInflow    = currentMonthData.Inflow;
   const monthlyOutflow   = currentMonthData.Outflow;
   const netCashFlow      = monthlyInflow - monthlyOutflow;
@@ -280,8 +280,15 @@ export default function SmeDashboard() {
               </div>
 
               <div className="h-72 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
+                {chartData.length === 0 ? (
+                  <div className="h-full rounded-xl border border-dashed border-slate-200 bg-slate-50/70 flex flex-col items-center justify-center px-6 text-center">
+                    <Activity className="w-8 h-8 text-slate-300 mb-3" />
+                    <p className="text-sm font-semibold text-slate-700">No financial history yet</p>
+                    <p className="text-xs text-slate-500 mt-1">Record sales and expenses to populate your monthly performance chart.</p>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} />
                     <XAxis
                       dataKey="month"
@@ -308,8 +315,9 @@ export default function SmeDashboard() {
                     />
                     <Bar dataKey="Revenue" fill="#10B981" radius={[2, 2, 0, 0]} barSize={20} />
                     <Bar dataKey="Expenses" fill="#94A3B8" radius={[2, 2, 0, 0]} barSize={20} />
-                  </BarChart>
-                </ResponsiveContainer>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </CardContent>
           </Card>
