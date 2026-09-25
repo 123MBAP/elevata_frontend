@@ -189,6 +189,11 @@ export default function ElevataBotPage() {
             institutionName: user?.financialInstitution?.institutionName,
             representativeName: user?.financialInstitution?.representativeName,
             activeSmeRevenue: activeSme?.monthlyData ? activeSme.monthlyData.reduce((sum, d) => sum + d.revenue, 0) : undefined,
+            activeSmeExpenses: activeSme?.monthlyData ? activeSme.monthlyData.reduce((sum, d) => sum + d.expenses, 0) : undefined,
+            activeSmeBalance: activeSme?.currentBalance,
+            activeSmeInventoryValue: activeSme?.inventoryItems
+              ? activeSme.inventoryItems.reduce((sum, item) => sum + (item.stockLevel * item.unitPrice), 0)
+              : undefined,
             activeSmeCreditScore: activeSme?.healthScore
           }
         })

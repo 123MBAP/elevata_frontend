@@ -1,6 +1,10 @@
-const BASE_URL = import.meta.env.VITE_API_URL
-  ? (import.meta.env.VITE_API_URL.endsWith('/api') ? import.meta.env.VITE_API_URL : `${import.meta.env.VITE_API_URL}/api`)
-  : 'http://localhost:5000/api';
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const productionApiUrl = 'https://elevata-backend.onrender.com/api';
+const developmentApiUrl = 'http://localhost:5000/api';
+const selectedApiUrl = import.meta.env.PROD && configuredApiUrl?.includes('localhost')
+  ? productionApiUrl
+  : (configuredApiUrl || (import.meta.env.PROD ? productionApiUrl : developmentApiUrl));
+const BASE_URL = selectedApiUrl.endsWith('/api') ? selectedApiUrl : `${selectedApiUrl}/api`;
 
 let isRefreshing = false;
 let refreshSubscribers: ((token: string) => void)[] = [];
