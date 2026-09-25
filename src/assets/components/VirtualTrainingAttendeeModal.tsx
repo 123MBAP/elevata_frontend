@@ -245,6 +245,10 @@ export default function VirtualTrainingAttendeeModal({
           })
         });
 
+        if (res?.data?.enabled === false) {
+          console.info('[LiveKit Attendee] Using secure WebRTC fallback.');
+          return;
+        }
         if (!active || !res || !res.success || !res.data?.token) {
           console.warn('[LiveKit Attendee] Could not fetch token:', res);
           return;
@@ -568,11 +572,12 @@ export default function VirtualTrainingAttendeeModal({
         pc.onicecandidate = (event) => {
           if (event.candidate) {
             console.log("[SME] ICE candidate generated:", event.candidate.candidate);
+            const serializedCandidate = event.candidate.toJSON();
             broadcastChannelRef.current?.postMessage({
               type: 'ICE_CANDIDATE',
               from: activeSme.id,
               to: 'host',
-              candidate: event.candidate
+              candidate: serializedCandidate
             });
 
             apiRequest(`/trainings/${training.id}/signal`, {
@@ -580,7 +585,7 @@ export default function VirtualTrainingAttendeeModal({
               body: JSON.stringify({
                 from: activeSme.id,
                 to: 'host',
-                signal: { type: 'candidate', candidate: event.candidate }
+                signal: { type: 'candidate', candidate: serializedCandidate }
               })
             }).catch(() => {});
           }
@@ -592,12 +597,13 @@ export default function VirtualTrainingAttendeeModal({
       await pc.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await pc.createAnswer();
       await pc.setLocalDescription(answer);
+      const serializedAnswer = { type: answer.type, sdp: answer.sdp };
 
       broadcastChannelRef.current?.postMessage({
         type: 'ANSWER',
         from: activeSme.id,
         to: 'host',
-        answer
+        answer: serializedAnswer
       });
 
       await apiRequest(`/trainings/${training.id}/signal`, {
@@ -605,7 +611,7 @@ export default function VirtualTrainingAttendeeModal({
         body: JSON.stringify({
           from: activeSme.id,
           to: 'host',
-          signal: { type: 'answer', answer }
+          signal: { type: 'answer', answer: serializedAnswer }
         })
       });
     } catch (err) {

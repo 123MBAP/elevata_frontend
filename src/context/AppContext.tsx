@@ -1299,7 +1299,14 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     setTrainings(prev => prev.map(t => {
       if (t.id === trainingId) {
         const mergedLiveState = { ...(t.liveState || {}), ...liveState, updatedAt: Date.now() };
-        syncLiveRoomToBackend(trainingId, { liveState: mergedLiveState });
+        // Video frames stay in the live media/BroadcastChannel path. Persisting
+        // base64 frames would exceed API limits and bloat every training poll.
+        const {
+          cameraSnapshot: _cameraSnapshot,
+          screenSnapshot: _screenSnapshot,
+          ...persistedLiveState
+        } = mergedLiveState;
+        syncLiveRoomToBackend(trainingId, { liveState: persistedLiveState });
         return {
           ...t,
           liveState: mergedLiveState

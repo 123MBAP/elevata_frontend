@@ -409,6 +409,10 @@ export default function VirtualTrainingDeliveryModal({
           })
         });
 
+        if (res?.data?.enabled === false) {
+          console.info('[LiveKit Host] Using secure WebRTC fallback.');
+          return;
+        }
         if (!active || !res || !res.success || !res.data?.token) {
           console.warn('[LiveKit Host] Token response error:', res);
           return;
@@ -505,18 +509,19 @@ export default function VirtualTrainingDeliveryModal({
         pc.onicecandidate = (event) => {
           if (event.candidate) {
             console.log(`[Presenter] ICE candidates exchanged for ${attendeeId}:`, event.candidate.candidate);
+            const serializedCandidate = event.candidate.toJSON();
             broadcastChannelRef.current?.postMessage({
               type: 'ICE_CANDIDATE',
               from: 'host',
               to: attendeeId,
-              candidate: event.candidate
+              candidate: serializedCandidate
             });
             apiRequest(`/trainings/${training.id}/signal`, {
               method: 'POST',
               body: JSON.stringify({
                 from: 'host',
                 to: attendeeId,
-                signal: { type: 'candidate', candidate: event.candidate }
+                signal: { type: 'candidate', candidate: serializedCandidate }
               })
             }).catch(() => {});
           }
@@ -552,13 +557,14 @@ export default function VirtualTrainingDeliveryModal({
       if (pc!.signalingState === 'stable') {
         const offer = await pc!.createOffer();
         await pc!.setLocalDescription(offer);
+        const serializedOffer = { type: offer.type, sdp: offer.sdp };
         console.log(`[Presenter] offer created for ${attendeeId}`);
 
         broadcastChannelRef.current?.postMessage({
           type: 'OFFER',
           from: 'host',
           to: attendeeId,
-          offer
+          offer: serializedOffer
         });
 
         await apiRequest(`/trainings/${training.id}/signal`, {
@@ -566,7 +572,7 @@ export default function VirtualTrainingDeliveryModal({
           body: JSON.stringify({
             from: 'host',
             to: attendeeId,
-            signal: { type: 'offer', offer }
+            signal: { type: 'offer', offer: serializedOffer }
           })
         });
         console.log(`[Presenter] offer sent to ${attendeeId}`);
