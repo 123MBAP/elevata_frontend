@@ -93,6 +93,33 @@ export default function BankOfficerDashboard() {
     info:    'bg-blue-600 text-white',
   };
 
+  if (smes.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-4 sm:p-6">
+        <div className="mx-auto flex min-h-[65vh] max-w-3xl items-center justify-center">
+          <Card className="w-full rounded-2xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+            <CardContent className="flex flex-col items-center px-6 py-14 text-center sm:px-12">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
+                <Building2 className="h-7 w-7" />
+              </div>
+              <h1 className="mt-5 text-xl font-bold text-slate-950">Your SME portfolio is ready to grow</h1>
+              <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-500">
+                No business profiles are currently available for portfolio monitoring. New registered SMEs and submitted financing applications will appear here automatically.
+              </p>
+              <button
+                onClick={handleApplications}
+                className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
+              >
+                <FileSearch className="h-4 w-4" />
+                Review applications
+              </button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5 bg-gray-50 min-h-screen p-5">
 
