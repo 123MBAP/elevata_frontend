@@ -150,97 +150,162 @@ export default function ReportsWorkspace() {
         row.Revenue_RWF.toLocaleString(), row.Expense_RWF.toLocaleString(), row.Net_RWF.toLocaleString()
       ]),
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [10, 102, 194] }
+      headStyles: { fillColor: [15, 118, 110] }
     });
     doc.save(`${activeSme.name.replace(/\W+/g, '_')}_${from}_${to}.pdf`);
     setExportOpen(false);
   };
 
   return (
-    <div className="space-y-6 pb-12">
-      <section className="overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-[#0a66c2] to-[#004182] p-6 text-white shadow-lg">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-100">Financial intelligence</span>
-            <h1 className="mt-2 text-2xl font-bold">Reports &amp; performance</h1>
-            <p className="mt-1 max-w-2xl text-xs text-blue-100">Generate audit-ready statements for {activeSme.name}, filter any date range, and export original calculations.</p>
-          </div>
-          <div className="relative">
-            <button onClick={() => setExportOpen((value) => !value)} disabled={!filtered.length} className="flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-[#0a66c2] shadow disabled:opacity-50">
-              <Download className="h-4 w-4" /> Download report
-            </button>
-            {exportOpen && (
-              <div className="absolute right-0 z-20 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 text-slate-800 shadow-xl">
-                <button onClick={exportPdf} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold hover:bg-slate-50"><FileText className="h-4 w-4 text-rose-600" /> PDF document</button>
-                <button onClick={exportExcel} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold hover:bg-slate-50"><FileSpreadsheet className="h-4 w-4 text-[#057642]" /> Excel workbook</button>
-              </div>
-            )}
-          </div>
+    <div className="mx-auto w-full max-w-7xl space-y-4 pb-10 sm:space-y-5">
+      <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="truncate text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Reports</h1>
+          <p className="mt-0.5 truncate text-sm text-slate-500">{activeSme.name}</p>
+        </div>
+        <div className="relative">
+          <button
+            onClick={() => setExportOpen((value) => !value)}
+            disabled={!filtered.length}
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0f172a] px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download className="h-4 w-4" /> Export
+          </button>
+          {exportOpen && (
+            <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+              <button onClick={exportPdf} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                <FileText className="h-4 w-4 text-[#0f766e]" /> PDF
+              </button>
+              <button onClick={exportExcel} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
+                <FileSpreadsheet className="h-4 w-4 text-[#0f766e]" /> Excel
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-          <div className="flex flex-wrap gap-2">
+      <section className="rounded-2xl border border-slate-200/80 bg-white p-3 shadow-sm sm:p-4">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div className="flex flex-wrap gap-1.5">
             {(['day', 'week', 'month', 'year'] as Period[]).map((item) => (
-              <button key={item} onClick={() => selectPeriod(item)} className={`rounded-lg px-4 py-2 text-xs font-bold capitalize ${period === item ? 'bg-[#0a66c2] text-white' : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>{item}</button>
+              <button
+                key={item}
+                onClick={() => selectPeriod(item)}
+                className={`h-9 rounded-xl px-3.5 text-xs font-bold capitalize transition ${
+                  period === item
+                    ? 'bg-[#0f766e] text-white'
+                    : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {item}
+              </button>
             ))}
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">From
-              <input type="date" value={from} max={to} onChange={(event) => setFrom(event.target.value)} className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-[#0a66c2]" />
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              From
+              <input
+                type="date"
+                value={from}
+                max={to}
+                onChange={(event) => setFrom(event.target.value)}
+                className="mt-1 block h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#0f766e] focus:ring-4 focus:ring-[#0f766e]/10"
+              />
             </label>
-            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">To
-              <input type="date" value={to} min={from} onChange={(event) => setTo(event.target.value)} className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800 outline-none focus:border-[#0a66c2]" />
+            <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              To
+              <input
+                type="date"
+                value={to}
+                min={from}
+                onChange={(event) => setTo(event.target.value)}
+                className="mt-1 block h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#0f766e] focus:ring-4 focus:ring-[#0f766e]/10"
+              />
             </label>
-            <div className="flex h-9 items-center gap-2 rounded-lg bg-blue-50 px-3 text-[10px] font-bold text-[#0a66c2]"><CalendarDays className="h-4 w-4" /> {filtered.length} transactions</div>
+            <div className="flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-[11px] font-bold text-slate-600">
+              <CalendarDays className="h-3.5 w-3.5 text-[#0f766e]" />
+              {filtered.length}
+            </div>
           </div>
         </div>
       </section>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[
-          ['Revenue', totals.revenue, 'text-[#057642]'],
-          ['Expenses', totals.expenses, 'text-rose-600'],
-          ['Net profit', totals.profit, totals.profit >= 0 ? 'text-[#057642]' : 'text-rose-600'],
-          ['Profit margin', `${totals.margin}%`, 'text-[#0a66c2]']
-        ].map(([label, value, color]) => (
-          <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</p>
-            <p className={`mt-2 truncate font-mono text-lg font-bold ${color}`}>{typeof value === 'number' ? formatRWF(value) : value}</p>
+          ['Revenue', totals.revenue],
+          ['Expenses', totals.expenses],
+          ['Net profit', totals.profit],
+          ['Margin', `${totals.margin}%`]
+        ].map(([label, value]) => (
+          <div key={String(label)} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
+            <p className="mt-2 truncate font-mono text-lg font-bold text-slate-950">
+              {typeof value === 'number' ? formatRWF(value) : value}
+            </p>
           </div>
         ))}
       </div>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-900"><TrendingUp className="h-4 w-4 text-[#0a66c2]" /> Revenue and operating cost trend</h2>
+      <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4 flex items-center justify-between gap-2">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-slate-950">
+            <TrendingUp className="h-4 w-4 text-[#0f766e]" /> Trend
+          </h2>
           <span className="text-[10px] text-slate-400">{from} — {to}</span>
         </div>
-        <div className="h-72">
+        <div className="h-64 sm:h-72">
           {chartData.length ? (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
-                <Tooltip formatter={(value: number | string) => formatRWF(Number(value))} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
+                <Tooltip formatter={(value: number | string) => formatRWF(Number(value))} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }} />
                 <Legend />
-                <Line type="monotone" dataKey="Revenue" stroke="#057642" strokeWidth={3} />
-                <Line type="monotone" dataKey="Expenses" stroke="#e11d48" strokeWidth={2.5} />
+                <Line type="monotone" dataKey="Revenue" stroke="#0f766e" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="Expenses" stroke="#94a3b8" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
-          ) : <div className="flex h-full items-center justify-center text-xs text-slate-400">No transactions in this date range.</div>}
+          ) : (
+            <div className="flex h-full items-center justify-center text-xs text-slate-400">No data</div>
+          )}
         </div>
       </section>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4"><h2 className="text-sm font-bold text-slate-900">Filtered transaction statement</h2></div>
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
+          <h2 className="text-sm font-bold text-slate-950">Statement</h2>
+        </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[760px] text-left text-xs">
-            <thead className="bg-slate-50 text-[9px] uppercase tracking-wider text-slate-500"><tr><th className="px-5 py-3">Date</th><th>Type</th><th>Description</th><th>Revenue</th><th>Expense</th><th className="pr-5 text-right">Net</th></tr></thead>
+          <table className="w-full min-w-[720px] text-left text-xs">
+            <thead className="bg-slate-50 text-[9px] uppercase tracking-wider text-slate-500">
+              <tr>
+                <th className="px-5 py-3">Date</th>
+                <th>Type</th>
+                <th>Description</th>
+                <th>Revenue</th>
+                <th>Expense</th>
+                <th className="pr-5 text-right">Net</th>
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((row, index) => <tr key={`${row.date.toISOString()}-${index}`} className="hover:bg-slate-50"><td className="px-5 py-3 font-mono">{row.date.toLocaleDateString()}</td><td><span className="rounded-full bg-blue-50 px-2 py-1 text-[9px] font-bold text-[#0a66c2]">{row.type}</span></td><td className="max-w-xs truncate pr-4 text-slate-600">{row.description}</td><td className="font-mono font-semibold text-[#057642]">{row.revenue ? formatRWF(row.revenue) : '—'}</td><td className="font-mono font-semibold text-rose-600">{row.expense ? formatRWF(row.expense) : '—'}</td><td className="pr-5 text-right font-mono font-bold">{formatRWF(row.revenue - row.expense)}</td></tr>)}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-5 py-10 text-center text-slate-400">No data</td>
+                </tr>
+              )}
+              {filtered.map((row, index) => (
+                <tr key={`${row.date.toISOString()}-${index}`} className="hover:bg-slate-50">
+                  <td className="px-5 py-3 font-mono text-slate-700">{row.date.toLocaleDateString()}</td>
+                  <td>
+                    <span className="rounded-full bg-teal-50 px-2 py-1 text-[9px] font-bold text-[#0f766e]">{row.type}</span>
+                  </td>
+                  <td className="max-w-xs truncate pr-4 text-slate-600">{row.description}</td>
+                  <td className="font-mono font-semibold text-slate-800">{row.revenue ? formatRWF(row.revenue) : '—'}</td>
+                  <td className="font-mono font-semibold text-slate-800">{row.expense ? formatRWF(row.expense) : '—'}</td>
+                  <td className="pr-5 text-right font-mono font-bold text-slate-950">{formatRWF(row.revenue - row.expense)}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

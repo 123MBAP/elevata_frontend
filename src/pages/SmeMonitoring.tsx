@@ -58,14 +58,8 @@ export default function SmeMonitoring() {
     r === 'Medium' ? 'bg-amber-100 text-amber-800' :
     'bg-rose-100 text-rose-805 text-rose-800';
 
-  const sectorBadgeColor = (sector: string) => {
-    switch (sector) {
-      case 'Retail': return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'Agriculture': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
-      case 'Logistics': return 'bg-indigo-50 text-indigo-700 border-indigo-100';
-      case 'Technology': return 'bg-purple-50 text-purple-700 border-purple-100';
-      default: return 'bg-gray-50 text-gray-700 border-gray-100';
-    }
+  const sectorBadgeColor = (_sector: string) => {
+    return 'bg-teal-50 text-[#0f766e] border-teal-100';
   };
 
   const handleInspect = (id: string) => {
@@ -79,27 +73,22 @@ export default function SmeMonitoring() {
   };
 
   return (
-    <div className="space-y-6 bg-[#eef1f6] min-h-screen p-5 font-sans text-slate-800 max-w-full overflow-x-hidden">
+    <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl font-bold text-[#2d2d2d] tracking-tight font-sans flex items-center gap-2">
-            <img src={logo} alt="Elevata" className="h-6 w-auto object-contain" />
-            SMEs Portfolio Monitoring
-          </h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Real-time status tracking, debt metrics &amp; credit exposure audit console.
-          </p>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
+          <img src={logo} alt="Elevata" className="h-6 w-auto object-contain" />
+          Monitoring
+        </h1>
       </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
-          { label: 'Monitored SMEs', value: `${stats.total} accounts`, sub: 'Active registry', icon: <Users className="w-4 h-4 text-gray-500" />, bg: 'bg-white' },
-          { label: 'Avg Health Score', value: `${stats.avgHealth}%`, sub: 'Target threshold: 75%', icon: <Activity className="w-4 h-4 text-emerald-500" />, bg: 'bg-white' },
+          { label: 'Monitored SMEs', value: `${stats.total} accounts`, sub: '', icon: <Users className="w-4 h-4 text-gray-500" />, bg: 'bg-white' },
+          { label: 'Avg Health Score', value: `${stats.avgHealth}%`, sub: '', icon: <Activity className="w-4 h-4 text-[#0f766e]" />, bg: 'bg-white' },
           { label: 'Active Loans', value: `${stats.activeLoans}`, sub: 'Outstanding lines', icon: <DollarSign className="w-4 h-4 text-indigo-500" />, bg: 'bg-white' },
-          { label: 'Critical Risks', value: `${stats.criticalRisks} accounts`, sub: 'Score < 60 or high risk', icon: <ShieldAlert className="w-4 h-4 text-rose-500" />, bg: 'bg-rose-50/20 border-rose-100' }
+          { label: 'Critical Risks', value: `${stats.criticalRisks} accounts`, sub: '', icon: <ShieldAlert className="w-4 h-4 text-slate-500" />, bg: 'bg-white border-slate-200' }
         ].map((card, i) => (
           <Card key={i} className={`border border-[#e2e8f0] shadow-sm rounded-sm ${card.bg}`}>
             <CardContent className="p-4 flex justify-between items-center">
@@ -205,9 +194,9 @@ export default function SmeMonitoring() {
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-0.5">
                           {sme.healthTrend === 'up' ? (
-                            <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                            <TrendingUp className="w-3.5 h-3.5 text-[#0f766e]" />
                           ) : sme.healthTrend === 'down' ? (
-                            <TrendingDown className="w-3.5 h-3.5 text-rose-500" />
+                            <TrendingDown className="w-3.5 h-3.5 text-slate-500" />
                           ) : (
                             <Activity className="w-3.5 h-3.5 text-slate-400" />
                           )}
@@ -225,7 +214,7 @@ export default function SmeMonitoring() {
                           />
                         </div>
                       </div>
-                      <span className={`text-[9px] font-semibold ${sme.healthTrend === 'up' ? 'text-emerald-500' : sme.healthTrend === 'down' ? 'text-rose-500' : 'text-slate-400'}`}>
+                      <span className={`text-[9px] font-semibold ${sme.healthTrend === 'up' ? 'text-[#0f766e]' : sme.healthTrend === 'down' ? 'text-slate-500' : 'text-slate-400'}`}>
                         {sme.healthTrend === 'up' ? '+' : ''}{sme.healthTrendPercent}% MoM
                       </span>
                     </td>
@@ -251,7 +240,7 @@ export default function SmeMonitoring() {
                           <div className="text-[10px] text-gray-500 mt-0.5">{formatRWF(sme.loanDetails.outstandingAmount)} ({formatRWF(sme.loanDetails.monthlyInstallment)}/mo)</div>
                         </div>
                       ) : sme.loanDetails.status === 'Pending' ? (
-                        <span className="px-1.5 py-0.5 rounded-sm font-bold text-[9px] bg-blue-50 text-blue-705 text-blue-700 border border-blue-100">
+                        <span className="px-1.5 py-0.5 rounded-sm font-bold text-[9px] bg-teal-50 text-[#0f766e] border border-teal-100">
                           Pending Approval
                         </span>
                       ) : (

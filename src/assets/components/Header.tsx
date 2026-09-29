@@ -217,7 +217,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                                   ? 'bg-red-500'
                                   : alert.type === 'warning'
                                   ? 'bg-amber-500'
-                                  : 'bg-emerald-500'
+                                  : 'bg-[#0f766e]'
                               }`}
                             />
                             <p className="text-[11px] leading-relaxed text-slate-600">{alert.text}</p>

@@ -87,41 +87,36 @@ export default function BankOfficerDashboard() {
       : 'bg-red-50 text-red-700';
 
   const toastStyles: Record<string, string> = {
-    success: 'bg-emerald-600 text-white',
+    success: 'bg-[#0f766e] text-white',
     danger:  'bg-red-600 text-white',
     warning: 'bg-amber-500 text-white',
-    info:    'bg-blue-600 text-white',
+    info:    'bg-[#0f766e] text-white',
   };
 
   if (smes.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50/40 p-4 sm:p-6">
-        <div className="mx-auto flex min-h-[65vh] max-w-3xl items-center justify-center">
-          <Card className="w-full rounded-2xl border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-            <CardContent className="flex flex-col items-center px-6 py-14 text-center sm:px-12">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
-                <Building2 className="h-7 w-7" />
-              </div>
-              <h1 className="mt-5 text-xl font-bold text-slate-950">Your SME portfolio is ready to grow</h1>
-              <p className="mt-2 max-w-lg text-sm leading-relaxed text-slate-500">
-                No business profiles are currently available for portfolio monitoring. New registered SMEs and submitted financing applications will appear here automatically.
-              </p>
-              <button
-                onClick={handleApplications}
-                className="mt-6 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700"
-              >
-                <FileSearch className="h-4 w-4" />
-                Review applications
-              </button>
-            </CardContent>
-          </Card>
-        </div>
+      <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center p-4">
+        <Card className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <CardContent className="flex flex-col items-center px-6 py-12 text-center">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-[#0f766e]">
+              <Building2 className="h-6 w-6" />
+            </div>
+            <h1 className="mt-4 text-lg font-bold text-slate-950">No SME portfolio</h1>
+            <button
+              onClick={handleApplications}
+              className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0f172a] px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
+            >
+              <FileSearch className="h-4 w-4" />
+              Applications
+            </button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen space-y-5 bg-[#F6F4EF] p-1 sm:p-2">
+    <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
 
       {/* ── Toast ── */}
       {toastMessage && (
@@ -135,19 +130,16 @@ export default function BankOfficerDashboard() {
       )}
 
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div>
-          <h1 className="text-[1.55rem] font-bold tracking-tight text-slate-950">Analytics</h1>
-          <p className="mt-0.5 text-sm text-slate-500">SME portfolio risk and lending control · amounts in RWF</p>
-        </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h1 className="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Portfolio</h1>
         <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
           <input
-            type="text"
-            placeholder="Search SME or sector…"
+            type="search"
+            placeholder="Search…"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-white border border-gray-200 rounded-lg text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#0f766e] focus:outline-none focus:ring-4 focus:ring-[#0f766e]/10"
           />
         </div>
       </div>
@@ -160,7 +152,7 @@ export default function BankOfficerDashboard() {
             value: `${portfolioStats.totalSMEs} SMEs`,
             sub: 'active accounts',
             icon: <Users className="w-4 h-4" />,
-            iconBg: 'bg-blue-50 text-blue-600',
+            iconBg: 'bg-teal-50 text-[#0f766e]',
             valueClass: 'text-gray-900',
           },
           {
@@ -168,24 +160,24 @@ export default function BankOfficerDashboard() {
             value: formatRWF(portfolioStats.totalOutstandingLoans),
             sub: 'total disbursed',
             icon: <DollarSign className="w-4 h-4" />,
-            iconBg: 'bg-emerald-50 text-emerald-600',
-            valueClass: 'text-emerald-700',
+            iconBg: 'bg-teal-50 text-[#0f766e]',
+            valueClass: 'text-slate-950',
           },
           {
             label: 'High risk SMEs',
             value: `${portfolioStats.highRiskSMEs} SMEs`,
             sub: 'score below 60',
             icon: <AlertTriangle className="w-4 h-4" />,
-            iconBg: 'bg-red-50 text-red-600',
-            valueClass: 'text-red-600',
+            iconBg: 'bg-slate-100 text-slate-600',
+            valueClass: 'text-slate-950',
           },
           {
             label: 'Loan ready',
             value: `${portfolioStats.loanReadySMEs} SMEs`,
             sub: 'score 80 or above',
             icon: <Shield className="w-4 h-4" />,
-            iconBg: 'bg-emerald-50 text-emerald-600',
-            valueClass: 'text-emerald-700',
+            iconBg: 'bg-teal-50 text-[#0f766e]',
+            valueClass: 'text-slate-950',
           },
         ].map((c, i) => (
           <Card key={i} className="rounded-[24px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
@@ -289,7 +281,7 @@ export default function BankOfficerDashboard() {
               <div className="space-y-2">
                 <button
                   onClick={handleApplications}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-lg transition"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#0f172a] hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition"
                 >
                   <Check className="w-4 h-4" /> Review applications
                 </button>
@@ -318,7 +310,7 @@ export default function BankOfficerDashboard() {
                   { label: 'Borrowing capacity', value: formatRWF(highlightedSme.borrowingCapacity) },
                   { label: 'Current balance',    value: formatRWF(highlightedSme.currentBalance) },
                   { label: 'Leverage ratio',     value: highlightedSme.loanDetails.status === 'Active' ? 'Medium' : 'None',
-                    valueClass: highlightedSme.loanDetails.status === 'Active' ? 'text-amber-600' : 'text-emerald-600' },
+                    valueClass: highlightedSme.loanDetails.status === 'Active' ? 'text-slate-700' : 'text-[#0f766e]' },
                 ].map((row, i) => (
                   <div key={i} className="flex justify-between items-center text-xs">
                     <span className="text-gray-500">{row.label}</span>
