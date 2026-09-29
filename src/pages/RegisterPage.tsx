@@ -400,49 +400,51 @@ export default function RegisterPage() {
   const villages = (formData.province && formData.district && formData.sector && formData.cell) ? RWANDA_ADDRESSES[formData.province][formData.district][formData.sector][formData.cell] || [] : [];
 
   return (
-    <div className="relative flex min-h-dvh w-screen items-center justify-center overflow-y-auto bg-[#f3f2f0] p-4 font-sans sm:p-6">
+    <div className="login-shell relative flex min-h-dvh w-screen items-start justify-center overflow-y-auto p-3 font-sans sm:items-center sm:p-5">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(255,255,255,0.35),transparent_40%)]" />
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="my-4 w-full max-w-[460px] rounded-[10px] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.08)] sm:p-8"
+        className="register-glass relative z-10 my-4 w-full max-w-[400px] px-5 py-6 sm:px-7 sm:py-7"
       >
         {/* Logo and Brand Name */}
         <div className="flex flex-col items-center text-center">
-          <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
-            <img src={logo} alt="Elevata" className="h-9 w-9 object-contain" />
-            <span className="text-[1.65rem] font-black tracking-tight text-[#0a66c2]">
-              Elevata
-            </span>
+          <Link to="/" className="flex flex-col items-center gap-2 transition-opacity hover:opacity-90">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-white/10 shadow-[0_0_0_5px_rgba(255,255,255,0.05)]">
+              <img src={logo} alt="Elevata" className="h-8 w-8 object-contain" />
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-[0.38em] text-white/75">Elevata</span>
           </Link>
-          <p className="mt-1 text-sm font-normal text-[#5e5e5e]">
-            Make the most of your professional journey
+          <h1 className="mt-2 text-[1.15rem] font-light tracking-[0.2em] text-white">REGISTRATION</h1>
+          <p className="mt-1 text-[12px] text-white/65">
+            Create your professional Elevata account
           </p>
         </div>
 
         {/* Wizard Progress Header */}
-        <div className="mt-5 mb-5 border-b border-[#e0e0e0] pb-4">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-[12px] font-bold uppercase tracking-wider text-[#0a66c2]">
+        <div className="mb-4 mt-5 border-b border-white/15 pb-3">
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-teal-100">
               Step {step} of {totalSteps}
             </span>
             <div className="flex gap-1.5">
               {Array.from({ length: totalSteps }, (_, index) => index + 1).map((i) => (
                 <div
                   key={i}
-                  className={`h-1.5 w-6 rounded-full transition-all duration-300 ${i <= step ? 'bg-[#0a66c2]' : 'bg-[#e0e0e0]'
+                  className={`h-1.5 w-5 rounded-full transition-all duration-300 ${i <= step ? 'bg-white' : 'bg-white/20'
                     }`}
                 />
               ))}
             </div>
           </div>
-          <h2 className="text-[1.15rem] font-bold text-[#181818]">
+          <h2 className="text-[1rem] font-semibold text-white">
             {step === 1 && 'Create your account'}
             {step === 2 && (formData.registrationType === 'SME' ? 'Business Profile' : 'Institution Details')}
             {step === 3 && 'Administrative Address'}
             {step === 4 && 'Geolocation Mapping'}
           </h2>
-          <p className="text-[13px] text-[#5e5e5e] mt-0.5">
+          <p className="mt-0.5 text-[12px] text-white/60">
             {step === 1 && 'Choose your registration profile type and security details.'}
             {step === 2 && (formData.registrationType === 'SME' ? 'Tell us about your registered business.' : 'Fill in institution category and regulatory license.')}
             {step === 3 && 'Select your local operating headquarters inside Rwanda.'}
@@ -457,12 +459,12 @@ export default function RegisterPage() {
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              className="mb-4 flex items-start gap-2.5 rounded-lg border border-red-200/35 bg-red-500/15 p-3 text-sm text-red-50"
             >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               <div>
                 <span className="font-semibold">Validation Notice</span>
-                <p className="mt-0.5 text-xs text-red-600">{error}</p>
+                <p className="mt-0.5 text-xs text-red-100/90">{error}</p>
               </div>
             </motion.div>
           )}
@@ -474,41 +476,35 @@ export default function RegisterPage() {
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
               {/* Role Selection Cards */}
               <div>
-                <label className="mb-1.5 block text-[14px] font-normal text-[#181818]">
+                <label className="mb-1.5 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                   Register as
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2.5">
                   {/* SME Card */}
                   <div
                     onClick={() => setFormData(prev => ({ ...prev, registrationType: 'SME' }))}
-                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${formData.registrationType === 'SME'
-                        ? 'border-[#0a66c2] bg-[#eaf2ff] text-[#0a66c2]'
-                        : 'border-[#cccccc] bg-white text-[#5e5e5e] hover:border-[#666666]'
-                      }`}
+                    className={`role-card cursor-pointer rounded-lg p-3 text-center transition-all ${formData.registrationType === 'SME' ? 'active' : ''}`}
                   >
-                    <Briefcase className={`mx-auto h-5 w-5 mb-1 transition-colors ${formData.registrationType === 'SME' ? 'text-[#0a66c2]' : 'text-[#5e5e5e]'}`} />
-                    <span className="block text-xs font-bold text-[#181818]">SME Owner</span>
-                    <span className="text-[10px] leading-tight block mt-0.5 text-[#5e5e5e]">Personalised Offers & Eligibility</span>
+                    <Briefcase className="mx-auto mb-1 h-5 w-5 text-white/80" />
+                    <span className="block text-xs font-bold text-white">SME Owner</span>
+                    <span className="mt-0.5 block text-[10px] leading-tight text-white/60">Personalised Offers & Eligibility</span>
                   </div>
 
                   {/* Financial Institution Card */}
                   <div
                     onClick={() => setFormData(prev => ({ ...prev, registrationType: 'FINANCIAL_INSTITUTION' }))}
-                    className={`cursor-pointer rounded-[6px] border p-3 text-center transition-all ${formData.registrationType === 'FINANCIAL_INSTITUTION'
-                        ? 'border-[#0a66c2] bg-[#eaf2ff] text-[#0a66c2]'
-                        : 'border-[#cccccc] bg-white text-[#5e5e5e] hover:border-[#666666]'
-                      }`}
+                    className={`role-card cursor-pointer rounded-lg p-3 text-center transition-all ${formData.registrationType === 'FINANCIAL_INSTITUTION' ? 'active' : ''}`}
                   >
-                    <ShieldCheck className={`mx-auto h-5 w-5 mb-1 transition-colors ${formData.registrationType === 'FINANCIAL_INSTITUTION' ? 'text-[#0a66c2]' : 'text-[#5e5e5e]'}`} />
-                    <span className="block text-xs font-bold text-[#181818]">Financial Institution</span>
-                    <span className="text-[10px] leading-tight block mt-0.5 text-[#5e5e5e]">Publish Financial Products</span>
+                    <ShieldCheck className="mx-auto mb-1 h-5 w-5 text-white/80" />
+                    <span className="block text-xs font-bold text-white">Financial Institution</span>
+                    <span className="mt-0.5 block text-[10px] leading-tight text-white/60">Publish Financial Products</span>
                   </div>
                 </div>
               </div>
 
               {/* Full Name input based on role */}
               <div>
-                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                   {formData.registrationType === 'SME' ? 'Owner full name' : 'Representative full name'}
                 </label>
                 <input
@@ -518,12 +514,12 @@ export default function RegisterPage() {
                   value={formData.ownerName}
                   onChange={handleChange}
                   placeholder="Jean Claude"
-                  className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                  className="auth-input"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                   Email address
                 </label>
                 <input
@@ -533,18 +529,18 @@ export default function RegisterPage() {
                   value={formData.email}
                   onChange={handleChange}
                   placeholder="office@elevata.com"
-                  className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                  className="auth-input"
                 />
                 <div className="mt-2 flex gap-2">
                   <button
                     type="button"
                     onClick={handleSendVerificationCode}
                     disabled={!formData.email || verificationLoading || emailVerified}
-                    className="h-9 rounded-[4px] border border-[#0a66c2] px-3 text-xs font-semibold text-[#0a66c2] transition-colors hover:bg-[#eaf2ff] disabled:cursor-not-allowed disabled:opacity-50"
+                    className="h-8 rounded-md border border-white/35 px-3 text-xs font-semibold text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {emailVerified ? 'Email verified' : verificationLoading ? 'Sending...' : verificationSent ? 'Resend code' : 'Send verification code'}
                   </button>
-                  {emailVerified && <CheckCircle className="mt-1.5 h-5 w-5 text-[#057642]" />}
+                  {emailVerified && <CheckCircle className="mt-1.5 h-5 w-5 text-emerald-300" />}
                 </div>
                 {verificationSent && !emailVerified && (
                   <div className="mt-2 flex gap-2">
@@ -556,25 +552,25 @@ export default function RegisterPage() {
                       onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
                       placeholder="6-digit code"
                       aria-label="Email verification code"
-                      className="h-10 min-w-0 flex-1 rounded-[4px] border border-[#666666] px-3 text-sm outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                      className="auth-input"
                     />
                     <button
                       type="button"
                       onClick={handleVerifyEmail}
                       disabled={verificationCode.length !== 6 || verificationLoading}
-                      className="h-10 rounded-[4px] bg-[#057642] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#045c33] disabled:cursor-not-allowed disabled:opacity-50"
+                      className="h-10 shrink-0 rounded-md bg-[#0b1c24] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#07141a] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Verify
                     </button>
                   </div>
                 )}
                 {verificationSent && !emailVerified && (
-                  <p className="mt-1 text-xs text-[#5e5e5e]">Check your inbox for the 6-digit code.</p>
+                  <p className="mt-1 text-xs text-white/55">Check your inbox for the 6-digit code.</p>
                 )}
               </div>
 
               <div>
-                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                   Phone number
                 </label>
                 <input
@@ -584,12 +580,12 @@ export default function RegisterPage() {
                   value={formData.phone}
                   onChange={handleChange}
                   placeholder="+250781234567"
-                  className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                  className="auth-input"
                 />
               </div>
 
               <div>
-                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                   Password (8+ characters)
                 </label>
                 <div className="relative flex items-center">
@@ -599,12 +595,12 @@ export default function RegisterPage() {
                     required
                     value={formData.password}
                     onChange={handleChange}
-                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-12 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="auth-input"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full text-[#5e5e5e] transition-colors hover:bg-[#eaf2ff] hover:text-[#0a66c2] focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/30"
+                    className="absolute right-0 flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white"
                     aria-label={showPassword ? 'Hide password' : 'Show password'}
                     aria-pressed={showPassword}
                     title={showPassword ? 'Hide password' : 'Show password'}
@@ -615,7 +611,7 @@ export default function RegisterPage() {
               </div>
 
               <div>
-                <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                   Confirm password
                 </label>
                 <div className="relative flex items-center">
@@ -625,12 +621,12 @@ export default function RegisterPage() {
                     required
                     value={formData.confirmPassword}
                     onChange={handleChange}
-                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-12 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="auth-input"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full text-[#5e5e5e] transition-colors hover:bg-[#eaf2ff] hover:text-[#0a66c2] focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/30"
+                    className="absolute right-0 flex h-8 w-8 items-center justify-center rounded-full text-white/70 transition-colors hover:text-white"
                     aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
                     aria-pressed={showConfirmPassword}
                     title={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
@@ -649,7 +645,7 @@ export default function RegisterPage() {
                 /* SME FIELDS */
                 <>
                   <div>
-                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                    <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                       Business Name
                     </label>
                     <input
@@ -659,12 +655,12 @@ export default function RegisterPage() {
                       value={formData.businessName}
                       onChange={handleChange}
                       placeholder="Kigali Retail Shop"
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                      className="auth-input"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                    <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                       Business Category
                     </label>
                     <div className="relative">
@@ -673,14 +669,14 @@ export default function RegisterPage() {
                         required
                         value={formData.businessType}
                         onChange={handleChange}
-                        className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
+                        className="auth-select appearance-none cursor-pointer"
                       >
                         <option value="" disabled className="text-[#8c8c8c]">Select operating category</option>
                         {businessTypes.map((type) => (
                           <option key={type} value={type} className="text-[#181818] bg-white">{type}</option>
                         ))}
                       </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#5e5e5e]">
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                         <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                           <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                         </svg>
@@ -692,7 +688,7 @@ export default function RegisterPage() {
                 /* FINANCIAL INSTITUTION FIELDS */
                 <>
                   <div>
-                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                    <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                       Institution Name
                     </label>
                     <input
@@ -702,13 +698,13 @@ export default function RegisterPage() {
                       value={formData.institutionName}
                       onChange={handleChange}
                       placeholder="Kigali Development Bank"
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                      className="auth-input"
                     />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                      <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                         Category
                       </label>
                       <div className="relative">
@@ -717,14 +713,14 @@ export default function RegisterPage() {
                           required
                           value={formData.category}
                           onChange={handleChange}
-                          className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
+                          className="auth-select appearance-none cursor-pointer"
                         >
                           <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                           {FI_CATEGORIES.map((cat) => (
                             <option key={cat} value={cat} className="text-[#181818] bg-white">{cat}</option>
                           ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                           <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                             <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                           </svg>
@@ -733,7 +729,7 @@ export default function RegisterPage() {
                     </div>
 
                     <div>
-                      <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                      <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                         Scope
                       </label>
                       <div className="relative">
@@ -742,14 +738,14 @@ export default function RegisterPage() {
                           required
                           value={formData.operatingScope}
                           onChange={handleChange}
-                          className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
+                          className="auth-select appearance-none cursor-pointer"
                         >
                           <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                           {FI_SCOPES.map((scope) => (
                             <option key={scope} value={scope} className="text-[#181818] bg-white">{scope}</option>
                           ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                           <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                             <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                           </svg>
@@ -759,7 +755,7 @@ export default function RegisterPage() {
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                    <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                       Regulatory License Number
                     </label>
                     <input
@@ -769,12 +765,12 @@ export default function RegisterPage() {
                       value={formData.licenseNumber}
                       onChange={handleChange}
                       placeholder="BNR-MFI-902348"
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                      className="auth-input"
                     />
                   </div>
 
                   <div>
-                    <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                    <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                       Official Website URL (Optional)
                     </label>
                     <input
@@ -783,7 +779,7 @@ export default function RegisterPage() {
                       value={formData.website}
                       onChange={handleChange}
                       placeholder="https://www.institution.com"
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                      className="auth-input"
                     />
                   </div>
                 </>
@@ -796,7 +792,7 @@ export default function RegisterPage() {
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-3.5">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     Province
                   </label>
                   <div className="relative">
@@ -805,14 +801,14 @@ export default function RegisterPage() {
                       required
                       value={formData.province}
                       onChange={handleChange}
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer"
+                      className="auth-select appearance-none cursor-pointer"
                     >
                       <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {provinces.map((p) => (
                         <option key={p} value={p} className="text-[#181818] bg-white">{p}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
@@ -821,7 +817,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     District
                   </label>
                   <div className="relative">
@@ -831,14 +827,14 @@ export default function RegisterPage() {
                       disabled={!formData.province}
                       value={formData.district}
                       onChange={handleChange}
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
+                      className="auth-select appearance-none cursor-pointer disabled:opacity-40"
                     >
                       <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {districts.map((d) => (
                         <option key={d} value={d} className="text-[#181818] bg-white">{d}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
@@ -849,7 +845,7 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     Sector
                   </label>
                   <div className="relative">
@@ -859,14 +855,14 @@ export default function RegisterPage() {
                       disabled={!formData.district}
                       value={formData.sector}
                       onChange={handleChange}
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
+                      className="auth-select appearance-none cursor-pointer disabled:opacity-40"
                     >
                       <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {sectors.map((s) => (
                         <option key={s} value={s} className="text-[#181818] bg-white">{s}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
@@ -875,7 +871,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     Cell
                   </label>
                   <div className="relative">
@@ -885,14 +881,14 @@ export default function RegisterPage() {
                       disabled={!formData.sector}
                       value={formData.cell}
                       onChange={handleChange}
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
+                      className="auth-select appearance-none cursor-pointer disabled:opacity-40"
                     >
                       <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {cells.map((c) => (
                         <option key={c} value={c} className="text-[#181818] bg-white">{c}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
@@ -903,7 +899,7 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     Village
                   </label>
                   <div className="relative">
@@ -913,14 +909,14 @@ export default function RegisterPage() {
                       disabled={!formData.cell}
                       value={formData.village}
                       onChange={handleChange}
-                      className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-8 text-[15px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] appearance-none cursor-pointer disabled:opacity-40"
+                      className="auth-select appearance-none cursor-pointer disabled:opacity-40"
                     >
                       <option value="" disabled className="text-[#8c8c8c]">Select...</option>
                       {villages.map((v) => (
                         <option key={v} value={v} className="text-[#181818] bg-white">{v}</option>
                       ))}
                     </select>
-                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-[#5e5e5e]">
+                    <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
                       <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
                         <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                       </svg>
@@ -929,7 +925,7 @@ export default function RegisterPage() {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     Known Place
                   </label>
                   <input
@@ -938,7 +934,7 @@ export default function RegisterPage() {
                     value={formData.knownPlace}
                     onChange={handleChange}
                     placeholder="e.g. Head Office Suite"
-                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="auth-input"
                   />
                 </div>
               </div>
@@ -948,15 +944,15 @@ export default function RegisterPage() {
           {/* STEP 4: Geolocation Mapping */}
           {step === 4 && (
             <motion.div initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-              <div className="rounded-[8px] border border-[#e0e0e0] bg-[#f8fafc] p-4 text-center">
-                <Compass className="mx-auto h-7 w-7 text-[#0a66c2] mb-2" />
-                <p className="text-[13px] text-[#5e5e5e] max-w-xs mx-auto mb-3 leading-relaxed">
+              <div className="rounded-xl border border-white/20 bg-white/8 p-4 text-center">
+                <Compass className="mx-auto mb-2 h-7 w-7 text-teal-200" />
+                <p className="mx-auto mb-3 max-w-xs text-[13px] leading-relaxed text-white/65">
                   Elevata location requirements help credit institutions verify SME business nodes and operating ranges.
                 </p>
                 <button
                   type="button"
                   onClick={handleLocateMe}
-                  className="inline-flex h-9 items-center justify-center gap-1.5 px-4 text-xs font-bold text-[#0a66c2] border border-[#0a66c2] hover:bg-[#eaf2ff] rounded-full transition-colors"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 rounded-full border border-white/40 px-4 text-xs font-bold text-white transition-colors hover:bg-white/10"
                 >
                   Retrieve Geolocation Coords
                 </button>
@@ -964,7 +960,7 @@ export default function RegisterPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     Latitude
                   </label>
                   <input
@@ -974,12 +970,12 @@ export default function RegisterPage() {
                     value={formData.latitude}
                     onChange={handleChange}
                     placeholder="-1.944100"
-                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="auth-input"
                   />
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[14px] font-normal text-[#181818]">
+                  <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
                     Longitude
                   </label>
                   <input
@@ -989,7 +985,7 @@ export default function RegisterPage() {
                     value={formData.longitude}
                     onChange={handleChange}
                     placeholder="30.061900"
-                    className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="auth-input"
                   />
                 </div>
               </div>
@@ -1003,7 +999,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={handlePrevStep}
                 disabled={loading}
-                className="flex h-12 items-center justify-center gap-1 px-5 text-[15px] font-semibold border border-[#666666] hover:bg-gray-50 bg-white text-[#181818] rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                className="flex h-10 items-center justify-center gap-1 rounded-sm border border-white/30 bg-transparent px-4 text-[13px] font-semibold text-white transition-colors hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <ArrowLeft className="h-4 w-4" /> Back
               </button>
@@ -1014,7 +1010,7 @@ export default function RegisterPage() {
                 whileTap={{ scale: 0.99 }}
                 type="button"
                 onClick={handleNextStep}
-                className="flex h-12 flex-1 items-center justify-center gap-1.5 rounded-full bg-[#0a66c2] text-[16px] font-bold text-white transition-colors hover:bg-[#004182]"
+                className="flex h-10 flex-1 items-center justify-center gap-1.5 rounded-sm bg-[#0b1c24] text-[13px] font-extrabold tracking-[0.14em] text-white transition-colors hover:bg-[#07141a]"
               >
                 Next <ArrowRight className="h-4 w-4" />
               </motion.button>
@@ -1023,7 +1019,7 @@ export default function RegisterPage() {
                 whileTap={{ scale: 0.99 }}
                 type="submit"
                 disabled={loading}
-                className="flex h-12 flex-1 items-center justify-center gap-2 rounded-full bg-[#0a66c2] text-[16px] font-bold text-white transition-colors hover:bg-[#004182] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-10 flex-1 items-center justify-center gap-2 rounded-sm bg-[#0b1c24] text-[13px] font-extrabold tracking-[0.14em] text-white transition-colors hover:bg-[#07141a] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
@@ -1036,14 +1032,14 @@ export default function RegisterPage() {
         </form>
 
         <div className="relative flex items-center py-3">
-          <div className="flex-grow border-t border-[#e0e0e0]"></div>
-          <span className="mx-4 flex-shrink text-[13px] text-[#717171]">or</span>
-          <div className="flex-grow border-t border-[#e0e0e0]"></div>
+          <div className="h-px flex-grow bg-white/20"></div>
+          <span className="mx-4 flex-shrink text-[12px] text-white/50">or</span>
+          <div className="h-px flex-grow bg-white/20"></div>
         </div>
 
-        <div className="text-center text-[14px] text-[#5e5e5e]">
+        <div className="text-center text-[13px] text-white/70">
           Already on Elevata?{' '}
-          <Link to="/login" className="font-semibold text-[#0a66c2] hover:underline">
+          <Link to="/login" className="font-semibold text-white hover:underline">
             Sign in
           </Link>
         </div>

@@ -87,8 +87,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isActive = (path: string) => {
     const isMatch = location.pathname === path || (path === '/activities' && isActivitiesRoute);
     return isMatch
-      ? 'bg-emerald-50 text-emerald-700 font-bold border-l-4 border-emerald-500 rounded-r-lg'
-      : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-l-4 border-transparent transition duration-150';
+      ? 'bg-white/10 text-white font-bold rounded-xl'
+      : 'text-slate-400 hover:bg-white/5 hover:text-white transition duration-150';
   };
 
   const adminLinks = [
@@ -124,16 +124,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
     <>
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex w-64 bg-white text-slate-800 flex-col fixed h-full z-35 border-r border-gray-200">
+      <aside className="z-35 hidden md:flex h-full w-64 flex-col fixed bg-[#0f1724] text-slate-300">
         {/* Logo Section */}
-        <div className="p-5 border-b border-gray-200 bg-white">
+        <div className="border-b border-white/10 bg-[#0f1724] p-5">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 flex items-center justify-center">
-              <img src={logo} alt="Elevata Logo" className="w-4.5 h-4.5" />
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white">
+              <img src={logo} alt="Elevata Logo" className="h-9 w-9 object-contain" />
             </div>
             <div>
-              <h1 className="text-sm font-bold text-slate-900 tracking-tight leading-none font-heading">Elevata</h1>
-              <p className="text-[9px] text-slate-500 mt-1 font-semibold tracking-wider uppercase"> Elevating SME Growth Through Intelligent Finance</p>
+              <h1 className="font-heading text-sm font-bold leading-none tracking-tight text-white">Elevata</h1>
+              <p className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Intelligent Finance</p>
             </div>
           </div>
         </div>
@@ -143,7 +143,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* SME Segment */}
           {user?.role !== 'FINANCIAL_INSTITUTION' && (
             <div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">SME Workspace</h3>
+              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-slate-500">SME Workspace</h3>
               <div className="space-y-1">
                 {smeLinks.map((link) => {
                   if (link.path === '/activities') {
@@ -160,20 +160,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                         </Link>
 
                         {/* Nested Subtabs inside Business Activities */}
-                        <div className="ml-3 pl-3 py-1 space-y-0.5 border-l-2 border-emerald-200/80 my-1">
+                        <div className="my-1 ml-3 space-y-0.5 border-l-2 border-white/10 py-1 pl-3">
                           {activitySubtabs.map((sub) => {
                             const isSubActive = isActivitiesRoute && currentActivitySubtab === sub.id;
                             return (
                               <Link
                                 key={sub.id}
                                 to={sub.path}
-                                className={`flex items-center space-x-2.5 px-2.5 py-1.5 rounded-lg text-[11px] transition-all duration-150 ${
+                                className={`flex items-center space-x-2.5 rounded-lg px-2.5 py-1.5 text-[11px] transition-all duration-150 ${
                                   isSubActive
-                                    ? 'bg-[#0a66c2]/10 text-[#0a66c2] font-bold border-l-2 border-[#0a66c2]'
-                                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
+                                    ? 'bg-white/10 font-bold text-white'
+                                    : 'font-medium text-slate-400 hover:bg-white/5 hover:text-white'
                                 }`}
                               >
-                                <span className={isSubActive ? 'text-[#0a66c2]' : 'text-slate-400'}>{sub.icon}</span>
+                                <span className={isSubActive ? 'text-white' : 'text-slate-500'}>{sub.icon}</span>
                                 <span>{sub.label}</span>
                               </Link>
                             );
@@ -201,7 +201,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* AI Segment */}
           {user?.role !== 'FINANCIAL_INSTITUTION' && (
             <div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">Advisory & Planning</h3>
+              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-slate-500">Advisory & Planning</h3>
               <div className="space-y-1">
                 {aiLinks.map((link) => (
                   <Link
@@ -220,7 +220,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Admin Segment */}
           {user?.role === 'ADMIN' && (
             <div>
-              <h3 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest mb-2 px-3">Administration</h3>
+              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-violet-300">Administration</h3>
               <div className="space-y-1">
                 {adminLinks.map((link) => (
                   <Link
@@ -239,7 +239,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           {/* Banker Segment */}
           {(user?.role === 'ADMIN' || user?.role === 'FINANCIAL_INSTITUTION') && (
             <div>
-              <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-2 px-3">Credit Institution</h3>
+              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-slate-500">Credit Institution</h3>
               <div className="space-y-1">
                 {bankerLinks.map((link) => (
                   <Link
@@ -258,27 +258,27 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Sidebar Info & Reset */}
         {user?.role !== 'FINANCIAL_INSTITUTION' && (
-          <div className="p-4 border-t border-gray-200 space-y-3">
+          <div className="space-y-3 border-t border-white/10 p-4">
             {/* Active SME Overview Widget */}
-            <div className="p-3 bg-slate-50 border border-gray-200 rounded-xl space-y-2">
-              <div className="flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase tracking-wider">
+            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
+              <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-slate-400">
                 <span>Active Subject</span>
-                <span className={`w-2 h-2 rounded-full ${
+                <span className={`h-2 w-2 rounded-full ${
                   activeSme.healthScore >= 80 ? 'bg-emerald-500' : activeSme.healthScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
                 }`} />
               </div>
               <div>
-                <span className="text-xs font-bold text-slate-900 block leading-tight">{activeSme.name}</span>
-                <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">{activeSme.sector} • Score: {activeSme.healthScore}</span>
+                <span className="block text-xs font-bold leading-tight text-white">{activeSme.name}</span>
+                <span className="mt-0.5 block text-[9px] font-semibold text-slate-400">{activeSme.sector} • Score: {activeSme.healthScore}</span>
               </div>
             </div>
 
             {/* Reset button */}
             <button
               onClick={resetAll}
-              className="flex items-center justify-center space-x-2 w-full py-2 bg-white hover:bg-slate-50 border border-gray-200 text-slate-600 hover:text-slate-900 rounded-xl text-xs font-bold transition duration-150"
+              className="flex w-full items-center justify-center space-x-2 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-bold text-slate-200 transition duration-150 hover:bg-white/10 hover:text-white"
             >
-              <RotateCcw className="w-3.5 h-3.5" />
+              <RotateCcw className="h-3.5 w-3.5" />
               <span>Reset Simulations</span>
             </button>
           </div>
@@ -293,28 +293,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         onClick={onClose}
       >
         <aside
-          className={`bg-white w-64 h-full text-slate-800 transform transition-transform duration-300 ease-in-out border-r border-gray-200 ${
+          className={`h-full w-64 transform bg-[#0f1724] text-slate-300 transition-transform duration-300 ease-in-out ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Mobile Header */}
-          <div className="flex justify-between items-center p-5 border-b border-gray-200 bg-white">
+          <div className="flex items-center justify-between border-b border-white/10 bg-[#0f1724] p-5">
             <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-                <img src={logo} alt="Elevata Logo" className="w-4.5 h-4.5" />
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white">
+                <img src={logo} alt="Elevata Logo" className="h-7 w-7 object-contain" />
               </div>
               <div>
-                <h1 className="text-sm font-bold text-slate-900 leading-none font-heading">Elevata</h1>
-                <p className="text-[8px] text-slate-500 mt-1 uppercase font-semibold">Financial Intelligence</p>
+                <h1 className="font-heading text-sm font-bold leading-none text-white">Elevata</h1>
+                <p className="mt-1 text-[8px] font-semibold uppercase text-slate-400">Financial Intelligence</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="text-slate-500 p-1 rounded-full hover:bg-slate-100 transition"
+              className="rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white"
               aria-label="Close menu"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
@@ -341,21 +341,21 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           </Link>
 
                           {/* Mobile Subtabs */}
-                          <div className="ml-3 pl-3 py-1 space-y-0.5 border-l-2 border-emerald-200/80 my-1">
+                          <div className="my-1 ml-3 space-y-0.5 border-l-2 border-white/10 py-1 pl-3">
                             {activitySubtabs.map((sub) => {
                               const isSubActive = isActivitiesRoute && currentActivitySubtab === sub.id;
                               return (
                                 <Link
                                   key={sub.id}
                                   to={sub.path}
-                                  className={`flex items-center space-x-2.5 px-2 py-1.5 rounded-lg text-[11px] transition-all duration-150 ${
+                                  className={`flex items-center space-x-2.5 rounded-lg px-2 py-1.5 text-[11px] transition-all duration-150 ${
                                     isSubActive
-                                      ? 'bg-[#0a66c2]/10 text-[#0a66c2] font-bold border-l-2 border-[#0a66c2]'
-                                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 font-medium'
+                                      ? 'bg-white/10 font-bold text-white'
+                                      : 'font-medium text-slate-400 hover:bg-white/5 hover:text-white'
                                   }`}
                                   onClick={onClose}
                                 >
-                                  <span className={isSubActive ? 'text-[#0a66c2]' : 'text-slate-400'}>{sub.icon}</span>
+                                  <span className={isSubActive ? 'text-white' : 'text-slate-500'}>{sub.icon}</span>
                                   <span>{sub.label}</span>
                                 </Link>
                               );
@@ -404,7 +404,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             {/* Admin Segment */}
             {user?.role === 'ADMIN' && (
               <div>
-                <h3 className="text-[9px] font-bold text-purple-600 uppercase tracking-widest mb-1.5 px-3">Administration</h3>
+                <h3 className="mb-1.5 px-3 text-[9px] font-bold uppercase tracking-widest text-violet-300">Administration</h3>
                 <div className="space-y-1">
                   {adminLinks.map((link) => (
                     <Link
@@ -444,15 +444,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {/* Mobile Footer */}
           {user?.role !== 'FINANCIAL_INSTITUTION' && (
-            <div className="p-4 border-t border-gray-200 space-y-3 bg-slate-50">
+            <div className="space-y-3 border-t border-white/10 bg-[#0f1724] p-4">
               <button
                 onClick={() => {
                   resetAll();
                   onClose();
                 }}
-                className="flex items-center justify-center space-x-2 w-full py-2 bg-white hover:bg-slate-100 text-slate-600 rounded-lg text-xs font-bold border border-gray-200 transition"
+                className="flex w-full items-center justify-center space-x-2 rounded-lg border border-white/10 bg-white/5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10 hover:text-white"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="h-3.5 w-3.5" />
                 <span>Reset Simulations</span>
               </button>
             </div>

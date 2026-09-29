@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Check, Eye, EyeOff } from 'lucide-react';
+import { AlertCircle, Check, Eye, EyeOff, Mail, Lock } from 'lucide-react';
 import logo from '../assets/images/elevata_logo.png';
 
 export default function LoginPage() {
@@ -44,20 +44,21 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-dvh w-screen items-center justify-center bg-[#f3f2f0] p-4 font-sans sm:p-6">
+    <div className="login-shell relative flex min-h-dvh w-screen items-center justify-center overflow-hidden p-3 font-sans sm:p-4">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_18%,rgba(255,255,255,0.4),transparent_40%)]" />
+
       <motion.div
-        initial={{ opacity: 0, y: 15 }}
+        initial={{ opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className="w-full max-w-[400px] rounded-[10px] bg-white p-6 shadow-[0_4px_16px_rgba(0,0,0,0.08)] sm:p-8"
+        className="login-glass relative z-10 w-full max-w-[340px] px-5 py-6 sm:px-6 sm:py-7"
       >
-        <div className="mb-6 flex flex-col items-center text-center">
-          <Link to="/" className="flex items-center gap-2.5 transition-opacity hover:opacity-90">
-            <img src={logo} alt="Elevata" className="h-9 w-9 object-contain" />
-            <span className="text-[1.65rem] font-black tracking-tight text-[#0a66c2]">
-              Elevata
-            </span>
-          </Link>
+        <div className="mb-5 flex flex-col items-center text-center">
+          <div className="mb-2.5 flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-white/10 shadow-[0_0_0_5px_rgba(255,255,255,0.05)]">
+            <img src={logo} alt="Elevata" className="h-8 w-8 object-contain" />
+          </div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.38em] text-white/75">Elevata</p>
+          <h1 className="mt-1.5 text-[1.15rem] font-light tracking-[0.22em] text-white">USER LOGIN</h1>
         </div>
 
         <AnimatePresence>
@@ -66,77 +67,71 @@ export default function LoginPage() {
               initial={{ opacity: 0, y: -6 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -6 }}
-              className="mb-5 flex items-start gap-2.5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+              className="mb-4 flex items-start gap-2 rounded-lg border border-red-200/35 bg-red-500/15 px-2.5 py-2 text-[12px] text-red-50"
             >
-              <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+              <AlertCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <div>
                 <span className="font-semibold">Sign in failed</span>
-                <p className="mt-0.5 text-xs text-red-600">{error}</p>
+                <p className="mt-0.5 text-[11px] text-red-100/90">{error}</p>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="email" className="mb-1 block text-[14px] font-normal text-[#181818]">
-              Email
-            </label>
+          <div className="login-field">
+            <Mail className="login-field-icon" />
             <input
               id="email"
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-11 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              placeholder="Email ID"
+              autoComplete="email"
             />
           </div>
 
-          <div>
-            <label htmlFor="password" className="mb-1 block text-[14px] font-normal text-[#181818]">
-              Password
-            </label>
-            <div className="relative flex items-center">
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-11 w-full rounded-[4px] border border-[#666666] bg-white pl-3 pr-12 text-[15px] text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-2 flex h-8 w-8 items-center justify-center rounded-full text-[#5e5e5e] transition-colors hover:bg-[#eaf2ff] hover:text-[#0a66c2] focus:outline-none focus:ring-2 focus:ring-[#0a66c2]/30"
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
-                aria-pressed={showPassword}
-                title={showPassword ? 'Hide password' : 'Show password'}
-              >
-                {showPassword ? <EyeOff className="h-[18px] w-[18px]" /> : <Eye className="h-[18px] w-[18px]" />}
-              </button>
-            </div>
+          <div className="login-field">
+            <Lock className="login-field-icon" />
+            <input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-0 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-white/70 transition hover:text-white"
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+              title={showPassword ? 'Hide password' : 'Show password'}
+            >
+              {showPassword ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+            </button>
           </div>
 
-          <div className="flex items-center justify-between pt-1">
+          <div className="flex items-center justify-between pt-0.5 text-[12px]">
             <label
-              className="flex cursor-pointer select-none items-center gap-2.5"
+              className="flex cursor-pointer select-none items-center gap-2 text-white/85"
               onClick={() => setRememberMe(!rememberMe)}
             >
               <div
-                className={`flex h-5 w-5 items-center justify-center rounded-[3px] transition-colors ${rememberMe ? 'bg-[#057642]' : 'border border-[#666666] bg-white'
-                  }`}
+                className={`flex h-3.5 w-3.5 items-center justify-center rounded-[2px] border transition ${
+                  rememberMe ? 'border-white bg-white text-[#1d4d57]' : 'border-white/50 bg-transparent'
+                }`}
               >
-                {rememberMe && <Check className="h-3.5 w-3.5 stroke-[3] text-white" />}
+                {rememberMe && <Check className="h-2.5 w-2.5 stroke-[3]" />}
               </div>
-              <span className="text-[14px] text-[#181818]">Remember me</span>
+              Remember me
             </label>
 
-            <Link
-              to="/forgot-password"
-              className="text-[14px] font-semibold text-[#0a66c2] hover:underline"
-            >
-              Forgot password?
+            <Link to="/forgot-password" className="font-medium text-white/80 transition hover:text-white">
+              Forgot Password?
             </Link>
           </div>
 
@@ -144,27 +139,21 @@ export default function LoginPage() {
             whileTap={{ scale: 0.99 }}
             type="submit"
             disabled={loading}
-            className="flex h-12 w-full items-center justify-center rounded-full bg-[#0a66c2] text-[16px] font-bold text-white transition-colors hover:bg-[#004182] disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-1 flex h-10 w-full items-center justify-center rounded-sm bg-[#0b1c24] text-[12px] font-extrabold tracking-[0.24em] text-white shadow-[0_8px_20px_rgba(8,20,28,0.32)] transition hover:bg-[#07141a] disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loading ? (
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
             ) : (
-              'Login'
+              'LOGIN'
             )}
           </motion.button>
 
-          <div className="relative flex items-center py-2">
-            <div className="flex-grow border-t border-[#e0e0e0]"></div>
-            <span className="mx-4 flex-shrink text-[13px] text-[#717171]">or</span>
-            <div className="flex-grow border-t border-[#e0e0e0]"></div>
-          </div>
-
-          <div className="text-center text-[14px] text-[#5e5e5e]">
-            Don't have account?{' '}
-            <Link to="/register" className="font-semibold text-[#0a66c2] hover:underline">
+          <p className="pt-1 text-center text-[12px] text-white/70">
+            Don&apos;t have account?{' '}
+            <Link to="/register" className="font-semibold text-white hover:underline">
               Register
             </Link>
-          </div>
+          </p>
         </form>
       </motion.div>
     </div>

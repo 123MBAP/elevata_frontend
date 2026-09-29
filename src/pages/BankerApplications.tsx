@@ -20,6 +20,7 @@ import {
   ShieldCheck,
   Eye,
   Download,
+  ExternalLink,
   Coins,
   X,
   CheckSquare,
@@ -27,6 +28,7 @@ import {
   Sliders
 } from 'lucide-react';
 import { apiFile } from '../lib/api';
+import { openBlankViewerTab, writeDocumentViewer } from '../lib/documentViewer';
 
 interface DocumentDetail {
   id: string;
@@ -110,22 +112,62 @@ export default function BankerApplications() {
     setSelectedAppId(null);
   };
 
+  const isTextDocumentType = (mimeType?: string | null) =>
+    Boolean(mimeType?.startsWith('text/'))
+    || ['application/json', 'application/xml', 'application/rtf'].includes(mimeType || '');
+
+  const writeViewer = (
+    tab: Window | null,
+    document: DocumentDetail,
+    blobUrl: string,
+    textContent: string | null
+  ) => {
+    if (!tab) return false;
+    writeDocumentViewer(tab, {
+      blobUrl,
+      fileName: document.fileName || document.name,
+      title: document.name,
+      mimeType: document.mimeType,
+      textContent,
+      fileType: document.fileType
+    });
+    return true;
+  };
+
   const handleOpenDocument = async (document: DocumentDetail) => {
     if (!document.downloadUrl) return;
+    const viewerTab = openBlankViewerTab();
     setDocumentLoading(true);
     try {
       const blob = await apiFile(document.downloadUrl);
       if (previewUrl) URL.revokeObjectURL(previewUrl);
-      const isTextDocument = document.mimeType?.startsWith('text/')
-        || ['application/json', 'application/xml', 'application/rtf'].includes(document.mimeType || '');
-      setPreviewText(isTextDocument ? await blob.text() : null);
-      setPreviewUrl(URL.createObjectURL(blob));
+      const textContent = isTextDocumentType(document.mimeType) ? await blob.text() : null;
+      const modalUrl = URL.createObjectURL(blob);
+      const tabUrl = URL.createObjectURL(blob);
+      setPreviewText(textContent);
+      setPreviewUrl(modalUrl);
       setPreviewDoc(document);
+      if (!writeViewer(viewerTab, document, tabUrl, textContent)) {
+        URL.revokeObjectURL(tabUrl);
+        triggerToast('Allow pop-ups to open this document in a new tab.');
+      }
     } catch (error: unknown) {
+      viewerTab?.close();
       triggerToast(error instanceof Error ? error.message : 'Unable to open this document.');
     } finally {
       setDocumentLoading(false);
     }
+  };
+
+  const handleOpenInNewTab = async (document: DocumentDetail) => {
+    if (previewDoc?.id === document.id && previewUrl) {
+      const viewerTab = openBlankViewerTab();
+      if (!writeViewer(viewerTab, document, previewUrl, previewText)) {
+        triggerToast('Allow pop-ups to open this document in a new tab.');
+      }
+      return;
+    }
+    await handleOpenDocument(document);
   };
 
   const closeDocumentPreview = () => {
@@ -874,10 +916,20 @@ export default function BankerApplications() {
                               type="button"
                               onClick={() => handleOpenDocument(doc)}
                               disabled={documentLoading}
-                              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-[10.5px] transition flex items-center gap-1 border border-slate-200"
+                              className="px-3 py-1.5 bg-slate-950 hover:bg-slate-800 text-white font-bold rounded-lg text-[10.5px] transition flex items-center gap-1"
                             >
-                              <Eye className="w-3.5 h-3.5 text-slate-500" />
-                              <span>View Document</span>
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>View</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleOpenInNewTab(doc)}
+                              disabled={documentLoading}
+                              className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold rounded-lg text-[10.5px] transition flex items-center gap-1 border border-slate-200"
+                              title="Open in new tab"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5 text-slate-500" />
+                              <span>New tab</span>
                             </button>
                             <button
                               type="button"
@@ -1114,85 +1166,91 @@ export default function BankerApplications() {
       {/* DOCUMENT PREVIEW MODAL */}
       <AnimatePresence>
         {previewDoc && (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-60 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-60 flex items-center justify-center bg-slate-950/70 p-3 backdrop-blur-sm sm:p-6">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.97 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh]"
+              exit={{ opacity: 0, scale: 0.97 }}
+              className="flex h-[92vh] w-full max-w-6xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
             >
-              {/* Document Header */}
-              <div className="px-5 py-3.5 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <span className="p-1.5 bg-emerald-100 text-emerald-800 rounded-lg">
-                    <FileText className="w-4 h-4" />
+              <div className="flex items-center justify-between border-b border-slate-200 bg-[#0f1724] px-5 py-4 text-white">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="rounded-xl bg-white/10 p-2">
+                    <FileText className="h-4 w-4" />
                   </span>
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900">{previewDoc.name}</h4>
-                    <span className="text-[9.5px] text-slate-400 font-mono">
-                      Ref: {previewDoc.docNumber} · {previewDoc.fileSize}
+                  <div className="min-w-0">
+                    <h4 className="truncate text-sm font-bold">{previewDoc.name}</h4>
+                    <span className="text-[11px] text-slate-300">
+                      {previewDoc.fileName || previewDoc.name} · {previewDoc.fileType} · {previewDoc.fileSize}
                     </span>
                   </div>
                 </div>
                 <button
                   type="button"
                   onClick={closeDocumentPreview}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition"
+                  className="rounded-lg p-1.5 text-slate-300 transition hover:bg-white/10 hover:text-white"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <div className="min-h-0 flex-1 bg-slate-100 p-3">
+              <div className="min-h-0 flex-1 bg-[#F6F4EF] p-3 sm:p-4">
                 {previewUrl && previewDoc.mimeType === 'application/pdf' ? (
                   <iframe
                     src={previewUrl}
                     title={previewDoc.name}
-                    className="h-[60vh] w-full rounded-lg border border-slate-200 bg-white"
+                    className="h-full min-h-[70vh] w-full rounded-2xl border border-slate-200 bg-white"
                   />
                 ) : previewUrl && previewDoc.mimeType?.startsWith('image/') ? (
-                  <div className="flex h-[60vh] items-center justify-center overflow-auto rounded-lg border border-slate-200 bg-white p-4">
+                  <div className="flex h-full min-h-[70vh] items-center justify-center overflow-auto rounded-2xl border border-slate-200 bg-white p-4">
                     <img src={previewUrl} alt={previewDoc.name} className="max-h-full max-w-full object-contain" />
                   </div>
                 ) : previewText !== null ? (
-                  <div className="h-[60vh] overflow-auto rounded-lg border border-slate-200 bg-white p-4">
-                    <pre className="whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-slate-700">{previewText}</pre>
+                  <div className="h-full min-h-[70vh] overflow-auto rounded-2xl border border-slate-200 bg-white p-5">
+                    <pre className="whitespace-pre-wrap break-words font-mono text-sm leading-relaxed text-slate-700">{previewText}</pre>
                   </div>
                 ) : previewUrl && previewDoc.mimeType?.startsWith('audio/') ? (
-                  <div className="flex h-64 items-center justify-center rounded-lg border border-slate-200 bg-white p-6">
+                  <div className="flex h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-6">
                     <audio src={previewUrl} controls className="w-full max-w-lg" />
                   </div>
                 ) : previewUrl && previewDoc.mimeType?.startsWith('video/') ? (
-                  <div className="flex h-[60vh] items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-950 p-2">
+                  <div className="flex h-full min-h-[70vh] items-center justify-center overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 p-2">
                     <video src={previewUrl} controls className="max-h-full max-w-full rounded-md" />
                   </div>
                 ) : (
-                  <div className="flex h-64 flex-col items-center justify-center rounded-lg border border-dashed border-slate-300 bg-white px-6 text-center">
+                  <div className="flex h-64 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 text-center">
                     <FileText className="mb-3 h-10 w-10 text-slate-300" />
-                    <p className="text-xs font-bold text-slate-700">{previewDoc.fileType} document attached securely</p>
-                    <p className="mt-1 max-w-sm text-[10px] leading-relaxed text-slate-500">
-                      Browsers cannot safely render this format inline. Review the verified file details, then download the original document to open it in its native application.
+                    <p className="text-sm font-bold text-slate-700">{previewDoc.fileType} document attached securely</p>
+                    <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">
+                      Browsers cannot safely render this format inline. Open it in a new tab or download the original file.
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Document Modal Footer */}
-              <div className="px-5 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                <span className="text-[9.5px] text-slate-400 font-mono">{previewDoc.fileName}</span>
-                <div className="flex gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-white px-5 py-3.5">
+                <span className="font-mono text-[11px] text-slate-400">{previewDoc.docNumber}</span>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleOpenInNewTab(previewDoc)}
+                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open in new tab
+                  </button>
                   <button
                     type="button"
                     onClick={() => handleDownloadDocument(previewDoc)}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-xs transition flex items-center gap-1.5 shadow-xs"
+                    className="flex items-center gap-1.5 rounded-xl bg-slate-950 px-3 py-2 text-xs font-bold text-white transition hover:bg-slate-800"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download Original</span>
+                    <Download className="h-3.5 w-3.5" />
+                    Download
                   </button>
                   <button
                     type="button"
                     onClick={closeDocumentPreview}
-                    className="px-3 py-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold rounded-lg text-xs transition border border-slate-200"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
                   >
                     Close
                   </button>

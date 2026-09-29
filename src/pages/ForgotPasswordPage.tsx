@@ -84,28 +84,25 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="relative flex min-h-dvh w-screen items-center justify-center overflow-hidden bg-[radial-gradient(circle_at_top,_#f7f9fc_0%,_#eef3f9_45%,_#e8eef7_100%)] p-3 font-sans sm:p-4">
-      {/* Light Overlay */}
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(to_bottom,rgba(255,255,255,0.65),rgba(255,255,255,0.1))]" />
+    <div className="login-shell relative flex min-h-dvh w-screen items-center justify-center overflow-hidden p-3 font-sans sm:p-4">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.35),transparent_42%)]" />
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.45, ease: 'easeOut' }}
-        className="relative z-10 w-full max-w-[420px] rounded-[24px] border border-[#e3eaf4] bg-white px-6 py-7 shadow-[0_24px_60px_rgba(15,23,42,0.08)] sm:px-8 sm:py-8"
+        className="login-glass relative z-10 w-full max-w-[340px] px-5 py-6 sm:px-6 sm:py-7"
       >
         {/* Brand Logo and Title */}
         <div className="flex flex-col items-center text-center">
-          <div className="flex items-center gap-3">
+          <div className="mb-3 flex h-16 w-16 items-center justify-center rounded-full border border-white/25 bg-white/10">
             <img src={logo} alt="Elevata" className="h-10 w-10 object-contain" />
-            <span className="text-[1.8rem] font-extrabold tracking-[-0.04em] text-[#101828]">
-              Elevata
-            </span>
           </div>
-          <h2 className="mt-6 text-[1.25rem] font-extrabold tracking-[-0.02em] text-[#101828]">
-            Reset Password
+          <p className="text-[11px] font-semibold uppercase tracking-[0.42em] text-white/80">Elevata</p>
+          <h2 className="mt-3 text-[1.35rem] font-light tracking-[0.18em] text-white">
+            RESET PASSWORD
           </h2>
-          <p className="text-[0.9rem] text-[#64748b] mt-1 leading-relaxed max-w-[320px]">
+          <p className="mt-2 max-w-[320px] text-sm leading-relaxed text-white/70">
             {step === 1
               ? "Enter your email address to receive a 6-digit verification code."
               : `Enter the code sent to ${email} and your new password.`}
@@ -120,12 +117,12 @@ export default function ForgotPasswordPage() {
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="mb-5 flex items-start gap-2.5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+                className="mb-5 flex items-start gap-2.5 rounded-2xl border border-red-200/30 bg-red-500/15 px-4 py-3 text-sm text-red-50"
               >
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
                 <div>
                   <span className="font-semibold">Reset Error</span>
-                  <p className="mt-0.5 text-red-600">{error}</p>
+                  <p className="mt-0.5 text-red-100/90">{error}</p>
                 </div>
               </motion.div>
             )}
@@ -135,12 +132,12 @@ export default function ForgotPasswordPage() {
                 initial={{ opacity: 0, y: -8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                className="mb-5 flex items-start gap-2.5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800"
+                className="mb-5 flex items-start gap-2.5 rounded-2xl border border-emerald-200/30 bg-emerald-500/15 px-4 py-3 text-sm text-emerald-50"
               >
                 <CheckCircle className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
                 <div>
                   <span className="font-semibold">Notification</span>
-                  <p className="mt-0.5 text-emerald-700">{success}</p>
+                  <p className="mt-0.5 text-emerald-100/90">{success}</p>
                 </div>
               </motion.div>
             )}
@@ -150,10 +147,11 @@ export default function ForgotPasswordPage() {
           {step === 1 ? (
             <form onSubmit={handleRequestCode} className="space-y-4">
               <div className="space-y-1">
-                <label htmlFor="email" className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <label htmlFor="email" className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
                   Email Address
                 </label>
-                <div className="relative">
+                <div className="login-field">
+                  <Mail className="login-field-icon" />
                   <input
                     id="email"
                     type="email"
@@ -161,9 +159,7 @@ export default function ForgotPasswordPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="office@elevata.com"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-10 pr-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
                   />
-                  <Mail className="absolute left-3 top-3.5 h-5 w-5 text-[#94a3b8]" />
                 </div>
               </div>
 
@@ -172,7 +168,7 @@ export default function ForgotPasswordPage() {
                 whileTap={{ scale: 0.99 }}
                 type="submit"
                 disabled={loading || !email}
-                className="flex h-12 w-full items-center justify-center rounded-full bg-[#0f74e7] text-[1rem] font-extrabold text-white shadow-[0_16px_30px_rgba(15,116,231,0.28)] transition-colors hover:bg-[#0d67cf] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 w-full items-center justify-center rounded-sm bg-[#0b1c24] text-[13px] font-extrabold tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(8,20,28,0.35)] transition hover:bg-[#07141a] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
@@ -187,10 +183,11 @@ export default function ForgotPasswordPage() {
             <form onSubmit={handleResetPassword} className="space-y-4">
               {/* Verification Code */}
               <div className="space-y-1">
-                <label htmlFor="code" className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <label htmlFor="code" className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
                   6-Digit Reset Code
                 </label>
-                <div className="relative">
+                <div className="login-field">
+                  <Key className="login-field-icon" />
                   <input
                     id="code"
                     type="text"
@@ -199,18 +196,15 @@ export default function ForgotPasswordPage() {
                     value={code}
                     onChange={(e) => setCode(e.target.value)}
                     placeholder="Enter 6-digit code"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-10 pr-4 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
                   />
-                  <Key className="absolute left-3 top-3.5 h-5 w-5 text-[#94a3b8]" />
                 </div>
               </div>
 
-              {/* New Password */}
               <div className="space-y-1">
-                <label htmlFor="newPassword" className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <label htmlFor="newPassword" className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
                   New Password
                 </label>
-                <div className="relative">
+                <div className="login-field no-icon">
                   <input
                     id="newPassword"
                     type={showPassword ? 'text' : 'password'}
@@ -218,24 +212,22 @@ export default function ForgotPasswordPage() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-10 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[#94a3b8] transition-colors hover:text-[#475569]"
+                    className="absolute inset-y-0 right-0 flex items-center px-1 text-white/70 transition hover:text-white"
                   >
-                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
-              {/* Confirm New Password */}
               <div className="space-y-1">
-                <label htmlFor="confirmPassword" className="block text-[0.85rem] font-extrabold uppercase tracking-[0.02em] text-[#111827]">
+                <label htmlFor="confirmPassword" className="mb-1 block text-[11px] font-semibold uppercase tracking-[0.18em] text-white/70">
                   Confirm New Password
                 </label>
-                <div className="relative">
+                <div className="login-field no-icon">
                   <input
                     id="confirmPassword"
                     type={showConfirmPassword ? 'text' : 'password'}
@@ -243,14 +235,13 @@ export default function ForgotPasswordPage() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="••••••••"
-                    className="w-full rounded-lg border border-[#2f3a4a] bg-[#eaf2ff] pl-4 pr-10 py-3 text-[1rem] text-[#111827] outline-none transition-[border-color,box-shadow,background-color] placeholder:text-[#6b7280] focus:border-[#1d4ed8] focus:bg-[#edf4ff] focus:shadow-[0_0_0_4px_rgba(37,99,235,0.15)]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center px-3 text-[#94a3b8] transition-colors hover:text-[#475569]"
+                    className="absolute inset-y-0 right-0 flex items-center px-1 text-white/70 transition hover:text-white"
                   >
-                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
@@ -260,12 +251,12 @@ export default function ForgotPasswordPage() {
                 whileTap={{ scale: 0.99 }}
                 type="submit"
                 disabled={loading || !code || !newPassword || !confirmPassword}
-                className="flex h-12 w-full items-center justify-center rounded-full bg-[#0f74e7] text-[1rem] font-extrabold text-white shadow-[0_16px_30px_rgba(15,116,231,0.28)] transition-colors hover:bg-[#0d67cf] disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 w-full items-center justify-center rounded-sm bg-[#0b1c24] text-[13px] font-extrabold tracking-[0.18em] text-white shadow-[0_10px_24px_rgba(8,20,28,0.35)] transition hover:bg-[#07141a] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? (
                   <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                 ) : (
-                  'Reset Password'
+                  'RESET PASSWORD'
                 )}
               </motion.button>
 
@@ -276,21 +267,21 @@ export default function ForgotPasswordPage() {
                   setSuccess(null);
                   setStep(1);
                 }}
-                className="flex items-center justify-center gap-1 w-full text-sm font-semibold text-[#64748b] hover:text-[#475569] transition-colors pt-2"
+                className="flex w-full items-center justify-center gap-1 pt-2 text-sm font-semibold text-white/70 transition hover:text-white"
               >
                 <ArrowLeft className="h-4 w-4" /> Request code again
               </button>
             </form>
           )}
 
-          <div className="flex items-center gap-4 py-3 text-center text-[#94a3b8] mt-2">
-            <span className="h-px flex-1 bg-[#d9e2ef]" />
+          <div className="mt-2 flex items-center gap-4 py-3 text-center text-white/50">
+            <span className="h-px flex-1 bg-white/20" />
             <span className="text-sm font-medium">or</span>
-            <span className="h-px flex-1 bg-[#d9e2ef]" />
+            <span className="h-px flex-1 bg-white/20" />
           </div>
 
-          <div className="text-center text-[0.98rem] text-[#64748b]">
-            <Link to="/login" className="font-bold text-[#1670d8] hover:underline flex items-center justify-center gap-1.5">
+          <div className="text-center text-[0.98rem] text-white/70">
+            <Link to="/login" className="flex items-center justify-center gap-1.5 font-bold text-white hover:underline">
               <ArrowLeft className="h-4 w-4" /> Back to Sign In
             </Link>
           </div>

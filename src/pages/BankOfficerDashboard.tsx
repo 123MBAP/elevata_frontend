@@ -121,7 +121,7 @@ export default function BankOfficerDashboard() {
   }
 
   return (
-    <div className="space-y-5 bg-gray-50 min-h-screen p-5">
+    <div className="min-h-screen space-y-5 bg-[#F6F4EF] p-1 sm:p-2">
 
       {/* ── Toast ── */}
       {toastMessage && (
@@ -137,8 +137,8 @@ export default function BankOfficerDashboard() {
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900 tracking-tight">Bank officer dashboard</h1>
-          <p className="text-xs text-gray-500 mt-0.5">SME portfolio risk &amp; lending control · all amounts in RWF</p>
+          <h1 className="text-[1.55rem] font-bold tracking-tight text-slate-950">Analytics</h1>
+          <p className="mt-0.5 text-sm text-slate-500">SME portfolio risk and lending control · amounts in RWF</p>
         </div>
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
@@ -188,7 +188,7 @@ export default function BankOfficerDashboard() {
             valueClass: 'text-emerald-700',
           },
         ].map((c, i) => (
-          <Card key={i} className="bg-white border border-gray-200 shadow-sm rounded-xl">
+          <Card key={i} className="rounded-[24px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
             <CardContent className="p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-heading">{c.label}</span>
@@ -206,7 +206,7 @@ export default function BankOfficerDashboard() {
 
         {/* Table */}
         <div className="lg:col-span-2">
-          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl overflow-hidden flex flex-col h-full">
+          <Card className="flex h-full flex-col overflow-hidden rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
             <div className="px-5 pt-4 pb-3 border-b border-gray-100">
               <h2 className="text-sm font-semibold text-gray-800">Risk scoring &amp; ledger status</h2>
               <p className="text-xs text-gray-400 mt-0.5">Select a row to activate the decision panel</p>
@@ -272,7 +272,7 @@ export default function BankOfficerDashboard() {
 
         {/* Decision panel */}
         <div className="lg:col-span-1">
-          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+          <Card className="rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
             <CardContent className="p-5 space-y-4">
 
               <div className="pb-3 border-b border-gray-100">
@@ -337,7 +337,7 @@ export default function BankOfficerDashboard() {
 
         {/* Sector chart */}
         <div className="lg:col-span-1">
-          <Card className="bg-white border border-gray-200 shadow-sm rounded-xl h-full">
+          <Card className="h-full rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
             <CardContent className="p-5">
               <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-4">
                 <Building2 className="w-4 h-4 text-gray-400" /> Sector health scores
@@ -396,7 +396,7 @@ export default function BankOfficerDashboard() {
         </div>
 
         {/* Opportunity feed */}
-        <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+        <Card className="rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <CardContent className="p-5 space-y-3">
             <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 border-b border-gray-100 pb-3">
               <Zap className="w-4 h-4 text-gray-400" /> Lending opportunity feed
@@ -423,7 +423,7 @@ export default function BankOfficerDashboard() {
         </Card>
 
         {/* Early warning */}
-        <Card className="bg-white border border-gray-200 shadow-sm rounded-xl">
+        <Card className="rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
           <CardContent className="p-5 space-y-3">
             <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 border-b border-red-100 pb-3">
               <AlertTriangle className="w-4 h-4 text-red-500" /> Early warning system

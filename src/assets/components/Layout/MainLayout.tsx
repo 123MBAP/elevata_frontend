@@ -9,7 +9,7 @@ export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-x-hidden">
+    <div className="flex h-screen overflow-x-hidden bg-[#f8fafc]">
       {/* Sidebar */}
       <Sidebar
         isOpen={sidebarOpen}
@@ -17,9 +17,9 @@ export default function MainLayout() {
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col md:ml-64 w-full min-w-0">
+      <div className="flex min-w-0 w-full flex-1 flex-col md:ml-64">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-y-auto p-3 md:p-6 w-full min-w-0">
+        <main className="min-w-0 w-full flex-1 overflow-y-auto p-3 sm:p-4 md:p-6">
           <Outlet />
         </main>
       </div>
