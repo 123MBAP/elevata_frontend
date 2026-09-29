@@ -148,36 +148,28 @@ export default function BankOfficerDashboard() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           {
-            label: 'Total portfolio',
-            value: `${portfolioStats.totalSMEs} SMEs`,
-            sub: 'active accounts',
+            label: 'Portfolio',
+            value: `${portfolioStats.totalSMEs}`,
             icon: <Users className="w-4 h-4" />,
             iconBg: 'bg-teal-50 text-[#0f766e]',
-            valueClass: 'text-gray-900',
           },
           {
-            label: 'Outstanding loans',
+            label: 'Outstanding',
             value: formatRWF(portfolioStats.totalOutstandingLoans),
-            sub: 'total disbursed',
             icon: <DollarSign className="w-4 h-4" />,
             iconBg: 'bg-teal-50 text-[#0f766e]',
-            valueClass: 'text-slate-950',
           },
           {
-            label: 'High risk SMEs',
-            value: `${portfolioStats.highRiskSMEs} SMEs`,
-            sub: 'score below 60',
+            label: 'High risk',
+            value: `${portfolioStats.highRiskSMEs}`,
             icon: <AlertTriangle className="w-4 h-4" />,
             iconBg: 'bg-slate-100 text-slate-600',
-            valueClass: 'text-slate-950',
           },
           {
             label: 'Loan ready',
-            value: `${portfolioStats.loanReadySMEs} SMEs`,
-            sub: 'score 80 or above',
+            value: `${portfolioStats.loanReadySMEs}`,
             icon: <Shield className="w-4 h-4" />,
             iconBg: 'bg-teal-50 text-[#0f766e]',
-            valueClass: 'text-slate-950',
           },
         ].map((c, i) => (
           <Card key={i} className="rounded-[24px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
@@ -186,8 +178,7 @@ export default function BankOfficerDashboard() {
                 <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-heading">{c.label}</span>
                 <div className={`p-2 rounded-lg ${c.iconBg}`}>{c.icon}</div>
               </div>
-              <div className={`text-2xl font-bold font-mono tracking-tight ${c.valueClass}`}>{c.value}</div>
-              <div className="text-[10px] text-gray-400 mt-1">{c.sub}</div>
+              <div className="text-2xl font-bold font-mono tracking-tight text-slate-950">{c.value}</div>
             </CardContent>
           </Card>
         ))}
@@ -200,8 +191,7 @@ export default function BankOfficerDashboard() {
         <div className="lg:col-span-2">
           <Card className="flex h-full flex-col overflow-hidden rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
             <div className="px-5 pt-4 pb-3 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-800">Risk scoring &amp; ledger status</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Select a row to activate the decision panel</p>
+              <h2 className="text-sm font-semibold text-gray-800">Risk scoring</h2>
             </div>
 
             <div className="overflow-x-auto flex-1">
@@ -283,25 +273,25 @@ export default function BankOfficerDashboard() {
                   onClick={handleApplications}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#0f172a] hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition"
                 >
-                  <Check className="w-4 h-4" /> Review applications
+                  <Check className="w-4 h-4" /> Applications
                 </button>
                 <button
                   onClick={handleMonitor}
                   className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition"
                 >
-                  <Eye className="w-4 h-4" /> Inspect dashboard
+                  <Eye className="w-4 h-4" /> Monitor
                 </button>
                 <button
                   onClick={handleAudit}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-amber-50 hover:bg-amber-100 text-amber-700 text-sm font-semibold rounded-lg border border-amber-200 transition"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg border border-slate-200 transition"
                 >
-                  <FileSearch className="w-4 h-4" /> Request audit
+                  <FileSearch className="w-4 h-4" /> Audit
                 </button>
                 <button
                   onClick={handleApplications}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white hover:bg-red-50 text-red-600 text-sm font-semibold rounded-lg border border-gray-200 transition"
+                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg border border-slate-200 transition"
                 >
-                  <XCircle className="w-4 h-4" /> Open decision workflow
+                  <XCircle className="w-4 h-4" /> Decision
                 </button>
               </div>
 

@@ -88,12 +88,12 @@ const createVirtualCameraStream = (speakerName: string, orgName?: string): Media
     ctx.beginPath();
     ctx.arc(320, 130, 52, 0, Math.PI * 2);
     const circleGrad = ctx.createLinearGradient(270, 80, 370, 180);
-    circleGrad.addColorStop(0, '#0a66c2');
-    circleGrad.addColorStop(1, '#0284c7');
+    circleGrad.addColorStop(0, '#0f766e');
+    circleGrad.addColorStop(1, '#0f766e');
     ctx.fillStyle = circleGrad;
     ctx.fill();
     ctx.lineWidth = 3;
-    ctx.strokeStyle = '#38bdf8';
+    ctx.strokeStyle = '#5eead4';
     ctx.stroke();
 
     // Speaker Initials
@@ -112,7 +112,7 @@ const createVirtualCameraStream = (speakerName: string, orgName?: string): Media
     for (let i = 0; i < barCount; i++) {
       const wave = Math.sin(frame * 0.15 + i * 0.6);
       const height = Math.max(6, Math.abs(wave) * 22);
-      ctx.fillStyle = i % 2 === 0 ? '#10b981' : '#38bdf8';
+      ctx.fillStyle = i % 2 === 0 ? '#10b981' : '#5eead4';
       ctx.fillRect(startX + i * (barWidth + barSpacing), 195 - height / 2, barWidth, height);
     }
 
@@ -985,10 +985,10 @@ export default function VirtualTrainingDeliveryModal({
       {/* Top Navigation Bar */}
       <header className="h-14 px-4 sm:px-6 bg-[#0f172a] border-b border-[#1e293b] flex items-center justify-between shrink-0 select-none z-10">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-red-500/10 border border-red-500/30 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-ping" />
-            <span className="text-[11px] font-bold text-red-400 uppercase tracking-wider flex items-center gap-1 font-mono">
-              <Radio className="w-3 h-3 text-red-400" /> LIVE DELIVERY
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-teal-500/10 border border-teal-500/30 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-teal-500 animate-ping" />
+            <span className="text-[11px] font-bold text-teal-300 uppercase tracking-wider flex items-center gap-1 font-mono">
+              <Radio className="w-3 h-3 text-teal-300" /> Live
             </span>
           </div>
 
@@ -998,43 +998,34 @@ export default function VirtualTrainingDeliveryModal({
             <h2 className="text-xs sm:text-sm font-bold text-slate-100 truncate max-w-[200px] sm:max-w-md">
               {training.title}
             </h2>
-            <p className="text-[10px] text-slate-400 hidden sm:block">
-              Host: <span className="text-slate-200 font-semibold">{training.speaker}</span> · {training.speakerOrg || 'Elevata Partner Academy'}
-            </p>
+            <p className="text-[10px] text-slate-400 hidden sm:block">{training.speaker}</p>
           </div>
         </div>
 
-        {/* Center: Live Timer & Roster Count */}
-        <div className="flex items-center gap-4 text-xs">
+        <div className="flex items-center gap-3 text-xs">
           <div className="flex items-center gap-1.5 px-3 py-1 bg-[#1e293b] rounded-full border border-slate-700 text-slate-300 font-mono">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{formatTime(sessionSeconds)}</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full text-emerald-400 font-medium text-xs">
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-[#0f766e]/10 border border-teal-500/20 rounded-full text-teal-300 font-medium text-xs">
             <Users className="w-3.5 h-3.5" />
-            <span>{admittedAttendees.length} Admitted</span>
+            <span>{admittedAttendees.length}</span>
             {waitingAttendees.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 bg-amber-500 text-slate-950 font-bold text-[10px] rounded-full">
-                {waitingAttendees.length} in waiting room
+              <span className="ml-1 px-1.5 py-0.2 bg-[#0f766e] text-white font-bold text-[10px] rounded-full">
+                {waitingAttendees.length} waiting
               </span>
             )}
           </div>
-
-          <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 bg-sky-950/80 border border-sky-500/40 text-[#38bdf8] rounded-full text-[11px] font-bold uppercase tracking-wider">
-            <Radio className={`w-3 h-3 ${isLivekitConnected ? 'text-emerald-400 animate-pulse' : 'text-amber-400'}`} />
-            <span>{isLivekitConnected ? 'LiveKit Cloud SFU' : 'LiveKit Connecting...'}</span>
-          </div>
         </div>
 
-        {/* Right: End Session / Exit */}
         <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowEndConfirm(true)}
             className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold transition shadow-sm cursor-pointer flex items-center gap-1.5"
           >
-            <span>End Session</span>
+            <span>End</span>
           </button>
           <button
             type="button"
@@ -1072,7 +1063,7 @@ export default function VirtualTrainingDeliveryModal({
                   className="w-full h-full object-contain"
                 />
                 <div className="absolute top-4 left-4 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700 text-xs flex items-center gap-2">
-                  <Monitor className="w-4 h-4 text-emerald-400" />
+                  <Monitor className="w-4 h-4 text-teal-300" />
                   <span className="font-semibold text-slate-200">Sharing Your Screen to Attendees</span>
                 </div>
               </div>
@@ -1081,7 +1072,7 @@ export default function VirtualTrainingDeliveryModal({
               <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white">
                 <div className="flex justify-between items-start">
                   <div className="flex items-center gap-2">
-                    <span className="px-2.5 py-1 bg-[#0a66c2]/20 border border-[#0a66c2]/40 text-[#38bdf8] text-[11px] font-bold rounded-full uppercase tracking-wider">
+                    <span className="px-2.5 py-1 bg-[#0f766e]/20 border border-[#0f766e]/40 text-[#5eead4] text-[11px] font-bold rounded-full uppercase tracking-wider">
                       {presentationSlides[currentSlideIndex].badge}
                     </span>
                     <span className="text-xs text-slate-400">
@@ -1115,7 +1106,7 @@ export default function VirtualTrainingDeliveryModal({
                     <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                       {presentationSlides[currentSlideIndex].title}
                     </h1>
-                    <p className="text-sm sm:text-base text-[#38bdf8] font-medium mt-1">
+                    <p className="text-sm sm:text-base text-[#5eead4] font-medium mt-1">
                       {presentationSlides[currentSlideIndex].subtitle}
                     </p>
                   </div>
@@ -1123,7 +1114,7 @@ export default function VirtualTrainingDeliveryModal({
                   <div className="space-y-3 pt-2">
                     {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
                       <div key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-200">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0 mt-0.5" />
                         <span className="leading-relaxed">{pt}</span>
                       </div>
                     ))}
@@ -1135,7 +1126,7 @@ export default function VirtualTrainingDeliveryModal({
                       <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                         {presentationSlides[currentSlideIndex].metricLabel}
                       </span>
-                      <strong className="text-lg font-mono font-bold text-emerald-400">
+                      <strong className="text-lg font-mono font-bold text-teal-300">
                         {presentationSlides[currentSlideIndex].metricValue}
                       </strong>
                     </div>
@@ -1147,7 +1138,7 @@ export default function VirtualTrainingDeliveryModal({
 
                 {/* Slide Footer */}
                 <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-800/80">
-                  <span>Elevata Virtual Academy · Credit Underwriting &amp; Capacity Program</span>
+                  <span>Elevata</span>
                   <span>Press arrow buttons or click next to advance</span>
                 </div>
               </div>
@@ -1170,11 +1161,11 @@ export default function VirtualTrainingDeliveryModal({
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute top-2.5 left-2.5 px-2 py-0.5 bg-black/70 backdrop-blur-md rounded text-[10px] font-bold text-white flex items-center gap-1.5">
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
                     Presenter Live Video
                   </div>
                   {isMicOn && (
-                    <span className="absolute bottom-2.5 right-2.5 w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow">
+                    <span className="absolute bottom-2.5 right-2.5 w-6 h-6 rounded-full bg-[#0f766e] flex items-center justify-center shadow">
                       <Mic className="w-3.5 h-3.5 text-white" />
                     </span>
                   )}
@@ -1189,17 +1180,17 @@ export default function VirtualTrainingDeliveryModal({
                   <button
                     type="button"
                     onClick={handleToggleScreenShare}
-                    className="px-4 py-2 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition cursor-pointer"
+                    className="px-4 py-2 bg-[#0f766e] hover:bg-[#115e59] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition cursor-pointer"
                   >
                     <Monitor className="w-4 h-4" />
-                    <span>Share Screen</span>
+                    <span>Share</span>
                   </button>
                   <button
                     type="button"
                     onClick={() => setActiveSideTab('slides')}
                     className="px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 rounded-lg font-semibold flex items-center gap-2 transition cursor-pointer"
                   >
-                    <FileText className="w-4 h-4 text-[#38bdf8]" />
+                    <FileText className="w-4 h-4 text-[#5eead4]" />
                     <span>Open Training Slides</span>
                   </button>
                 </div>
@@ -1214,7 +1205,7 @@ export default function VirtualTrainingDeliveryModal({
                     Host (You)
                   </span>
                   <div className="flex items-center gap-1">
-                    {isMicOn ? <Mic className="w-3 h-3 text-emerald-400" /> : <MicOff className="w-3 h-3 text-red-400" />}
+                    {isMicOn ? <Mic className="w-3 h-3 text-teal-300" /> : <MicOff className="w-3 h-3 text-red-400" />}
                   </div>
                 </div>
 
@@ -1252,7 +1243,7 @@ export default function VirtualTrainingDeliveryModal({
                 }`}
                 title={isMicOn ? 'Mute Microphone' : 'Unmute Microphone'}
               >
-                {isMicOn ? <Mic className="w-4 h-4 text-emerald-400" /> : <MicOff className="w-4 h-4 text-white" />}
+                {isMicOn ? <Mic className="w-4 h-4 text-teal-300" /> : <MicOff className="w-4 h-4 text-white" />}
                 <span className="hidden sm:inline">{isMicOn ? 'Mute' : 'Unmuted'}</span>
               </button>
 
@@ -1264,7 +1255,7 @@ export default function VirtualTrainingDeliveryModal({
                 }`}
                 title={isCamOn ? 'Stop Camera' : 'Start Camera'}
               >
-                {isCamOn ? <Video className="w-4 h-4 text-[#38bdf8]" /> : <VideoOff className="w-4 h-4 text-white" />}
+                {isCamOn ? <Video className="w-4 h-4 text-[#5eead4]" /> : <VideoOff className="w-4 h-4 text-white" />}
                 <span className="hidden sm:inline">{isCamOn ? 'Stop Video' : 'Start Video'}</span>
               </button>
             </div>
@@ -1276,12 +1267,12 @@ export default function VirtualTrainingDeliveryModal({
                 onClick={handleToggleScreenShare}
                 className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow cursor-pointer ${
                   isScreenSharing
-                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                    : 'bg-[#0a66c2] hover:bg-[#004182] text-white'
+                    ? 'bg-[#0f766e] hover:bg-teal-800 text-white'
+                    : 'bg-[#0f766e] hover:bg-[#115e59] text-white'
                 }`}
               >
                 <Monitor className="w-4 h-4" />
-                <span>{isScreenSharing ? 'Stop Screen Share' : 'Share Screen'}</span>
+                <span>{isScreenSharing ? 'Stop Screen Share' : 'Share'}</span>
               </button>
 
               <button
@@ -1289,7 +1280,7 @@ export default function VirtualTrainingDeliveryModal({
                 onClick={() => setActiveSideTab('slides')}
                 className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 border transition cursor-pointer ${
                   activeSideTab === 'slides'
-                    ? 'bg-[#38bdf8]/20 border-[#38bdf8] text-[#38bdf8]'
+                    ? 'bg-[#5eead4]/20 border-[#5eead4] text-[#5eead4]'
                     : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-300'
                 }`}
               >
@@ -1304,13 +1295,13 @@ export default function VirtualTrainingDeliveryModal({
                 type="button"
                 onClick={() => setActiveSideTab('attendees')}
                 className={`p-2 rounded-lg relative transition cursor-pointer ${
-                  activeSideTab === 'attendees' ? 'bg-[#0a66c2] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  activeSideTab === 'attendees' ? 'bg-[#0f766e] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
-                title="Attendees & Waiting Room"
+                title="Attendees"
               >
                 <Users className="w-4 h-4" />
                 {waitingAttendees.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 font-bold text-[9px] flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0f766e] text-slate-950 font-bold text-[9px] flex items-center justify-center">
                     {waitingAttendees.length}
                   </span>
                 )}
@@ -1320,13 +1311,13 @@ export default function VirtualTrainingDeliveryModal({
                 type="button"
                 onClick={() => setActiveSideTab('chat')}
                 className={`p-2 rounded-lg relative transition cursor-pointer ${
-                  activeSideTab === 'chat' ? 'bg-[#0a66c2] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  activeSideTab === 'chat' ? 'bg-[#0f766e] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
                 title="Live Chat & Q&A"
               >
                 <MessageSquare className="w-4 h-4" />
                 {chatMessages.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#38bdf8] text-slate-950 font-bold text-[9px] flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#5eead4] text-slate-950 font-bold text-[9px] flex items-center justify-center">
                     {chatMessages.length}
                   </span>
                 )}
@@ -1345,14 +1336,14 @@ export default function VirtualTrainingDeliveryModal({
               onClick={() => setActiveSideTab('attendees')}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeSideTab === 'attendees'
-                  ? 'bg-[#0a66c2] text-white shadow-xs'
+                  ? 'bg-[#0f766e] text-white shadow-xs'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
               <span>Attendees ({admittedAttendees.length})</span>
               {waitingAttendees.length > 0 && (
-                <span className="px-1.5 py-0.2 bg-amber-500 text-slate-950 rounded-full text-[9px] font-extrabold">
+                <span className="px-1.5 py-0.2 bg-[#0f766e] text-slate-950 rounded-full text-[9px] font-extrabold">
                   {waitingAttendees.length}
                 </span>
               )}
@@ -1363,7 +1354,7 @@ export default function VirtualTrainingDeliveryModal({
               onClick={() => setActiveSideTab('chat')}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeSideTab === 'chat'
-                  ? 'bg-[#0a66c2] text-white shadow-xs'
+                  ? 'bg-[#0f766e] text-white shadow-xs'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -1376,7 +1367,7 @@ export default function VirtualTrainingDeliveryModal({
               onClick={() => setActiveSideTab('slides')}
               className={`px-3 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeSideTab === 'slides'
-                  ? 'bg-[#0a66c2] text-white shadow-xs'
+                  ? 'bg-[#0f766e] text-white shadow-xs'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -1393,9 +1384,9 @@ export default function VirtualTrainingDeliveryModal({
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-                    <h3 className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-                      Waiting Room ({waitingAttendees.length})
+                    <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+                    <h3 className="text-xs font-bold text-teal-300 uppercase tracking-wider">
+                      Waiting ({waitingAttendees.length})
                     </h3>
                   </div>
 
@@ -1403,7 +1394,7 @@ export default function VirtualTrainingDeliveryModal({
                     <button
                       type="button"
                       onClick={handleAdmitAll}
-                      className="text-xs font-bold text-[#38bdf8] hover:underline cursor-pointer flex items-center gap-1"
+                      className="text-xs font-bold text-[#5eead4] hover:underline cursor-pointer flex items-center gap-1"
                     >
                       <UserCheck className="w-3.5 h-3.5" /> Admit All
                     </button>
@@ -1419,10 +1410,10 @@ export default function VirtualTrainingDeliveryModal({
                     {waitingAttendees.map((att) => (
                       <div
                         key={att.id}
-                        className="p-3 bg-[#131b2e] border border-amber-500/30 rounded-lg flex items-center justify-between gap-2 shadow-xs"
+                        className="p-3 bg-[#131b2e] border border-teal-500/30 rounded-lg flex items-center justify-between gap-2 shadow-xs"
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
-                          <div className="w-8 h-8 rounded-full bg-amber-500/20 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-teal-500/20 text-teal-300 font-bold text-xs flex items-center justify-center shrink-0">
                             {att.avatar || att.name.charAt(0)}
                           </div>
                           <div className="min-w-0">
@@ -1439,7 +1430,7 @@ export default function VirtualTrainingDeliveryModal({
                           <button
                             type="button"
                             onClick={() => handleAdmitAttendee(att.id)}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 bg-[#0f766e] hover:bg-teal-800 text-white rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                           >
                             <UserCheck className="w-3 h-3" /> Admit
                           </button>
@@ -1465,7 +1456,7 @@ export default function VirtualTrainingDeliveryModal({
                       key={att.id}
                       className={`p-3 rounded-lg border transition flex items-center justify-between gap-2 ${
                         att.handRaised
-                          ? 'bg-amber-500/10 border-amber-500/40 shadow-sm'
+                          ? 'bg-teal-500/10 border-teal-500/40 shadow-sm'
                           : 'bg-[#111827] border-slate-800 hover:border-slate-700'
                       }`}
                     >
@@ -1473,7 +1464,7 @@ export default function VirtualTrainingDeliveryModal({
                         <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center shrink-0 relative">
                           {att.avatar || att.name.charAt(0)}
                           {att.handRaised && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center text-[9px] font-extrabold animate-bounce">
+                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0f766e] text-slate-950 flex items-center justify-center text-[9px] font-extrabold animate-bounce">
                               <Hand className="w-2.5 h-2.5 text-slate-950" />
                             </span>
                           )}
@@ -1484,7 +1475,7 @@ export default function VirtualTrainingDeliveryModal({
                               {att.name}
                             </strong>
                             {att.handRaised && (
-                              <span className="px-1.5 py-0.2 bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold rounded">
+                              <span className="px-1.5 py-0.2 bg-teal-500/20 text-teal-300 border border-teal-500/30 text-[9px] font-bold rounded">
                                 Hand Raised
                               </span>
                             )}
@@ -1500,10 +1491,10 @@ export default function VirtualTrainingDeliveryModal({
                           <button
                             type="button"
                             onClick={() => toggleHandRaise(training.id, att.id)}
-                            className="px-2 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-bold rounded border border-amber-500/30 transition cursor-pointer"
-                            title="Lower Hand"
+                            className="px-2 py-1 bg-teal-500/20 hover:bg-teal-500/30 text-teal-300 text-[10px] font-bold rounded border border-teal-500/30 transition cursor-pointer"
+                            title="Lower"
                           >
-                            Lower Hand
+                            Lower
                           </button>
                         )}
                       </div>
@@ -1532,12 +1523,12 @@ export default function VirtualTrainingDeliveryModal({
                       key={msg.id}
                       className={`p-3 rounded-lg text-xs space-y-1 ${
                         msg.senderRole === 'host'
-                          ? 'bg-[#0a66c2]/20 border border-[#0a66c2]/40 text-slate-100 ml-4'
+                          ? 'bg-[#0f766e]/20 border border-[#0f766e]/40 text-slate-100 ml-4'
                           : 'bg-[#131b2e] border border-[#1e293b] text-slate-200 mr-4'
                       }`}
                     >
                       <div className="flex justify-between items-center text-[10px]">
-                        <strong className={msg.senderRole === 'host' ? 'text-[#38bdf8] font-bold' : 'text-slate-300 font-bold'}>
+                        <strong className={msg.senderRole === 'host' ? 'text-[#5eead4] font-bold' : 'text-slate-300 font-bold'}>
                           {msg.senderName}
                         </strong>
                         <span className="text-slate-500 font-mono">{msg.timestamp}</span>
@@ -1555,12 +1546,12 @@ export default function VirtualTrainingDeliveryModal({
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Post announcement or reply to Q&A..."
-                  className="flex-1 bg-[#131b2e] border border-[#233358] rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#38bdf8]"
+                  className="flex-1 bg-[#131b2e] border border-[#233358] rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#5eead4]"
                 />
                 <button
                   type="submit"
                   disabled={!chatInput.trim()}
-                  className="px-3 py-2 bg-[#0a66c2] hover:bg-[#004182] disabled:opacity-40 text-white rounded-lg transition cursor-pointer shrink-0"
+                  className="px-3 py-2 bg-[#0f766e] hover:bg-[#115e59] disabled:opacity-40 text-white rounded-lg transition cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -1591,12 +1582,12 @@ export default function VirtualTrainingDeliveryModal({
                     }}
                     className={`w-full text-left p-3 rounded-lg border transition cursor-pointer ${
                       currentSlideIndex === idx
-                        ? 'bg-[#0a66c2]/20 border-[#0a66c2] text-white shadow-md'
+                        ? 'bg-[#0f766e]/20 border-[#0f766e] text-white shadow-md'
                         : 'bg-[#111827] border-slate-800 text-slate-300 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex justify-between items-center text-[10px] text-slate-400 mb-1">
-                      <span className="font-bold text-[#38bdf8]">SLIDE {idx + 1}</span>
+                      <span className="font-bold text-[#5eead4]">SLIDE {idx + 1}</span>
                       <span>{slide.badge}</span>
                     </div>
                     <strong className="text-xs font-bold block">{slide.title}</strong>
@@ -1610,7 +1601,7 @@ export default function VirtualTrainingDeliveryModal({
           {/* Session Overview Footer */}
           <div className="p-3.5 bg-[#090d16] border-t border-[#1e293b] flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-teal-300" />
               <span>Accredited Session</span>
             </span>
             <span className="font-mono text-slate-300">{training.opportunityTitle || 'Elevata Academy'}</span>
@@ -1623,7 +1614,7 @@ export default function VirtualTrainingDeliveryModal({
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full bg-[#0f766e]/20 text-teal-300 flex items-center justify-center shrink-0">
                 <Award className="w-6 h-6" />
               </div>
               <div>
@@ -1641,11 +1632,11 @@ export default function VirtualTrainingDeliveryModal({
               </div>
               <div className="flex justify-between">
                 <span>Readiness Score Bonus:</span>
-                <strong className="text-emerald-400 font-mono">+12% Points Each</strong>
+                <strong className="text-teal-300 font-mono">+12% Points Each</strong>
               </div>
               <div className="flex justify-between">
                 <span>Digital Credentials Issued:</span>
-                <strong className="text-[#38bdf8] font-mono">Accredited Certificate</strong>
+                <strong className="text-[#5eead4] font-mono">Accredited Certificate</strong>
               </div>
             </div>
 
@@ -1660,7 +1651,7 @@ export default function VirtualTrainingDeliveryModal({
               <button
                 type="button"
                 onClick={handleEndSession}
-                className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 bg-[#0f766e] hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
               >
                 <Award className="w-4 h-4" />
                 <span>Confirm &amp; Issue Certificates</span>
@@ -1673,15 +1664,15 @@ export default function VirtualTrainingDeliveryModal({
       {/* MODAL: Final Session Completed Summary */}
       {isEnded && (
         <div className="fixed inset-0 z-50 bg-[#060911]/95 backdrop-blur-lg flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-emerald-500/40 rounded-2xl max-w-md w-full p-8 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-emerald-500/20 text-emerald-400 mx-auto flex items-center justify-center shadow-lg">
+          <div className="bg-[#0f172a] border border-teal-500/40 rounded-2xl max-w-md w-full p-8 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-full bg-[#0f766e]/20 text-teal-300 mx-auto flex items-center justify-center shadow-lg">
               <Award className="w-8 h-8" />
             </div>
 
             <div className="space-y-1.5">
               <h2 className="text-xl font-extrabold text-white">Training Successfully Delivered!</h2>
               <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
-                All <strong className="text-emerald-400 font-bold">{admittedAttendees.length} admitted SMEs</strong> have been issued accredited certificates of completion with readiness points added.
+                All <strong className="text-teal-300 font-bold">{admittedAttendees.length} admitted SMEs</strong> have been issued accredited certificates of completion with readiness points added.
               </p>
             </div>
 
@@ -1692,14 +1683,14 @@ export default function VirtualTrainingDeliveryModal({
               </div>
               <div className="flex justify-between text-slate-300">
                 <span>Certified Alumni:</span>
-                <span className="text-emerald-400 font-bold">{admittedAttendees.map(a=>a.name).join(', ') || 'Attended SMEs'}</span>
+                <span className="text-teal-300 font-bold">{admittedAttendees.map(a=>a.name).join(', ') || 'Attended SMEs'}</span>
               </div>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-3 bg-[#0a66c2] hover:bg-[#004182] text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer"
+              className="w-full py-3 bg-[#0f766e] hover:bg-[#115e59] text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer"
             >
               Return to Opportunities Dashboard
             </button>

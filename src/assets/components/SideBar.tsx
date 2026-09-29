@@ -102,7 +102,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     //{ path: '/inventory', label: 'Inventory Catalog', icon: <Package className="w-4 h-4" /> },
     { path: '/activities', label: 'Business Activities', icon: <Activity className="w-4 h-4" /> },
     { path: '/opportunity-hub', label: 'Opportunity Hub', icon: <Target className="w-4 h-4" /> },
-    { path: '/trainings', label: 'Virtual Academy', icon: <GraduationCap className="w-4 h-4" /> },
+    { path: '/trainings', label: 'Training', icon: <GraduationCap className="w-4 h-4" /> },
     { path: '/reports', label: 'Financial Reports', icon: <FileBarChart className="w-4 h-4" /> }
   ];
 

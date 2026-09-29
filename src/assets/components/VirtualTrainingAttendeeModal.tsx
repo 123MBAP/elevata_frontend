@@ -686,10 +686,10 @@ export default function VirtualTrainingAttendeeModal({
       {/* Top Header Bar */}
       <header className="h-14 px-4 sm:px-6 bg-[#0f172a] border-b border-[#1e293b] flex items-center justify-between shrink-0 select-none z-10">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1 font-mono">
-              <Radio className="w-3 h-3 text-emerald-400" /> VIRTUAL ACADEMY
+          <div className="flex items-center gap-2 px-2.5 py-1 bg-[#0f766e]/10 border border-teal-500/30 rounded-full">
+            <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
+            <span className="text-[11px] font-bold text-teal-300 uppercase tracking-wider flex items-center gap-1 font-mono">
+              <Radio className="w-3 h-3 text-teal-300" /> VIRTUAL ACADEMY
             </span>
           </div>
 
@@ -715,19 +715,19 @@ export default function VirtualTrainingAttendeeModal({
           <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/80 rounded-full border border-slate-700 text-[11px]">
             <span className="text-slate-400">Completion:</span>
             <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
-              <div className="h-full bg-emerald-500 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, progress * 2)}%` }} />
+              <div className="h-full bg-[#0f766e] rounded-full transition-all duration-300" style={{ width: `${Math.min(100, progress * 2)}%` }} />
             </div>
-            <span className="font-mono font-bold text-emerald-400">{Math.min(100, progress * 2)}%</span>
+            <span className="font-mono font-bold text-teal-300">{Math.min(100, progress * 2)}%</span>
           </div>
         </div>
 
-        {/* Right: Exit / Leave Session */}
+        {/* Right: Exit / Leave */}
         <div className="flex items-center gap-2">
           {progress >= 30 && !showCertificate && (
             <button
               type="button"
               onClick={handleClaimCertificate}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer animate-pulse"
+              className="px-3 py-1.5 bg-[#0f766e] hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer animate-pulse"
             >
               <Award className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Claim Certificate</span>
@@ -757,23 +757,23 @@ export default function VirtualTrainingAttendeeModal({
             {/* STATE 1: WAITING ROOM (if not yet admitted) */}
             {!isAdmitted ? (
               <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center bg-gradient-to-b from-[#0e1628] to-[#070b14] space-y-6">
-                <div className="w-20 h-20 rounded-full bg-amber-500/10 border-2 border-amber-500/30 flex items-center justify-center relative">
-                  <Clock className="w-10 h-10 text-amber-400 animate-spin" style={{ animationDuration: '6s' }} />
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-400 animate-ping" />
+                <div className="w-20 h-20 rounded-full bg-teal-500/10 border-2 border-teal-500/30 flex items-center justify-center relative">
+                  <Clock className="w-10 h-10 text-teal-300 animate-spin" style={{ animationDuration: '6s' }} />
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-teal-400 animate-ping" />
                 </div>
 
                 <div className="space-y-2 max-w-md">
                   <h2 className="text-xl sm:text-2xl font-bold text-white">
-                    You're in the Waiting Room
+                    Waiting
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                    The trainer <strong className="text-[#38bdf8] font-semibold">{training.speaker}</strong> will admit you to the live session in a moment.
+                    Waiting for host to admit you.
                   </p>
                 </div>
 
                 {/* SME Profile Badge */}
                 <div className="p-4 bg-[#131d33] border border-[#1f2e50] rounded-xl max-w-sm w-full text-left flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-[#0a66c2] text-white font-bold flex items-center justify-center text-sm">
+                  <div className="w-10 h-10 rounded-full bg-[#0f766e] text-white font-bold flex items-center justify-center text-sm">
                     {activeSme.ownerName.split(' ').map(n=>n[0]).join('')}
                   </div>
                   <div>
@@ -784,16 +784,16 @@ export default function VirtualTrainingAttendeeModal({
 
                 {/* Instant Quick-Enter Test Button */}
                 <div className="pt-2">
-                  <p className="text-[11px] text-slate-500 mb-2">Simulated Testing Environment</p>
+                  <p className="text-[11px] text-slate-500 mb-2">Test</p>
                   <button
                     type="button"
                     onClick={() => {
                       // Instantly admit self in context for testing and interactive demo
                       admitAttendee(training.id, activeSme.id);
                     }}
-                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-[#38bdf8] border border-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-[#5eead4] border border-slate-700 rounded-lg text-xs font-bold transition cursor-pointer"
                   >
-                    Auto-Admit to Session
+                    Enter
                   </button>
                 </div>
               </div>
@@ -845,19 +845,19 @@ export default function VirtualTrainingAttendeeModal({
                         /* Ultra-clean animated studio presenter stage */
                         <div className="w-full h-full flex flex-col items-center justify-center p-8 text-center bg-gradient-to-b from-[#0e1628] via-[#090d18] to-[#04060c] space-y-4">
                           <div className="relative">
-                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-[#0a66c2] to-[#0284c7] border-4 border-[#38bdf8] flex items-center justify-center shadow-2xl shadow-sky-500/20">
+                            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-[#0f766e] to-[#0f766e] border-4 border-[#5eead4] flex items-center justify-center shadow-2xl shadow-teal-500/20">
                               <span className="text-3xl font-extrabold text-white tracking-wider">
                                 {training.speaker?.split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase() || 'TR'}
                               </span>
                             </div>
-                            <span className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-slate-900 flex items-center justify-center shadow">
+                            <span className="absolute bottom-1 right-1 w-6 h-6 rounded-full bg-[#0f766e] border-2 border-slate-900 flex items-center justify-center shadow">
                               <Mic className="w-3.5 h-3.5 text-white" />
                             </span>
                           </div>
 
                           <div className="space-y-1 max-w-md">
-                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold font-mono uppercase tracking-wider">
-                              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0f766e]/15 border border-teal-500/30 text-teal-300 text-xs font-bold font-mono uppercase tracking-wider">
+                              <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
                               Presenter Live Audio &amp; Video
                             </div>
                             <h3 className="text-lg sm:text-xl font-bold text-white">{training.speaker}</h3>
@@ -922,8 +922,8 @@ export default function VirtualTrainingAttendeeModal({
                         <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white">
                           <div className="flex justify-between items-start">
                             <div className="flex items-center gap-2">
-                              <span className="px-2.5 py-1 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                              <span className="px-2.5 py-1 bg-teal-500/20 border border-teal-500/40 text-teal-300 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
+                                <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
                                 Live Screen Synced Deck
                               </span>
                               <span className="text-xs text-slate-400">
@@ -937,7 +937,7 @@ export default function VirtualTrainingAttendeeModal({
                               <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
                                 {presentationSlides[currentSlideIndex].title}
                               </h1>
-                              <p className="text-xs sm:text-sm text-[#38bdf8] font-medium mt-1">
+                              <p className="text-xs sm:text-sm text-[#5eead4] font-medium mt-1">
                                 {presentationSlides[currentSlideIndex].subtitle}
                               </p>
                             </div>
@@ -945,7 +945,7 @@ export default function VirtualTrainingAttendeeModal({
                             <div className="space-y-2.5 pt-1">
                               {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
                                 <div key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200">
-                                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                                  <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0 mt-0.5" />
                                   <span className="leading-relaxed">{pt}</span>
                                 </div>
                               ))}
@@ -956,7 +956,7 @@ export default function VirtualTrainingAttendeeModal({
                                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                                   {presentationSlides[currentSlideIndex].metricLabel}
                                 </span>
-                                <strong className="text-base font-mono font-bold text-emerald-400">
+                                <strong className="text-base font-mono font-bold text-teal-300">
                                   {presentationSlides[currentSlideIndex].metricValue}
                                 </strong>
                               </div>
@@ -967,8 +967,8 @@ export default function VirtualTrainingAttendeeModal({
                           </div>
 
                           <div className="flex justify-between items-center text-xs text-slate-500 pt-3 border-t border-slate-800/80">
-                            <span>Elevata Virtual Academy · Credit Underwriting &amp; Capacity Program</span>
-                            <span className="text-emerald-400 font-semibold">● Broadcasting to {training.speaker} Session</span>
+                            <span>Elevata</span>
+                            <span className="text-teal-300 font-semibold">● Broadcasting to {training.speaker} Session</span>
                           </div>
                         </div>
                       )}
@@ -978,7 +978,7 @@ export default function VirtualTrainingAttendeeModal({
                     <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
+                          <span className="px-2.5 py-1 bg-[#0f766e]/20 border border-teal-500/40 text-teal-300 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
                             <Radio className="w-3 h-3" /> Host Slide Deck
                           </span>
                           <span className="text-xs text-slate-400">
@@ -1011,7 +1011,7 @@ export default function VirtualTrainingAttendeeModal({
                           <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
                             {presentationSlides[currentSlideIndex].title}
                           </h1>
-                          <p className="text-sm sm:text-base text-[#38bdf8] font-medium mt-1">
+                          <p className="text-sm sm:text-base text-[#5eead4] font-medium mt-1">
                             {presentationSlides[currentSlideIndex].subtitle}
                           </p>
                         </div>
@@ -1019,7 +1019,7 @@ export default function VirtualTrainingAttendeeModal({
                         <div className="space-y-3 pt-2">
                           {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
                             <div key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-200">
-                              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                              <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0 mt-0.5" />
                               <span className="leading-relaxed">{pt}</span>
                             </div>
                           ))}
@@ -1030,7 +1030,7 @@ export default function VirtualTrainingAttendeeModal({
                             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                               {presentationSlides[currentSlideIndex].metricLabel}
                             </span>
-                            <strong className="text-lg font-mono font-bold text-emerald-400">
+                            <strong className="text-lg font-mono font-bold text-teal-300">
                               {presentationSlides[currentSlideIndex].metricValue}
                             </strong>
                           </div>
@@ -1041,7 +1041,7 @@ export default function VirtualTrainingAttendeeModal({
                       </div>
 
                       <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-800/80">
-                        <span>Elevata Virtual Academy · Live Interactive Transmission</span>
+                        <span>Elevata</span>
                         <span>Audio &amp; Video synchronized</span>
                       </div>
                     </div>
@@ -1053,23 +1053,23 @@ export default function VirtualTrainingAttendeeModal({
                   <div className="flex items-center gap-2 bg-slate-950/85 backdrop-blur-md px-3 py-1.5 rounded-lg border border-slate-700/80 shadow-lg pointer-events-auto">
                     {isHostScreenSharing ? (
                       <>
-                        <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-500 animate-ping" />
                         <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
-                          <Radio className="w-3.5 h-3.5 text-red-400" /> Live Screen Share
+                          <Radio className="w-3.5 h-3.5 text-teal-300" /> Live Screen Share
                         </span>
                         <span className="text-slate-600">|</span>
-                        <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
+                        <span className="text-xs text-[#5eead4] font-medium truncate max-w-[180px] sm:max-w-xs">
                           {training.speaker} is presenting
                         </span>
                       </>
                     ) : (
                       <>
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                        <span className="w-2.5 h-2.5 rounded-full bg-teal-400 animate-pulse" />
                         <span className="text-[11px] font-bold text-white flex items-center gap-1.5 uppercase tracking-wider">
-                          <Radio className="w-3.5 h-3.5 text-emerald-400" /> Trainer Live Broadcast
+                          <Radio className="w-3.5 h-3.5 text-teal-300" /> Live
                         </span>
                         <span className="text-slate-600">|</span>
-                        <span className="text-xs text-[#38bdf8] font-medium truncate max-w-[180px] sm:max-w-xs">
+                        <span className="text-xs text-[#5eead4] font-medium truncate max-w-[180px] sm:max-w-xs">
                           {training.speaker} is speaking
                         </span>
                       </>
@@ -1084,7 +1084,7 @@ export default function VirtualTrainingAttendeeModal({
                         onClick={() => setAttendeeViewMode('presentation')}
                         className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1.5 cursor-pointer ${
                           attendeeViewMode === 'presentation'
-                            ? 'bg-[#0a66c2] text-white'
+                            ? 'bg-[#0f766e] text-white'
                             : 'text-slate-400 hover:text-white'
                         }`}
                         title="Presentation / Screen View"
@@ -1098,7 +1098,7 @@ export default function VirtualTrainingAttendeeModal({
                         onClick={() => setAttendeeViewMode('speaker')}
                         className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1.5 cursor-pointer ${
                           attendeeViewMode === 'speaker'
-                            ? 'bg-[#0a66c2] text-white'
+                            ? 'bg-[#0f766e] text-white'
                             : 'text-slate-400 hover:text-white'
                         }`}
                         title="Trainer Camera Full Stage"
@@ -1112,7 +1112,7 @@ export default function VirtualTrainingAttendeeModal({
                         onClick={() => setAttendeeViewMode('slides')}
                         className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1.5 cursor-pointer ${
                           attendeeViewMode === 'slides'
-                            ? 'bg-[#0a66c2] text-white'
+                            ? 'bg-[#0f766e] text-white'
                             : 'text-slate-400 hover:text-white'
                         }`}
                         title="Session Slides"
@@ -1122,7 +1122,7 @@ export default function VirtualTrainingAttendeeModal({
                       </button>
                     </div>
 
-                    <span className="px-2.5 py-1 bg-emerald-950/80 border border-emerald-500/40 text-emerald-400 text-[10px] font-bold rounded-md uppercase tracking-wider shadow hidden sm:inline-block">
+                    <span className="px-2.5 py-1 bg-teal-950/80 border border-teal-500/40 text-teal-300 text-[10px] font-bold rounded-md uppercase tracking-wider shadow hidden sm:inline-block">
                       {isLivekitConnected ? 'LiveKit Cloud SFU' : remoteStream ? 'WebRTC HD P2P' : 'Live Snapshot HD'}
                     </span>
                   </div>
@@ -1131,7 +1131,7 @@ export default function VirtualTrainingAttendeeModal({
                 {/* Overlaid Bottom Status Bar */}
                 <div className="p-3 bg-gradient-to-t from-slate-950/95 via-slate-950/60 to-transparent flex justify-between items-center text-xs text-slate-400 z-10">
                   <span className="flex items-center gap-1.5 text-[11px]">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Elevata Encrypted Stream
+                    <ShieldCheck className="w-3.5 h-3.5 text-teal-300" /> Elevata Encrypted Stream
                   </span>
                   <span className="text-[11px] text-slate-400">
                     Live Session · Synced with Trainer
@@ -1144,7 +1144,7 @@ export default function VirtualTrainingAttendeeModal({
                   <div className="w-40 sm:w-44 h-28 sm:h-32 bg-[#0a0f1d] border border-slate-700/80 rounded-xl overflow-hidden shadow-2xl p-2 flex flex-col justify-between relative group">
                     <div className="flex justify-between items-center z-10">
                       <span className="text-[9px] font-bold text-slate-200 bg-black/70 px-1.5 py-0.5 rounded flex items-center gap-1">
-                        <Radio className="w-2.5 h-2.5 text-emerald-400 animate-pulse" /> Trainer
+                        <Radio className="w-2.5 h-2.5 text-teal-300 animate-pulse" /> Trainer
                       </span>
                       <button
                         type="button"
@@ -1191,17 +1191,17 @@ export default function VirtualTrainingAttendeeModal({
                         />
                       ) : (
                         <div className="flex flex-col items-center">
-                          <div className="w-10 h-10 rounded-full bg-[#0a66c2] flex items-center justify-center text-sm font-bold text-white shadow-lg">
+                          <div className="w-10 h-10 rounded-full bg-[#0f766e] flex items-center justify-center text-sm font-bold text-white shadow-lg">
                             {training.speaker?.split(' ').map(n=>n[0]).join('').slice(0,2) || 'TR'}
                           </div>
-                          <span className="text-[10px] text-emerald-400 mt-1 font-semibold">Live Camera</span>
+                          <span className="text-[10px] text-teal-300 mt-1 font-semibold">Live Camera</span>
                         </div>
                       )}
                     </div>
 
                     <div className="z-10 bg-slate-950/80 backdrop-blur-sm px-2 py-0.5 rounded text-[9px] text-slate-200 truncate font-semibold flex items-center justify-between">
                       <span className="truncate">{training.speaker}</span>
-                      <Mic className="w-3 h-3 text-emerald-400 shrink-0 ml-1" />
+                      <Mic className="w-3 h-3 text-teal-300 shrink-0 ml-1" />
                     </div>
                   </div>
 
@@ -1211,7 +1211,7 @@ export default function VirtualTrainingAttendeeModal({
                       <span className="text-[9px] font-bold text-slate-300 bg-black/70 px-1.5 py-0.5 rounded truncate max-w-[110px]">
                         You ({activeSme.name})
                       </span>
-                      {isMicOn ? <Mic className="w-2.5 h-2.5 text-emerald-400" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}
+                      {isMicOn ? <Mic className="w-2.5 h-2.5 text-teal-300" /> : <MicOff className="w-2.5 h-2.5 text-red-400" />}
                     </div>
 
                     <div className="absolute inset-0 flex items-center justify-center bg-slate-900">
@@ -1230,10 +1230,10 @@ export default function VirtualTrainingAttendeeModal({
                         />
                       ) : isCamOn ? (
                         <div className="text-center">
-                          <div className="w-8 h-8 rounded-full bg-emerald-600/80 mx-auto flex items-center justify-center text-xs font-bold text-white shadow">
+                          <div className="w-8 h-8 rounded-full bg-[#0f766e]/80 mx-auto flex items-center justify-center text-xs font-bold text-white shadow">
                             {activeSme.ownerName?.split(' ').map(n=>n[0]).join('').slice(0,2) || 'ME'}
                           </div>
-                          <span className="text-[9px] text-emerald-400 mt-1 block font-medium">Camera Active</span>
+                          <span className="text-[9px] text-teal-300 mt-1 block font-medium">Camera Active</span>
                         </div>
                       ) : (
                         <div className="text-[10px] text-slate-500 font-medium">Camera Muted</div>
@@ -1257,7 +1257,7 @@ export default function VirtualTrainingAttendeeModal({
                 type="button"
                 onClick={handleToggleAttendeeMic}
                 className={`px-3 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                  isMicOn ? 'bg-emerald-600 text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                  isMicOn ? 'bg-[#0f766e] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
                 }`}
                 title={isMicOn ? 'Mute Microphone' : 'Unmute Microphone'}
               >
@@ -1273,24 +1273,24 @@ export default function VirtualTrainingAttendeeModal({
                 }`}
                 title={isCamOn ? 'Stop Camera' : 'Start Camera'}
               >
-                {isCamOn ? <Video className="w-3.5 h-3.5 text-[#38bdf8]" /> : <VideoOff className="w-3.5 h-3.5 text-white" />}
+                {isCamOn ? <Video className="w-3.5 h-3.5 text-[#5eead4]" /> : <VideoOff className="w-3.5 h-3.5 text-white" />}
                 <span className="hidden sm:inline">{isCamOn ? 'Camera' : 'Start Video'}</span>
               </button>
             </div>
 
-            {/* Center Controls: Raise Hand - Zero Emojis */}
+            {/* Center Controls: Hand - Zero Emojis */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={handleToggleHand}
                 className={`px-4 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition shadow-sm cursor-pointer ${
                   isHandRaised
-                    ? 'bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold'
+                    ? 'bg-[#0f766e] hover:bg-[#0f766e] text-slate-950 font-bold'
                     : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
                 }`}
               >
-                <Hand className={`w-3.5 h-3.5 ${isHandRaised ? 'text-slate-950' : 'text-amber-400'}`} />
-                <span>{isHandRaised ? 'Hand Raised' : 'Raise Hand'}</span>
+                <Hand className={`w-3.5 h-3.5 ${isHandRaised ? 'text-slate-950' : 'text-teal-300'}`} />
+                <span>{isHandRaised ? 'Hand Raised' : 'Hand'}</span>
               </button>
             </div>
 
@@ -1300,7 +1300,7 @@ export default function VirtualTrainingAttendeeModal({
                 type="button"
                 onClick={() => setActiveTab('chat')}
                 className={`px-3 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                  activeTab === 'chat' ? 'bg-[#0a66c2] text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  activeTab === 'chat' ? 'bg-[#0f766e] text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
               >
                 <MessageSquare className="w-3.5 h-3.5" />
@@ -1311,7 +1311,7 @@ export default function VirtualTrainingAttendeeModal({
                 type="button"
                 onClick={() => setActiveTab('materials')}
                 className={`px-3 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
-                  activeTab === 'materials' ? 'bg-[#0a66c2] text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  activeTab === 'materials' ? 'bg-[#0f766e] text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
               >
                 <FileText className="w-3.5 h-3.5" />
@@ -1331,7 +1331,7 @@ export default function VirtualTrainingAttendeeModal({
               onClick={() => setActiveTab('chat')}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === 'chat'
-                  ? 'bg-[#0a66c2] text-white'
+                  ? 'bg-[#0f766e] text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -1344,7 +1344,7 @@ export default function VirtualTrainingAttendeeModal({
               onClick={() => setActiveTab('materials')}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeTab === 'materials'
-                  ? 'bg-[#0a66c2] text-white'
+                  ? 'bg-[#0f766e] text-white'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -1371,12 +1371,12 @@ export default function VirtualTrainingAttendeeModal({
                       key={msg.id}
                       className={`p-3 rounded-lg text-xs space-y-1 ${
                         msg.senderRole === 'host'
-                          ? 'bg-[#0a66c2]/20 border border-[#0a66c2]/40 text-slate-100 mr-4'
+                          ? 'bg-[#0f766e]/20 border border-[#0f766e]/40 text-slate-100 mr-4'
                           : 'bg-[#131b2e] border border-[#1e293b] text-slate-200 ml-4'
                       }`}
                     >
                       <div className="flex justify-between items-center text-[10px]">
-                        <strong className={msg.senderRole === 'host' ? 'text-[#38bdf8] font-bold' : 'text-slate-300 font-bold'}>
+                        <strong className={msg.senderRole === 'host' ? 'text-[#5eead4] font-bold' : 'text-slate-300 font-bold'}>
                           {msg.senderName}
                         </strong>
                         <span className="text-slate-500 font-mono">{msg.timestamp}</span>
@@ -1394,12 +1394,12 @@ export default function VirtualTrainingAttendeeModal({
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Ask a question to the trainer..."
-                  className="flex-1 bg-[#131b2e] border border-[#233358] rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#38bdf8]"
+                  className="flex-1 bg-[#131b2e] border border-[#233358] rounded-lg px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-[#5eead4]"
                 />
                 <button
                   type="submit"
                   disabled={!chatInput.trim()}
-                  className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-40 text-white rounded-lg transition cursor-pointer shrink-0"
+                  className="px-3 py-2 bg-[#0f766e] hover:bg-teal-800 disabled:opacity-40 text-white rounded-lg transition cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -1427,7 +1427,7 @@ export default function VirtualTrainingAttendeeModal({
                 ]).map((mat, i) => (
                   <div key={i} className="p-3 bg-[#111827] border border-slate-800 rounded-xl flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <FileText className="w-4 h-4 text-[#38bdf8] shrink-0" />
+                      <FileText className="w-4 h-4 text-[#5eead4] shrink-0" />
                       <div className="min-w-0">
                         <strong className="text-xs font-bold text-white block truncate">{mat.title}</strong>
                         <span className="text-[10px] text-slate-400">{mat.size}</span>
@@ -1436,7 +1436,7 @@ export default function VirtualTrainingAttendeeModal({
                     <button
                       type="button"
                       onClick={() => alert(`Downloading ${mat.title}...`)}
-                      className="p-1.5 bg-slate-800 hover:bg-slate-700 text-[#38bdf8] rounded-lg transition cursor-pointer"
+                      className="p-1.5 bg-slate-800 hover:bg-slate-700 text-[#5eead4] rounded-lg transition cursor-pointer"
                       title="Download File"
                     >
                       <Download className="w-4 h-4" />
@@ -1450,10 +1450,10 @@ export default function VirtualTrainingAttendeeModal({
           {/* Footer Accreditation */}
           <div className="p-3.5 bg-[#090d16] border-t border-[#1e293b] flex items-center justify-between text-xs text-slate-400">
             <span className="flex items-center gap-1.5">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-teal-300" />
               <span>Accredited Academy</span>
             </span>
-            <span className="font-mono text-emerald-400 font-bold">+12% Readiness Boost</span>
+            <span className="font-mono text-teal-300 font-bold">+12% Readiness Boost</span>
           </div>
         </aside>
       </div>
@@ -1461,18 +1461,18 @@ export default function VirtualTrainingAttendeeModal({
       {/* MODAL: Digital Certificate of Completion */}
       {showCertificate && (
         <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-[#0f172a] border border-emerald-500/40 rounded-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
+          <div className="bg-[#0f172a] border border-teal-500/40 rounded-2xl max-w-2xl w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
             
             {/* Printable Certificate Box */}
-            <div className="border-4 border-double border-emerald-500/40 bg-gradient-to-b from-[#0b1324] to-[#080d19] rounded-xl p-6 sm:p-8 text-center space-y-4 relative overflow-hidden">
+            <div className="border-4 border-double border-teal-500/40 bg-gradient-to-b from-[#0b1324] to-[#080d19] rounded-xl p-6 sm:p-8 text-center space-y-4 relative overflow-hidden">
               <div className="flex justify-between items-start">
                 <div className="text-left">
-                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest font-mono">
+                  <span className="text-[10px] font-bold text-teal-300 uppercase tracking-widest font-mono">
                     ELEVATA NATIONAL CREDIT RAILS
                   </span>
                   <p className="text-xs text-slate-400">Certificate of Accreditation</p>
                 </div>
-                <div className="w-10 h-10 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-[#0f766e]/20 text-teal-300 flex items-center justify-center">
                   <Award className="w-6 h-6" />
                 </div>
               </div>
@@ -1482,7 +1482,7 @@ export default function VirtualTrainingAttendeeModal({
                   Certificate of Completion
                 </h2>
                 <p className="text-xs text-slate-400">This certifies that</p>
-                <h3 className="text-xl sm:text-2xl font-bold text-emerald-400 font-heading pt-1">
+                <h3 className="text-xl sm:text-2xl font-bold text-teal-300 font-heading pt-1">
                   {activeSme.name}
                 </h3>
                 <p className="text-xs text-slate-300 font-medium">
@@ -1494,7 +1494,7 @@ export default function VirtualTrainingAttendeeModal({
                 has successfully attended and qualified in the accredited capacity-building masterclass:
               </p>
 
-              <div className="p-3 bg-[#131d33] border border-emerald-500/30 rounded-lg max-w-md mx-auto">
+              <div className="p-3 bg-[#131d33] border border-teal-500/30 rounded-lg max-w-md mx-auto">
                 <strong className="text-xs font-bold text-white block">{training.title}</strong>
                 <span className="text-[11px] text-slate-400">{training.speaker} · {training.speakerOrg || 'Elevata Partner Academy'}</span>
               </div>
@@ -1514,7 +1514,7 @@ export default function VirtualTrainingAttendeeModal({
 
             {/* Actions */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-              <div className="flex items-center gap-2 text-xs text-emerald-400 font-medium">
+              <div className="flex items-center gap-2 text-xs text-teal-300 font-medium">
                 <Check className="w-4 h-4 stroke-[3]" />
                 <span>+12% Readiness Points applied to your business profile</span>
               </div>
@@ -1531,7 +1531,7 @@ export default function VirtualTrainingAttendeeModal({
                 <button
                   type="button"
                   onClick={onClose}
-                  className="flex-1 sm:flex-none px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold transition shadow-md cursor-pointer"
+                  className="flex-1 sm:flex-none px-5 py-2 bg-[#0f766e] hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition shadow-md cursor-pointer"
                 >
                   Return to Dashboard
                 </button>
