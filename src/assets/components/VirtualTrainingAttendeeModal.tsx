@@ -4,24 +4,17 @@ import {
   VideoOff,
   Mic,
   MicOff,
-  Users,
   MessageSquare,
   FileText,
   Award,
-  CheckCircle2,
   X,
   Send,
   Download,
-  Share2,
   Radio,
   Clock,
   ShieldCheck,
   Check,
-  ChevronLeft,
-  ChevronRight,
   Hand,
-  Sparkles,
-  ExternalLink,
   Printer,
   Monitor,
   Maximize2
@@ -70,7 +63,6 @@ export default function VirtualTrainingAttendeeModal({
   const [liveSnapshot, setLiveSnapshot] = useState<string | null>(null);
   const [liveCameraSnapshot, setLiveCameraSnapshot] = useState<string | null>(null);
   const [isHostScreenSharing, setIsHostScreenSharing] = useState(false);
-  const [shareType, setShareType] = useState<'screen' | 'slides' | undefined>(undefined);
   const [isVideoReceivingFrames, setIsVideoReceivingFrames] = useState(false);
   const [localAttendeeStream, setLocalAttendeeStream] = useState<MediaStream | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
@@ -94,8 +86,7 @@ export default function VirtualTrainingAttendeeModal({
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [progress, setProgress] = useState(0);
   const [showCertificate, setShowCertificate] = useState(false);
-  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
-  const [attendeeViewMode, setAttendeeViewMode] = useState<'presentation' | 'speaker' | 'slides'>('presentation');
+  const [attendeeViewMode, setAttendeeViewMode] = useState<'presentation' | 'speaker'>('speaker');
 
   // Attendee local camera stream
   useEffect(() => {
@@ -127,66 +118,6 @@ export default function VirtualTrainingAttendeeModal({
       }
     };
   }, [localAttendeeStream]);
-
-  // Sample slides synced with host presentation
-  const presentationSlides = [
-    {
-      title: 'SME Financial Readiness & Underwriting Compliance',
-      subtitle: 'Building a Bankable Credit Dossier',
-      badge: 'Module 1 of 4',
-      bulletPoints: [
-        'How algorithmic underwriting analyzes your bank statement cashflows',
-        'Maintaining an active Debt Service Coverage Ratio (DSCR > 1.35x)',
-        'Understanding digital tax clearance (EBM invoice reconciliation)',
-        'Qualifying for 100% unsecured working capital lines'
-      ],
-      metricLabel: 'Underwriting Benchmark',
-      metricValue: '65%+ Readiness Score',
-      metricNote: 'Instantly surfaces your business on national credit rails'
-    },
-    {
-      title: 'Tax Compliance & EBM Record-Keeping',
-      subtitle: 'Eliminating Red Flags Before Bank Review',
-      badge: 'Module 2 of 4',
-      bulletPoints: [
-        'RRA tax clearance filing cycles & quarterly proofs',
-        'Matching reported POS sales with corporate bank receipts',
-        'Addressing missing compliance dossiers within 48 hours',
-        'Elevata automatic tax document validation engine'
-      ],
-      metricLabel: 'Compliance Approval Rate',
-      metricValue: '94% Approval',
-      metricNote: 'When EBM verified records are attached upfront'
-    },
-    {
-      title: 'Cashflow Optimization & Working Capital Ratio',
-      subtitle: 'Demonstrating Repayment Capacity',
-      badge: 'Module 3 of 4',
-      bulletPoints: [
-        'Calculating inventory turnover velocity for retail & manufacturing',
-        'Seasonal cash reserves for agricultural harvest cycles',
-        'Separating business bank accounts from personal owner withdrawals',
-        'Leveraging purchase orders (POs) as receivable collateral'
-      ],
-      metricLabel: 'Disbursement Timeline',
-      metricValue: '48 to 72 Hours',
-      metricNote: 'Fast-tracked for verified training alumni'
-    },
-    {
-      title: 'Live Q&A, Application Fast-Track & Certification',
-      subtitle: 'Next Steps to Unlock Financing',
-      badge: 'Module 4 of 4',
-      bulletPoints: [
-        'Direct link to pre-approved opportunity applications',
-        'Accredited Certificate of Completion awarded to all admitted attendees',
-        '+12% automatic boost to your Elevata Loan Readiness Score',
-        'One-on-one bank credit officer interview allocation'
-      ],
-      metricLabel: 'Readiness Boost',
-      metricValue: '+12% Health Boost',
-      metricNote: 'Logged directly in your SME dashboard upon session conclusion'
-    }
-  ];
 
   // Request to join on mount
   useEffect(() => {
@@ -288,7 +219,6 @@ export default function VirtualTrainingAttendeeModal({
             console.log('[LiveKit Attendee] >> ScreenShare track identified and activated <<');
             setRemoteScreenTrack(track);
             setIsHostScreenSharing(true);
-            setShareType('screen');
             setAttendeeViewMode('presentation');
             if (screenVideoRef.current) {
               track.attach(screenVideoRef.current);
@@ -335,7 +265,6 @@ export default function VirtualTrainingAttendeeModal({
           if (isScreen) {
             setRemoteScreenTrack(null);
             setIsHostScreenSharing(false);
-            setShareType(undefined);
             setAttendeeViewMode('speaker');
           } else if (publication.source === Track.Source.Camera || track.source === Track.Source.Camera || track.kind === Track.Kind.Video) {
             setRemoteTrainerCameraTrack(null);
@@ -351,7 +280,6 @@ export default function VirtualTrainingAttendeeModal({
         room.on(RoomEvent.TrackUnmuted, (publication: any) => {
           if (publication.source === Track.Source.ScreenShare) {
             setIsHostScreenSharing(true);
-            setShareType('screen');
             setAttendeeViewMode('presentation');
           }
         });
@@ -424,17 +352,11 @@ export default function VirtualTrainingAttendeeModal({
           setAttendeeViewMode('presentation');
         }
       }
-      if (live.shareType !== undefined) {
-        setShareType(live.shareType);
-      }
       if (live.screenSnapshot) {
         setLiveSnapshot(live.screenSnapshot);
       }
       if (live.cameraSnapshot) {
         setLiveCameraSnapshot(live.cameraSnapshot);
-      }
-      if (live.currentSlideIndex !== undefined) {
-        setCurrentSlideIndex(live.currentSlideIndex);
       }
     }
   }, [currentTraining.liveState]);
@@ -452,24 +374,18 @@ export default function VirtualTrainingAttendeeModal({
         if (msg.type === 'SCREEN_SHARE_STARTED') {
           console.log("[SME] SCREEN_SHARE_STARTED received");
           setIsHostScreenSharing(true);
-          setShareType('screen');
           setAttendeeViewMode('presentation');
           requestStreamFromHost();
         } else if (msg.type === 'SCREEN_SHARE_STOPPED') {
           console.log("[SME] SCREEN_SHARE_STOPPED received, returning to presenter camera stream");
           setIsHostScreenSharing(false);
-          setShareType(undefined);
           setLiveSnapshot(null);
           setAttendeeViewMode('speaker');
         } else if (msg.type === 'SCREEN_FRAME' && msg.frame) {
           setLiveSnapshot(msg.frame);
           setIsHostScreenSharing(true);
-          setShareType('screen');
         } else if (msg.type === 'CAMERA_FRAME' && msg.frame) {
           setLiveCameraSnapshot(msg.frame);
-        } else if (msg.type === 'SLIDE_CHANGED' && msg.slideIndex !== undefined) {
-          setCurrentSlideIndex(msg.slideIndex);
-          setShareType('slides');
         } else if (msg.type === 'OFFER' && (msg.to === activeSme.id || msg.to === 'all')) {
           console.log("[SME] WebRTC offer received via BroadcastChannel");
           handleWebRTCOffer(msg.offer);
@@ -682,9 +598,9 @@ export default function VirtualTrainingAttendeeModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#090d16] text-white flex flex-col font-sans overflow-hidden">
+    <div className="fixed inset-0 z-50 flex min-h-0 flex-col overflow-hidden bg-[#090d16] font-sans text-white">
       {/* Top Header Bar */}
-      <header className="h-14 px-4 sm:px-6 bg-[#0f172a] border-b border-[#1e293b] flex items-center justify-between shrink-0 select-none z-10">
+      <header className="flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[#1e293b] bg-[#0f172a] px-3 py-2 select-none sm:px-6">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-2 px-2.5 py-1 bg-[#0f766e]/10 border border-teal-500/30 rounded-full">
             <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
@@ -746,13 +662,13 @@ export default function VirtualTrainingAttendeeModal({
       </header>
 
       {/* Main Container */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <div className="relative flex min-h-0 flex-1 flex-col overflow-y-auto lg:flex-row lg:overflow-hidden">
         
         {/* Left: Video Stage / Screen Share Viewport */}
-        <main className="flex-1 bg-[#060911] p-3 sm:p-4 flex flex-col justify-between overflow-hidden relative">
+        <main className="flex min-h-[min(70dvh,44rem)] flex-1 flex-col justify-between overflow-hidden bg-[#060911] p-2.5 relative sm:p-4 lg:min-h-0">
           
           {/* Main Stage Viewport */}
-          <div className="flex-1 bg-[#0d1322] border border-[#1e293b] rounded-xl overflow-hidden relative flex flex-col shadow-2xl">
+          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#1e293b] bg-[#0d1322] shadow-2xl">
             
             {/* STATE 1: WAITING ROOM (if not yet admitted) */}
             {!isAdmitted ? (
@@ -868,7 +784,7 @@ export default function VirtualTrainingAttendeeModal({
                         </div>
                       )}
                     </div>
-                  ) : (isHostScreenSharing || attendeeViewMode === 'presentation') && shareType !== 'slides' ? (
+                  ) : (
                     /* VIEW MODE B: LIVE SCREEN SHARE VIEWPORT */
                     <div className="w-full h-full relative flex items-center justify-center bg-slate-950">
                       {remoteScreenTrack ? (
@@ -918,132 +834,14 @@ export default function VirtualTrainingAttendeeModal({
                           className="w-full h-full object-contain select-none"
                         />
                       ) : (
-                        /* Fallback presentation slide deck when waiting for screen buffer */
-                        <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white">
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-center gap-2">
-                              <span className="px-2.5 py-1 bg-teal-500/20 border border-teal-500/40 text-teal-300 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
-                                <span className="w-2 h-2 rounded-full bg-teal-400 animate-ping" />
-                                Live Screen Synced Deck
-                              </span>
-                              <span className="text-xs text-slate-400">
-                                Module {currentSlideIndex + 1} of {presentationSlides.length}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="space-y-5 max-w-2xl my-auto">
-                            <div>
-                              <h1 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
-                                {presentationSlides[currentSlideIndex].title}
-                              </h1>
-                              <p className="text-xs sm:text-sm text-[#5eead4] font-medium mt-1">
-                                {presentationSlides[currentSlideIndex].subtitle}
-                              </p>
-                            </div>
-
-                            <div className="space-y-2.5 pt-1">
-                              {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
-                                <div key={i} className="flex items-start gap-2.5 text-xs sm:text-sm text-slate-200">
-                                  <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0 mt-0.5" />
-                                  <span className="leading-relaxed">{pt}</span>
-                                </div>
-                              ))}
-                            </div>
-
-                            <div className="p-3 bg-[#141f38]/90 border border-[#233358] rounded-xl flex items-center justify-between">
-                              <div>
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                                  {presentationSlides[currentSlideIndex].metricLabel}
-                                </span>
-                                <strong className="text-base font-mono font-bold text-teal-300">
-                                  {presentationSlides[currentSlideIndex].metricValue}
-                                </strong>
-                              </div>
-                              <span className="text-xs text-slate-300 max-w-[200px] text-right">
-                                {presentationSlides[currentSlideIndex].metricNote}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div className="flex justify-between items-center text-xs text-slate-500 pt-3 border-t border-slate-800/80">
-                            <span>Elevata</span>
-                            <span className="text-teal-300 font-semibold">● Broadcasting to {training.speaker} Session</span>
+                        <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-b from-[#0e1628] to-[#04060c] p-6 text-center">
+                          <Monitor className="h-10 w-10 text-slate-600" />
+                          <div>
+                            <h3 className="text-sm font-bold text-white">Waiting for screen share</h3>
+                            <p className="mt-1 text-xs text-slate-400">The trainer will share content here when ready.</p>
                           </div>
                         </div>
                       )}
-                    </div>
-                  ) : (
-                    /* VIEW MODE C: INTERACTIVE SESSION SLIDE DECK */
-                    <div className="w-full h-full p-6 sm:p-10 flex flex-col justify-between bg-gradient-to-br from-[#0e1628] via-[#090d18] to-[#04060c] text-white">
-                      <div className="flex justify-between items-start">
-                        <div className="flex items-center gap-2">
-                          <span className="px-2.5 py-1 bg-[#0f766e]/20 border border-teal-500/40 text-teal-300 text-[11px] font-bold rounded-full uppercase tracking-wider flex items-center gap-1">
-                            <Radio className="w-3 h-3" /> Host Slide Deck
-                          </span>
-                          <span className="text-xs text-slate-400">
-                            Slide {currentSlideIndex + 1} of {presentationSlides.length}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            type="button"
-                            disabled={currentSlideIndex === 0}
-                            onClick={() => setCurrentSlideIndex(prev => Math.max(0, prev - 1))}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
-                          >
-                            <ChevronLeft className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={currentSlideIndex === presentationSlides.length - 1}
-                            onClick={() => setCurrentSlideIndex(prev => Math.min(presentationSlides.length - 1, prev + 1))}
-                            className="p-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 rounded-lg text-xs transition cursor-pointer"
-                          >
-                            <ChevronRight className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-6 max-w-2xl my-auto">
-                        <div>
-                          <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight leading-tight">
-                            {presentationSlides[currentSlideIndex].title}
-                          </h1>
-                          <p className="text-sm sm:text-base text-[#5eead4] font-medium mt-1">
-                            {presentationSlides[currentSlideIndex].subtitle}
-                          </p>
-                        </div>
-
-                        <div className="space-y-3 pt-2">
-                          {presentationSlides[currentSlideIndex].bulletPoints.map((pt, i) => (
-                            <div key={i} className="flex items-start gap-3 text-xs sm:text-sm text-slate-200">
-                              <CheckCircle2 className="w-4 h-4 text-teal-300 shrink-0 mt-0.5" />
-                              <span className="leading-relaxed">{pt}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="p-4 bg-[#141f38] border border-[#233358] rounded-xl flex items-center justify-between">
-                          <div>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                              {presentationSlides[currentSlideIndex].metricLabel}
-                            </span>
-                            <strong className="text-lg font-mono font-bold text-teal-300">
-                              {presentationSlides[currentSlideIndex].metricValue}
-                            </strong>
-                          </div>
-                          <span className="text-xs text-slate-300 max-w-[220px] text-right">
-                            {presentationSlides[currentSlideIndex].metricNote}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-between items-center text-xs text-slate-500 pt-4 border-t border-slate-800/80">
-                        <span>Elevata</span>
-                        <span>Audio &amp; Video synchronized</span>
-                      </div>
                     </div>
                   )}
                 </div>
@@ -1107,19 +905,6 @@ export default function VirtualTrainingAttendeeModal({
                         <span className="hidden sm:inline">Trainer Camera</span>
                       </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setAttendeeViewMode('slides')}
-                        className={`px-2.5 py-1 text-[11px] font-bold rounded-md transition flex items-center gap-1.5 cursor-pointer ${
-                          attendeeViewMode === 'slides'
-                            ? 'bg-[#0f766e] text-white'
-                            : 'text-slate-400 hover:text-white'
-                        }`}
-                        title="Session Slides"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                        <span className="hidden sm:inline">Slides</span>
-                      </button>
                     </div>
 
                     <span className="px-2.5 py-1 bg-teal-950/80 border border-teal-500/40 text-teal-300 text-[10px] font-bold rounded-md uppercase tracking-wider shadow hidden sm:inline-block">
@@ -1250,7 +1035,7 @@ export default function VirtualTrainingAttendeeModal({
           </div>
 
           {/* Bottom Attendee Control Dock */}
-          <div className="h-16 mt-3 bg-[#0f172a] border border-[#1e293b] rounded-xl px-4 flex items-center justify-between shrink-0">
+          <div className="mt-2 flex min-h-14 shrink-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[#1e293b] bg-[#0f172a] px-2.5 py-2 sm:mt-3 sm:min-h-16 sm:px-4">
             {/* Left Controls: Mic & Camera */}
             <div className="flex items-center gap-2">
               <button
@@ -1322,7 +1107,7 @@ export default function VirtualTrainingAttendeeModal({
         </main>
 
         {/* Right Side Panel: Live Q&A, Materials & Curriculum */}
-        <aside className="w-full lg:w-96 bg-[#0c1222] border-t lg:border-t-0 lg:border-l border-[#1e293b] flex flex-col justify-between shrink-0 overflow-hidden">
+        <aside className="flex max-h-[38dvh] min-h-64 w-full shrink-0 flex-col justify-between overflow-hidden border-t border-[#1e293b] bg-[#0c1222] lg:max-h-none lg:min-h-0 lg:w-96 lg:border-l lg:border-t-0">
           
           {/* Header Tabs */}
           <div className="p-3 bg-[#0f172a] border-b border-[#1e293b] flex items-center gap-1">
@@ -1422,8 +1207,7 @@ export default function VirtualTrainingAttendeeModal({
               <div className="space-y-2">
                 {(training.materials || [
                   { title: 'SME Tax Clearance Checklist.pdf', size: '1.2 MB' },
-                  { title: 'Credit Readiness Evaluation Sheet.xlsx', size: '850 KB' },
-                  { title: 'Presentation Slides - Session 1.pdf', size: '3.4 MB' }
+                  { title: 'Credit Readiness Evaluation Sheet.xlsx', size: '850 KB' }
                 ]).map((mat, i) => (
                   <div key={i} className="p-3 bg-[#111827] border border-slate-800 rounded-xl flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">

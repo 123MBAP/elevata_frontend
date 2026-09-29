@@ -4,13 +4,14 @@ import {
   User as UserIcon,
   Plus,
   Trash2,
-  Send,
   Copy,
   Check,
   MessageSquare,
-  ChevronRight,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  Sparkles,
+  Paperclip,
+  ArrowUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
@@ -38,6 +39,11 @@ export default function ElevataBotPage() {
   const { activeSme } = useApp();
 
   const isFI = user?.role === 'FINANCIAL_INSTITUTION' || user?.role === 'ADMIN';
+  const firstName = user?.business?.ownerName
+    ? user.business.ownerName.split(' ')[0]
+    : user?.financialInstitution?.representativeName
+    ? user.financialInstitution.representativeName.split(' ')[0]
+    : (user?.business?.businessName ? user.business.businessName.split(' ')[0] : 'there');
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeChatId, setActiveChatId] = useState<string>('');
@@ -48,6 +54,7 @@ export default function ElevataBotPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load conversations from localStorage on mount
   useEffect(() => {
@@ -91,7 +98,7 @@ export default function ElevataBotPage() {
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 180)}px`;
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 160)}px`;
     }
   }, [inputMessage]);
 
@@ -244,36 +251,79 @@ export default function ElevataBotPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Quick Starter Prompts for Empty Chat State
-  const starterPrompts = isFI
+  // Quick Action Cards matching mockup style
+  const quickCards = isFI
     ? [
-        { title: 'Assess SME Credit Risk', prompt: 'What key credit risk metrics should I evaluate for a growing retail SME in Kigali?' },
-        { title: 'Structure Working Capital Loan', prompt: 'Help me draft qualification criteria and repayment terms for an inventory-backed credit line.' },
-        { title: 'Portfolio NPL Strategies', prompt: 'What monitoring practices best assist credit officers in maintaining an NPL ratio below 3%?' },
-        { title: 'Evaluate Loan Application', prompt: 'Provide a structured underwriting rubric to assess an SME applying for 5,000,000 RWF working capital.' }
+        {
+          badge: 'Credit Assessment',
+          badgeStyle: 'text-cyan-400 bg-cyan-950/70 border-cyan-800/80',
+          subtitle: 'Evaluate SME risk & debt capacity',
+          prompt: 'What key credit risk metrics should I evaluate for a growing retail SME in Kigali?'
+        },
+        {
+          badge: 'Suggestions',
+          badgeStyle: 'text-rose-400 bg-rose-950/70 border-rose-800/80',
+          subtitle: 'Help with loan structuring ideas',
+          prompt: 'Help me draft qualification criteria and repayment terms for an inventory-backed credit line.'
+        },
+        {
+          badge: 'Portfolio Health',
+          badgeStyle: 'text-emerald-400 bg-emerald-950/70 border-emerald-800/80',
+          subtitle: 'Maintain low NPL loan ratios',
+          prompt: 'What monitoring practices best assist credit officers in maintaining an NPL ratio below 3%?'
+        }
       ]
     : [
-        { title: 'Improve My Credit Score', prompt: 'What specific financial and inventory practices will increase my business credit score on Elevata?' },
-        { title: 'Calculate Loan Affordability', prompt: 'If my monthly sales are 4,200,000 RWF with 28% profit margin, what loan amount can I comfortably repay over 12 months?' },
-        { title: 'Optimize Inventory & Costs', prompt: 'What strategies can I use to reduce dead inventory and cut unnecessary operating expenses?' },
-        { title: 'Find Active Grants & Loans', prompt: 'What funding opportunities, grants, or equipment financing programs are best suited for growing Rwandan SMEs?' }
+        {
+          badge: 'Content Help',
+          badgeStyle: 'text-cyan-400 bg-cyan-950/70 border-cyan-800/80',
+          subtitle: 'Help with reports & tax ledger',
+          prompt: 'How do I organize my monthly cash inflows and operating expenses for tax compliance?'
+        },
+        {
+          badge: 'Suggestions',
+          badgeStyle: 'text-rose-400 bg-rose-950/70 border-rose-800/80',
+          subtitle: 'Improve SME health score',
+          prompt: 'What specific financial and inventory practices will increase my business health score on Elevata?'
+        },
+        {
+          badge: 'Job Application',
+          badgeStyle: 'text-emerald-400 bg-emerald-950/70 border-emerald-800/80',
+          subtitle: 'Apply for grants & loan capital',
+          prompt: 'If my monthly sales are 4,200,000 RWF with 28% profit margin, what loan amount can I comfortably repay?'
+        }
       ];
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setInputMessage((prev) => `${prev} [Attached file: ${file.name}] `);
+    }
+  };
+
   return (
-    <div className="flex h-[calc(100vh-80px)] bg-[#f3f2f0] font-sans -m-3 md:-m-6 overflow-hidden">
+    <div className="flex h-[calc(100vh-80px)] bg-[#0c121e] text-slate-100 font-sans -m-3 md:-m-6 overflow-hidden">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileUpload}
+        className="hidden"
+      />
+
       {/* =========================================================================
-          LEFT SIDEBAR: Conversation History & New Chat (ChatGPT Style)
+          LEFT SIDEBAR: Conversation History
       ========================================================================== */}
       <aside
         className={`${
           sidebarOpen ? 'w-64 sm:w-72' : 'w-0'
-        } transition-all duration-300 ease-in-out bg-white border-r border-gray-200 flex flex-col shrink-0 overflow-hidden z-20`}
+        } transition-all duration-300 ease-in-out bg-[#0f172a] border-r border-slate-800/80 flex flex-col shrink-0 overflow-hidden z-20`}
       >
         {/* Top: New Chat Button */}
-        <div className="p-3.5 border-b border-gray-100 flex items-center gap-2">
+        <div className="p-3.5 border-b border-slate-800 flex items-center gap-2">
           <button
             onClick={startNewChat}
-            className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl text-xs font-bold transition shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#0f766e] hover:bg-[#0d9488] text-white rounded-xl text-xs font-bold transition shadow-sm"
           >
             <Plus className="w-4 h-4" />
             <span>New Chat</span>
@@ -287,7 +337,7 @@ export default function ElevataBotPage() {
           </p>
 
           {conversations.length === 0 ? (
-            <p className="text-xs text-slate-400 px-3 py-4 text-center">No conversation history yet.</p>
+            <p className="text-xs text-slate-500 px-3 py-4 text-center">No conversation history yet.</p>
           ) : (
             conversations.map((chat) => (
               <div
@@ -295,14 +345,14 @@ export default function ElevataBotPage() {
                 onClick={() => setActiveChatId(chat.id)}
                 className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs cursor-pointer transition ${
                   chat.id === activeChatId
-                    ? 'bg-[#eaf2ff] text-[#004182] font-bold border border-blue-200'
-                    : 'text-slate-700 hover:bg-slate-100 border border-transparent'
+                    ? 'bg-[#1e293b] text-teal-300 font-bold border border-teal-500/30'
+                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
                   <MessageSquare
                     className={`w-3.5 h-3.5 shrink-0 ${
-                      chat.id === activeChatId ? 'text-[#0a66c2]' : 'text-slate-400'
+                      chat.id === activeChatId ? 'text-teal-400' : 'text-slate-500'
                     }`}
                   />
                   <span className="truncate">{chat.title}</span>
@@ -311,7 +361,7 @@ export default function ElevataBotPage() {
                 <button
                   type="button"
                   onClick={(e) => deleteConversation(e, chat.id)}
-                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-rose-600 rounded transition shrink-0 ml-1"
+                  className="opacity-0 group-hover:opacity-100 p-1 text-slate-500 hover:text-rose-400 rounded transition shrink-0 ml-1"
                   title="Delete chat"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -322,35 +372,35 @@ export default function ElevataBotPage() {
         </div>
 
         {/* Bottom Sidebar User Summary */}
-        <div className="p-3 border-t border-gray-200 bg-slate-50 flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#057642] text-white flex items-center justify-center text-xs font-bold">
+        <div className="p-3 border-t border-slate-800 bg-[#0b111e] flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-[#0f766e] text-white flex items-center justify-center text-xs font-bold">
             <Bot className="w-4 h-4" />
           </div>
           <div className="truncate">
-            <p className="text-xs font-bold text-slate-900 truncate">
+            <p className="text-xs font-bold text-slate-200 truncate">
               {isFI ? 'Banker Copilot' : 'SME Copilot'}
             </p>
-            <p className="text-[10px] text-slate-500 truncate">Powered by OpenAI</p>
+            <p className="text-[10px] text-slate-400 truncate">Powered by Elevata AI</p>
           </div>
         </div>
       </aside>
 
       {/* =========================================================================
-          MAIN CHAT WORKSPACE (ChatGPT Style)
+          MAIN CHAT WORKSPACE
       ========================================================================== */}
-      <main className="flex-1 flex flex-col min-w-0 bg-white relative h-full">
+      <main className="flex-1 flex flex-col min-w-0 bg-[#0c121e] relative h-full">
         {/* Top Header Bar */}
-        <header className="h-14 border-b border-blue-100 px-4 flex items-center justify-between bg-gradient-to-r from-white to-blue-50 shrink-0">
+        <header className="h-14 border-b border-slate-800/80 px-4 flex items-center justify-between bg-[#0f172a]/60 backdrop-blur shrink-0">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
               title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             >
               {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-900 truncate max-w-[200px] sm:max-w-md">
+              <span className="text-xs font-bold text-slate-200 truncate max-w-[200px] sm:max-w-md">
                 {activeConversation?.title || 'New Conversation'}
               </span>
             </div>
@@ -359,62 +409,119 @@ export default function ElevataBotPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={startNewChat}
-              className="p-1.5 rounded-lg text-slate-500 hover:bg-slate-100 transition text-xs font-semibold flex items-center gap-1.5"
+              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-xs font-semibold flex items-center gap-1.5 border border-slate-700"
               title="Start a new chat"
             >
-              <Plus className="w-4 h-4" />
+              <Plus className="w-3.5 h-3.5 text-teal-400" />
               <span className="hidden sm:inline">New Chat</span>
             </button>
           </div>
         </header>
 
-        {/* Message Stream Area */}
-        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 select-text space-y-6">
+        {/* Message Stream Area / Welcome View */}
+        <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 select-text space-y-6 flex flex-col">
           {currentMessages.length === 0 ? (
-            /* Empty State / Welcome Screen */
-            <div className="h-full flex flex-col items-center justify-center max-w-2xl mx-auto text-center space-y-6 py-8">
-              <div className="w-12 h-12 rounded-2xl bg-[#eaf2ff] border border-blue-200 flex items-center justify-center text-[#0a66c2] shadow-sm">
-                <Bot className="w-6 h-6" />
-              </div>
-
-              <div className="space-y-1.5">
-                <h2 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-                  {isFI ? 'Elevata Banker AI Intelligence' : 'Elevata SME Virtual Copilot'}
+            /* =====================================================================
+                HERO EMPTY STATE (Redesigned matching screenshot)
+            ===================================================================== */
+            <div className="my-auto flex flex-col items-center justify-center max-w-3xl mx-auto w-full space-y-8 py-6">
+              {/* Heading */}
+              <div className="text-left w-full space-y-1">
+                <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
+                  Hey! {firstName}
+                </h1>
+                <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-slate-300">
+                  What can I help with?
                 </h2>
-                <p className="text-xs md:text-sm text-slate-500 max-w-md mx-auto">
-                  {isFI
-                    ? 'Ask any question regarding SME credit risk, underwriting benchmarks, or loan product structuring.'
-                    : 'Ask any question regarding your credit score, loan affordability, inventory management, or funding opportunities.'}
-                </p>
               </div>
 
-              {/* Starter Prompt Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 w-full pt-2">
-                {starterPrompts.map((item, idx) => (
+              {/* 3 Quick Action Cards matching screenshot */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">
+                {quickCards.map((item, idx) => (
                   <button
                     key={idx}
                     onClick={() => handleSendMessage(item.prompt)}
-                    className="p-3.5 rounded-xl border border-gray-200 bg-white hover:bg-[#eaf2ff] hover:border-blue-200 transition text-left group flex items-start justify-between gap-2 shadow-sm"
+                    className="p-4 rounded-2xl bg-[#141d2b] hover:bg-[#182334] border border-slate-800/90 hover:border-slate-700 transition text-left group flex flex-col justify-between gap-3 shadow-md"
                   >
                     <div>
-                      <p className="text-xs font-bold text-slate-800 group-hover:text-[#004182]">{item.title}</p>
-                      <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">{item.prompt}</p>
+                      <span className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold border ${item.badgeStyle}`}>
+                        {item.badge}
+                      </span>
                     </div>
-                    <ChevronRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#0a66c2] shrink-0 mt-0.5" />
+                    <p className="text-xs text-slate-400 group-hover:text-slate-200 transition line-clamp-2 leading-relaxed">
+                      {item.subtitle}
+                    </p>
                   </button>
                 ))}
+              </div>
+
+              {/* Central Input Box in Hero view */}
+              <div className="w-full">
+                <form
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }}
+                  className="w-full"
+                >
+                  <div className="relative rounded-2xl bg-[#141d2b] border border-slate-800 focus-within:border-teal-500/60 focus-within:ring-2 focus-within:ring-teal-500/20 p-4 transition shadow-lg space-y-3">
+                    {/* Top Sparkles Icon */}
+                    <div className="flex items-center text-teal-400">
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+
+                    {/* Textarea */}
+                    <textarea
+                      ref={textareaRef}
+                      rows={2}
+                      value={inputMessage}
+                      onChange={(e) => setInputMessage(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage();
+                        }
+                      }}
+                      placeholder="Ask me anything......"
+                      disabled={loading}
+                      className="ai-chat-textarea w-full resize-none !bg-transparent !border-0 !shadow-none !outline-none text-sm text-slate-100 placeholder:text-slate-500 max-h-40 leading-relaxed !min-h-0 !p-0"
+                      style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
+                    />
+
+                    {/* Bottom toolbar */}
+                    <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-xs font-semibold text-slate-300 border border-slate-700/70 transition"
+                      >
+                        <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                        <span>Attach file</span>
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={!inputMessage.trim() || loading}
+                        className="h-9 w-9 bg-[#0d9488] hover:bg-[#14b8a6] disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed shadow-md shadow-teal-950/50"
+                        title="Send message"
+                      >
+                        <ArrowUp className="w-4 h-4 stroke-[2.5]" />
+                      </button>
+                    </div>
+                  </div>
+                </form>
               </div>
             </div>
           ) : (
             /* Active Message List */
-            <div className="max-w-3xl mx-auto space-y-6">
+            <div className="max-w-3xl mx-auto w-full space-y-6">
               {currentMessages.map((msg) => (
                 <div
                   key={msg.id}
                   className={`flex gap-3.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-xl bg-[#057642] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#0f766e] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                       <Bot className="w-4 h-4" />
                     </div>
                   )}
@@ -422,8 +529,8 @@ export default function ElevataBotPage() {
                   <div
                     className={`max-w-[85%] rounded-2xl p-4 shadow-sm relative group text-xs md:text-sm ${
                       msg.role === 'user'
-                        ? 'bg-[#0a66c2] text-white rounded-tr-none'
-                        : 'bg-white text-slate-800 border border-gray-200 rounded-tl-none'
+                        ? 'bg-[#0f766e] text-white rounded-tr-none'
+                        : 'bg-[#141d2b] text-slate-100 border border-slate-800 rounded-tl-none'
                     }`}
                   >
                     {msg.role === 'user' ? (
@@ -433,25 +540,21 @@ export default function ElevataBotPage() {
                         <ElevataMarkdown content={msg.content} />
                         <button
                           onClick={() => handleCopy(msg.content, msg.id)}
-                          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition p-1 text-slate-400 hover:text-slate-700 bg-slate-100 rounded-md"
+                          className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition p-1 text-slate-400 hover:text-slate-200 bg-slate-800/80 rounded-md"
                           title="Copy text"
                         >
-                          {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                       </div>
                     )}
 
-                    <span
-                      className={`block text-[10px] mt-2 text-right ${
-                        msg.role === 'user' ? 'text-slate-400' : 'text-slate-400'
-                      }`}
-                    >
+                    <span className="block text-[10px] mt-2 text-right text-slate-400">
                       {msg.timestamp}
                     </span>
                   </div>
 
                   {msg.role === 'user' && (
-                    <div className="w-8 h-8 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    <div className="w-8 h-8 rounded-xl bg-slate-800 text-teal-300 flex items-center justify-center shrink-0 shadow-sm mt-0.5 border border-slate-700">
                       <UserIcon className="w-4 h-4" />
                     </div>
                   )}
@@ -461,14 +564,14 @@ export default function ElevataBotPage() {
               {/* Typing indicator */}
               {loading && (
                 <div className="flex gap-3.5 items-center">
-                  <div className="w-8 h-8 rounded-xl bg-[#057642] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-[#0f766e] text-white flex items-center justify-center shrink-0 shadow-sm">
                     <Bot className="w-4 h-4" />
                   </div>
-                  <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-bounce" />
-                    <span className="text-xs text-slate-500 font-medium pl-1">Analyzing...</span>
+                  <div className="bg-[#141d2b] border border-slate-800 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" />
+                    <span className="text-xs text-slate-400 font-medium pl-1">Elevata AI is analyzing...</span>
                   </div>
                 </div>
               )}
@@ -478,50 +581,65 @@ export default function ElevataBotPage() {
           )}
         </div>
 
-        {/* Bottom Input Box (ChatGPT Style) */}
-        <div className="p-4 md:p-5 bg-white border-t border-gray-200 shrink-0">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSendMessage();
-            }}
-            className="max-w-3xl mx-auto"
-          >
-            <div className="relative flex items-center border border-gray-200 focus-within:border-[#0a66c2] focus-within:ring-1 focus-within:ring-[#0a66c2] rounded-2xl bg-white px-4 py-2 transition shadow-sm">
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSendMessage();
-                  }
-                }}
-                placeholder={
-                  isFI
-                    ? 'Message Elevata Banker Copilot...'
-                    : 'Message Elevata SME Copilot...'
-                }
-                disabled={loading}
-                className="w-full resize-none bg-transparent text-xs sm:text-sm text-slate-900 focus:outline-none placeholder:text-slate-400 py-1.5 pr-10 max-h-40"
-              />
-              <button
-                type="submit"
-                disabled={!inputMessage.trim() || loading}
-                className="absolute right-3 p-2 bg-[#0a66c2] hover:bg-[#004182] disabled:bg-slate-200 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed"
-                title="Send message"
-              >
-                <Send className="w-3.5 h-3.5" />
-              </button>
-            </div>
-            <p className="text-[10px] text-slate-400 text-center mt-2">
-              Elevata AI provides financial and operational insights. Verify key lending parameters with official documentation.
-            </p>
-          </form>
-        </div>
+        {/* Bottom Input Box during active conversation */}
+        {currentMessages.length > 0 && (
+          <div className="p-4 md:p-5 bg-[#0b111e] border-t border-slate-800/80 shrink-0">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }}
+              className="max-w-3xl mx-auto"
+            >
+              <div className="relative rounded-2xl bg-[#141d2b] border border-slate-800 focus-within:border-teal-500/60 focus-within:ring-2 focus-within:ring-teal-500/20 p-3 transition shadow-lg space-y-2">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-teal-400 shrink-0" />
+                  <textarea
+                    ref={textareaRef}
+                    rows={1}
+                    value={inputMessage}
+                    onChange={(e) => setInputMessage(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Ask me anything......"
+                    disabled={loading}
+                    className="ai-chat-textarea w-full resize-none !bg-transparent !border-0 !shadow-none !outline-none text-xs sm:text-sm text-slate-100 placeholder:text-slate-500 py-1 max-h-36 !min-h-0 !p-0"
+                    style={{ backgroundColor: 'transparent', border: 'none', boxShadow: 'none' }}
+                  />
+                </div>
+
+                <div className="flex items-center justify-between pt-1 border-t border-slate-800/50">
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 text-[11px] font-semibold text-slate-300 border border-slate-700/60 transition"
+                  >
+                    <Paperclip className="w-3 h-3 text-slate-400" />
+                    <span>Attach file</span>
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={!inputMessage.trim() || loading}
+                    className="h-8 w-8 bg-[#0d9488] hover:bg-[#14b8a6] disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed shadow-md shadow-teal-950/50"
+                    title="Send message"
+                  >
+                    <ArrowUp className="w-3.5 h-3.5 stroke-[2.5]" />
+                  </button>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500 text-center mt-2">
+                Elevata AI provides financial and operational insights. Always verify critical lending metrics.
+              </p>
+            </form>
+          </div>
+        )}
       </main>
     </div>
   );
 }
+

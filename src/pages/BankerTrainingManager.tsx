@@ -7,29 +7,22 @@ import {
   Award,
   Plus,
   Search,
-  Filter,
   CheckCircle2,
   Radio,
-  ExternalLink,
-  ChevronRight,
   UserCheck,
   Download,
   Edit,
   Trash2,
-  Share2,
-  ShieldCheck,
   BookOpen,
   Globe,
   Hand,
   X
 } from 'lucide-react';
 import { Training, useApp } from '../context/AppContext';
-import { useAuth } from '../context/AuthContext';
 import ScheduleTrainingModal from '../assets/components/ScheduleTrainingModal';
 import VirtualTrainingDeliveryModal from '../assets/components/VirtualTrainingDeliveryModal';
 
 export default function BankerTrainingManager() {
-  const { user } = useAuth();
   const {
     trainings,
     deleteTraining,

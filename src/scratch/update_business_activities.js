@@ -1,741 +1,33 @@
-import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useApp } from '../context/AppContext';
-import { formatRWF, ProductItem, Sale, PurchaseTransaction, CashInTransaction, CashOutTransaction, OtherActivity } from '../lib/mockData';
-import { Button } from '../assets/components/ui/button';
-import { Card, CardContent } from '../assets/components/ui/card';
-import { Input } from '../assets/components/ui/input';
-import CreateProductModal from '../assets/components/CreateProductModal';
-import EditProductModal from '../assets/components/EditProductModal';
-import {
-  ShoppingBag,
-  Package,
-  Receipt,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Plus,
-  Trash2,
-  Edit3,
-  Search,
-  Filter,
-  DollarSign,
-  TrendingUp,
-  TrendingDown,
-  Calendar,
-  CheckCircle,
-  AlertCircle,
-  FileText,
-  User,
-  Phone,
-  Tag,
-  HelpCircle,
-  Truck,
-  Building2,
-  Wallet,
-  Activity,
-  Layers,
-  ArrowRight,
-  Printer,
-  Check,
-  X,
-  CreditCard,
-  Briefcase,
-  Wrench,
-  AlertTriangle,
-  Star,
-  LayoutGrid,
-  Users,
-  Bell
-} from 'lucide-react';
+const fs = require('fs');
+const path = require('path');
 
-export const UNIT_SELECT_OPTIONS = [
-  { value: 'pcs', label: 'pcs (Pieces)' },
-  { value: 'kgs', label: 'kgs (Kilograms)' },
-  { value: 'l', label: 'L (Liters)' },
-  { value: 'meters', label: 'm (Meters)' },
-  { value: 'm²', label: 'm² (Square Meters)' },
-  { value: 'dozen', label: 'dozen (12 pcs)' },
-  { value: 'box', label: 'box (Boxes)' },
-  { value: 'bag', label: 'bag (Bags / Sacks)' },
-  { value: 'tons', label: 'tons (Metric Tons)' },
-  { value: 'packs', label: 'packs (Packs)' },
-  { value: 'pairs', label: 'pairs (Pairs)' },
-  { value: 'other', label: 'other (Custom)' }
-];
+const targetFile = 'd:\\MP\\AI\\Ltd\\Finovatra\\Elevata\\frontend\\src\\pages\\BusinessActivities.tsx';
+let content = fs.readFileSync(targetFile, 'utf8');
 
-export type ActivityTab = 'sales' | 'purchases' | 'cash_in' | 'cash_out' | 'other';
+// Find the start marker and end marker
+const startMarker = '      {/* Header & Overview Card */}';
+const endMarker = '      {/* ========================================================================= */}\r\n      {/* UNIFIED ACTIVITIES HISTORY LEDGER */}';
+const endMarkerLF = '      {/* ========================================================================= */}\n      {/* UNIFIED ACTIVITIES HISTORY LEDGER */}';
 
-interface BusinessActivitiesProps {
-  defaultTab?: ActivityTab | 'expenses';
+let startIndex = content.indexOf(startMarker);
+let endIndex = content.indexOf(endMarker);
+if (endIndex === -1) {
+  endIndex = content.indexOf(endMarkerLF);
 }
 
-export default function BusinessActivities({ defaultTab = 'sales' }: BusinessActivitiesProps) {
-  const {
-    activeSme,
-    products,
-    createProduct,
-    updateProduct,
-    deleteProduct,
-    recordSaleTransaction,
-    deleteSale,
-    addExpense,
-    deleteExpense,
-    addPurchase,
-    deletePurchase,
-    addCashIn,
-    deleteCashIn,
-    addCashOut,
-    deleteCashOut,
-    addOtherActivity,
-    deleteOtherActivity,
-    refreshSales,
-    refreshProducts
-  } = useApp();
-
-  const [searchParams, setSearchParams] = useSearchParams();
-  const urlTab = searchParams.get('tab');
-
-  // Normalize initial tab (treat legacy 'expenses' as 'cash_out')
-  const initialTab: ActivityTab = (urlTab === 'expenses' ? 'cash_out' : (urlTab as ActivityTab)) || (defaultTab === 'expenses' ? 'cash_out' : defaultTab) || 'sales';
-  const [activeTab, setActiveTab] = useState<ActivityTab>(initialTab);
-
-  // Modals & UI View States
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<ProductItem | null>(null);
-  const [showAttentionBanner, setShowAttentionBanner] = useState(true);
-  const [showLedgerView, setShowLedgerView] = useState(true);
-  const [showKeypadModal, setShowKeypadModal] = useState(false);
-  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission | 'unsupported'>('default');
-
-  // Check notification permission on mount
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setNotificationPermission(Notification.permission);
-      if (Notification.permission === 'granted') {
-        setShowAttentionBanner(false);
-      }
-    } else {
-      setNotificationPermission('unsupported');
-    }
-  }, []);
-
-  const sendDesktopNotification = (title: string, body: string) => {
-    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
-      try {
-        new Notification(title, {
-          body,
-          icon: '/favicon.ico'
-        });
-      } catch (e) {
-        console.error('Error firing desktop notification:', e);
-      }
-    }
-  };
-
-  const handleEnableNotifications = async () => {
-    if (typeof window === 'undefined' || !('Notification' in window)) {
-      alert('Desktop notifications are not supported by this browser.');
-      return;
-    }
-
-    try {
-      const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
-
-      if (permission === 'granted') {
-        sendDesktopNotification(
-          'Elevata 360 • Notifications Enabled',
-          'You will now receive instant desktop alerts for sales, restock, and accounting transactions.'
-        );
-        showToast('Desktop notifications enabled successfully!');
-        setShowAttentionBanner(false);
-      } else if (permission === 'denied') {
-        showToast('Desktop notifications were blocked in browser settings.');
-      }
-    } catch (err) {
-      console.error('Failed to request notification permission:', err);
-    }
-  };
-
-  // Toast feedback
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
-  };
-
-  useEffect(() => {
-    refreshSales();
-    refreshProducts();
-  }, []);
-
-  useEffect(() => {
-    if (urlTab) {
-      const resolvedTab = urlTab === 'expenses' ? 'cash_out' : (urlTab as ActivityTab);
-      if (['sales', 'purchases', 'cash_in', 'cash_out', 'other'].includes(resolvedTab)) {
-        setActiveTab(resolvedTab);
-      }
-    } else if (defaultTab) {
-      setActiveTab(defaultTab === 'expenses' ? 'cash_out' : defaultTab);
-    }
-  }, [urlTab, defaultTab]);
-
-  const handleSelectTab = (tabId: ActivityTab) => {
-    setActiveTab(tabId);
-    setSearchParams({ tab: tabId }, { replace: true });
-  };
-
-  // ==========================================
-  // TAB 1: SALES STATE
-  // ==========================================
-  const [saleCustomer, setSaleCustomer] = useState('');
-  const [saleContact, setSaleContact] = useState('');
-  const [salePaymentMethod, setSalePaymentMethod] = useState('Cash');
-  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [saleItems, setSaleItems] = useState([
-    { id: '1', productId: '', product: '', unit: 'pcs', price: 0, quantity: 1, availableStock: 0 }
-  ]);
-  const [isSubmittingSale, setIsSubmittingSale] = useState(false);
-
-  const handleAddSaleItem = () => {
-    setSaleItems(prev => [
-      ...prev,
-      { id: Date.now().toString(), productId: '', product: '', unit: 'pcs', price: 0, quantity: 1, availableStock: 0 }
-    ]);
-  };
-
-  const handleDeleteSaleRow = (id: string) => {
-    if (saleItems.length <= 1) return;
-    setSaleItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handleSaleItemChange = (id: string, field: string, value: any) => {
-    setSaleItems(prev => prev.map(item => {
-      if (item.id === id) {
-        if (field === 'productId') {
-          const selectedProd = products.find(p => p.id === value);
-          if (selectedProd) {
-            return {
-              ...item,
-              productId: value,
-              product: selectedProd.name,
-              unit: selectedProd.unit || 'pcs',
-              price: selectedProd.unitPrice || 0,
-              availableStock: selectedProd.stockQuantity || 0
-            };
-          }
-        }
-        return { ...item, [field]: value };
-      }
-      return item;
-    }));
-  };
-
-  const saleTotal = saleItems.reduce((sum, item) => sum + (Number(item.price || 0) * Number(item.quantity || 0)), 0);
-
-  const handleRecordSale = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!saleCustomer.trim()) {
-      alert('Please specify the buyer / client name.');
-      return;
-    }
-
-    const validItems = saleItems.filter(item => (item.product || item.productId) && Number(item.quantity) > 0);
-    if (validItems.length === 0) {
-      alert('Please add at least one product line item.');
-      return;
-    }
-
-    try {
-      setIsSubmittingSale(true);
-      await recordSaleTransaction({
-        customer: saleCustomer.trim(),
-        customerContact: saleContact.trim() || undefined,
-        paymentStatus: 'Completed',
-        paymentMethod: salePaymentMethod,
-        items: validItems.map(item => ({
-          productId: item.productId || undefined,
-          productName: item.product,
-          unit: item.unit,
-          quantity: Number(item.quantity),
-          unitPrice: Number(item.price)
-        }))
-      });
-
-      showToast(`Sale of ${formatRWF(saleTotal)} to "${saleCustomer}" recorded successfully!`);
-      sendDesktopNotification('Sale Recorded', `Sale of ${formatRWF(saleTotal)} to "${saleCustomer}" logged successfully.`);
-
-      // Reset
-      setSaleCustomer('');
-      setSaleContact('');
-      setSalePaymentMethod('Cash');
-      setSaleItems([
-        { id: '1', productId: '', product: '', unit: 'pcs', price: 0, quantity: 1, availableStock: 0 }
-      ]);
-    } catch (err: any) {
-      alert(err.message || 'Failed to record sale.');
-    } finally {
-      setIsSubmittingSale(false);
-    }
-  };
-
-  // ==========================================
-  // TAB 2: PURCHASES / INTAKE STATE
-  // ==========================================
-  const [purchaseSupplier, setPurchaseSupplier] = useState('');
-  const [purchaseInvoiceRef, setPurchaseInvoiceRef] = useState('');
-  const [purchasePaymentMethod, setPurchasePaymentMethod] = useState('Cash');
-  const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [purchaseItems, setPurchaseItems] = useState([
-    { id: '1', productId: '', name: '', unit: 'pcs', unitPrice: 0, quantity: 1 }
-  ]);
-  const [isSubmittingPurchase, setIsSubmittingPurchase] = useState(false);
-
-  const handleAddPurchaseRow = () => {
-    setPurchaseItems(prev => [
-      ...prev,
-      { id: Date.now().toString(), productId: '', name: '', unit: 'pcs', unitPrice: 0, quantity: 1 }
-    ]);
-  };
-
-  const handleDeletePurchaseRow = (id: string) => {
-    if (purchaseItems.length <= 1) return;
-    setPurchaseItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handlePurchaseItemChange = (id: string, field: string, value: any) => {
-    setPurchaseItems(prev => prev.map(item => {
-      if (item.id === id) {
-        if (field === 'productId') {
-          const selectedProd = products.find(p => p.id === value);
-          if (selectedProd) {
-            return {
-              ...item,
-              productId: value,
-              name: selectedProd.name,
-              unit: selectedProd.unit || 'pcs',
-              unitPrice: selectedProd.costPrice || selectedProd.unitPrice || 0
-            };
-          }
-        }
-        return { ...item, [field]: value };
-      }
-      return item;
-    }));
-  };
-
-  const purchaseTotal = purchaseItems.reduce((sum, item) => sum + (Number(item.unitPrice || 0) * Number(item.quantity || 0)), 0);
-
-  const handleRecordPurchase = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!purchaseSupplier.trim()) {
-      alert('Please specify the supplier / vendor name.');
-      return;
-    }
-
-    const validItems = purchaseItems.filter(item => (item.name || item.productId) && Number(item.quantity) > 0);
-    if (validItems.length === 0) {
-      alert('Please enter at least one product purchase item.');
-      return;
-    }
-
-    try {
-      setIsSubmittingPurchase(true);
-      await addPurchase(
-        activeSme.id,
-        purchaseSupplier.trim(),
-        validItems,
-        purchaseInvoiceRef.trim() || undefined,
-        purchasePaymentMethod
-      );
-
-      showToast(`Purchase of ${formatRWF(purchaseTotal)} from "${purchaseSupplier}" recorded & stock updated!`);
-      sendDesktopNotification('Purchase Recorded', `Purchase of ${formatRWF(purchaseTotal)} from "${purchaseSupplier}" logged.`);
-
-      // Reset
-      setPurchaseSupplier('');
-      setPurchaseInvoiceRef('');
-      setPurchasePaymentMethod('Cash');
-      setPurchaseItems([
-        { id: '1', productId: '', name: '', unit: 'pcs', unitPrice: 0, quantity: 1 }
-      ]);
-    } catch (err: any) {
-      alert(err.message || 'Failed to record purchase.');
-    } finally {
-      setIsSubmittingPurchase(false);
-    }
-  };
-
-  // ==========================================
-  // TAB 3: CASH IN STATE
-  // ==========================================
-  const [cashInAmount, setCashInAmount] = useState('');
-  const [cashInSource, setCashInSource] = useState('');
-  const [cashInReason, setCashInReason] = useState('Loan received');
-  const [cashInPaymentMethod, setCashInPaymentMethod] = useState('Bank Transfer');
-  const [cashInDate, setCashInDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [cashInNotes, setCashInNotes] = useState('');
-
-  const handleRecordCashIn = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amt = Number(cashInAmount);
-    if (!amt || amt <= 0) {
-      alert('Please enter a valid cash inflow amount.');
-      return;
-    }
-    if (!cashInSource.trim()) {
-      alert('Please specify the source of funds (e.g. Bank, Investor, Grantor, Owner).');
-      return;
-    }
-
-    addCashIn(activeSme.id, {
-      amount: amt,
-      source: cashInSource.trim(),
-      reason: cashInReason,
-      paymentMethod: cashInPaymentMethod,
-      date: cashInDate,
-      notes: cashInNotes.trim() || undefined
-    });
-
-    showToast(`Cash Inflow of ${formatRWF(amt)} from ${cashInSource} logged successfully!`);
-    sendDesktopNotification('Cash Inflow Logged', `Cash Inflow of ${formatRWF(amt)} from ${cashInSource} recorded.`);
-
-    // Reset
-    setCashInAmount('');
-    setCashInSource('');
-    setCashInReason('Loan received');
-    setCashInNotes('');
-  };
-
-  // ==========================================
-  // TAB 4: MERGED CASH OUT & EXPENSES STATE
-  // ==========================================
-  const [cashOutMode, setCashOutMode] = useState<'single' | 'batch'>('single');
-
-  // Single Entry Form
-  const [cashOutAmount, setCashOutAmount] = useState('');
-  const [cashOutCategory, setCashOutCategory] = useState('Utilities');
-  const [cashOutDescription, setCashOutDescription] = useState('');
-  const [cashOutPaymentMethod, setCashOutPaymentMethod] = useState('Cash');
-  const [cashOutDate, setCashOutDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [cashOutNotes, setCashOutNotes] = useState('');
-
-  // Batch Lines Form (Multi-Expense / Multi-Cashout)
-  const [cashOutBatchLines, setCashOutBatchLines] = useState([
-    { id: '1', description: '', category: 'Utilities', amount: 0, paymentMethod: 'Cash' },
-    { id: '2', description: '', category: 'Rent', amount: 0, paymentMethod: 'Cash' }
-  ]);
-
-  const handleAddBatchLine = () => {
-    setCashOutBatchLines(prev => [
-      ...prev,
-      { id: Date.now().toString(), description: '', category: 'Utilities', amount: 0, paymentMethod: 'Cash' }
-    ]);
-  };
-
-  const handleDeleteBatchLine = (id: string) => {
-    if (cashOutBatchLines.length <= 1) return;
-    setCashOutBatchLines(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handleBatchLineChange = (id: string, field: string, value: any) => {
-    setCashOutBatchLines(prev => prev.map(item => {
-      if (item.id === id) {
-        return { ...item, [field]: value };
-      }
-      return item;
-    }));
-  };
-
-  const batchTotal = cashOutBatchLines.reduce((sum, item) => sum + Number(item.amount || 0), 0);
-
-  const handleRecordSingleCashOut = (e: React.FormEvent) => {
-    e.preventDefault();
-    const amt = Number(cashOutAmount);
-    if (!amt || amt <= 0) {
-      alert('Please enter a valid cash outflow / expense amount.');
-      return;
-    }
-    if (!cashOutDescription.trim()) {
-      alert('Please specify the recipient or expense description.');
-      return;
-    }
-
-    addCashOut(activeSme.id, {
-      amount: amt,
-      category: cashOutCategory,
-      description: cashOutDescription.trim(),
-      paymentMethod: cashOutPaymentMethod,
-      date: cashOutDate,
-      notes: cashOutNotes.trim() || undefined
-    });
-
-    showToast(`Cash Outflow / Expense of ${formatRWF(amt)} for "${cashOutDescription}" recorded!`);
-    sendDesktopNotification('Expense Voucher Recorded', `Expense of ${formatRWF(amt)} for "${cashOutDescription}" logged.`);
-
-    // Reset
-    setCashOutAmount('');
-    setCashOutDescription('');
-    setCashOutNotes('');
-  };
-
-  const handleRecordBatchCashOut = (e: React.FormEvent) => {
-    e.preventDefault();
-    const validLines = cashOutBatchLines.filter(item => item.description.trim() && Number(item.amount) > 0);
-    if (validLines.length === 0) {
-      alert('Please enter at least one valid expense description and amount.');
-      return;
-    }
-
-    validLines.forEach(item => {
-      addCashOut(activeSme.id, {
-        amount: Number(item.amount),
-        category: item.category,
-        description: item.description.trim(),
-        paymentMethod: item.paymentMethod,
-        date: cashOutDate
-      });
-    });
-
-    showToast(`Recorded ${validLines.length} cashout / expense item(s) totaling ${formatRWF(batchTotal)}!`);
-    sendDesktopNotification('Batch Expenses Logged', `Recorded ${validLines.length} expense items totaling ${formatRWF(batchTotal)}.`);
-
-    setCashOutBatchLines([
-      { id: '1', description: '', category: 'Utilities', amount: 0, paymentMethod: 'Cash' },
-      { id: '2', description: '', category: 'Rent', amount: 0, paymentMethod: 'Cash' }
-    ]);
-  };
-
-  // ==========================================
-  // TAB 5: OTHER ACTIVITIES STATE
-  // ==========================================
-  const [otherTitle, setOtherTitle] = useState('');
-  const [otherDescription, setOtherDescription] = useState('');
-  const [otherDate, setOtherDate] = useState(() => new Date().toISOString().split('T')[0]);
-  const [otherStatus, setOtherStatus] = useState<'Planned' | 'In Progress' | 'Completed' | 'On Hold'>('Completed');
-  const [otherMoneyInvolved, setOtherMoneyInvolved] = useState(false);
-  const [otherAmount, setOtherAmount] = useState('');
-  const [otherPaymentStatus, setOtherPaymentStatus] = useState<'Completed' | 'Pending' | 'Partial' | 'N/A'>('Completed');
-  const [otherCategory, setOtherCategory] = useState('Milestone');
-
-  const handleRecordOtherActivity = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!otherTitle.trim()) {
-      alert('Activity Title is required.');
-      return;
-    }
-
-    const amt = otherMoneyInvolved && Number(otherAmount) ? Number(otherAmount) : undefined;
-
-    addOtherActivity(activeSme.id, {
-      title: otherTitle.trim(),
-      description: otherDescription.trim() || undefined,
-      date: otherDate,
-      status: otherStatus,
-      moneyInvolved: otherMoneyInvolved,
-      amount: amt,
-      paymentStatus: otherMoneyInvolved ? otherPaymentStatus : 'N/A',
-      category: otherCategory
-    });
-
-    showToast(`Business Activity "${otherTitle}" recorded successfully!`);
-    sendDesktopNotification('Activity Logged', `Milestone / Activity "${otherTitle}" logged.`);
-
-    // Reset
-    setOtherTitle('');
-    setOtherDescription('');
-    setOtherMoneyInvolved(false);
-    setOtherAmount('');
-    setOtherStatus('Completed');
-  };
-
-  // ==========================================
-  // UNIFIED ACTIVITIES LEDGER & FILTERING
-  // ==========================================
-  const [ledgerFilter, setLedgerFilter] = useState<'all' | 'sales' | 'purchases' | 'cash_in' | 'cash_out' | 'other'>('all');
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Normalize all activities into a unified timeline
-  const salesList = (activeSme.sales || []).map(s => ({
-    id: `sale-${s.id}`,
-    originalId: s.id,
-    type: 'sales' as const,
-    typeLabel: 'Sale',
-    title: s.product || 'Sale Transaction',
-    party: s.customer,
-    category: s.status || 'Completed',
-    date: s.date,
-    amount: s.total,
-    isPositive: true,
-    status: s.status,
-    raw: s
-  }));
-
-  const purchasesList = (activeSme.purchases || []).map(p => ({
-    id: `purch-${p.id}`,
-    originalId: p.id,
-    type: 'purchases' as const,
-    typeLabel: 'Purchase / Restock',
-    title: p.items && p.items.length > 0 ? `${p.items[0].productName}${p.items.length > 1 ? ` (+${p.items.length - 1} more)` : ''}` : 'Stock Purchase',
-    party: p.supplier,
-    category: p.invoiceRef ? `Invoice: ${p.invoiceRef}` : 'Supplier Restock',
-    date: p.date,
-    amount: p.totalAmount,
-    isPositive: false,
-    status: p.status,
-    raw: p
-  }));
-
-  // Merged Cash Out List (incorporating direct cashouts + historical expenses)
-  const legacyExpensesList = (activeSme.expenses || []).map(e => ({
-    id: `exp-${e.id}`,
-    originalId: e.id,
-    type: 'cash_out' as const,
-    typeLabel: 'Cash Out / Expense',
-    title: e.description,
-    party: e.category,
-    category: e.category,
-    date: e.date,
-    amount: e.amount,
-    isPositive: false,
-    status: 'Completed',
-    raw: e
-  }));
-
-  const directCashOutsList = (activeSme.cashOuts || []).map(c => ({
-    id: `cashout-${c.id}`,
-    originalId: c.id,
-    type: 'cash_out' as const,
-    typeLabel: 'Cash Outflow',
-    title: c.description,
-    party: c.category,
-    category: c.paymentMethod,
-    date: c.date,
-    amount: c.amount,
-    isPositive: false,
-    status: 'Completed',
-    raw: c
-  }));
-
-  const cashOutsCombined = [...directCashOutsList, ...legacyExpensesList];
-
-  const cashInsList = (activeSme.cashIns || []).map(c => ({
-    id: `cashin-${c.id}`,
-    originalId: c.id,
-    type: 'cash_in' as const,
-    typeLabel: 'Cash Inflow',
-    title: c.reason,
-    party: c.source,
-    category: c.category || c.paymentMethod,
-    date: c.date,
-    amount: c.amount,
-    isPositive: true,
-    status: 'Completed',
-    raw: c
-  }));
-
-  const otherList = (activeSme.otherActivities || []).map(a => ({
-    id: `other-${a.id}`,
-    originalId: a.id,
-    type: 'other' as const,
-    typeLabel: 'Milestone / Event',
-    title: a.title,
-    party: a.category || 'Milestone',
-    category: a.description || a.status || 'General Activity',
-    date: a.date,
-    amount: a.amount || 0,
-    isPositive: true,
-    status: a.status || 'Completed',
-    raw: a
-  }));
-
-  const allActivities = [
-    ...salesList,
-    ...purchasesList,
-    ...cashInsList,
-    ...cashOutsCombined,
-    ...otherList
-  ];
-
-  const filteredActivities = allActivities.filter(item => {
-    const matchesTab = ledgerFilter === 'all' || item.type === ledgerFilter;
-    const matchesSearch =
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.party.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.category.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesTab && matchesSearch;
-  });
-
-  // Calculate totals
-  const totalInflow = salesList.reduce((sum, s) => sum + s.amount, 0) + cashInsList.reduce((sum, c) => sum + c.amount, 0);
-  const totalOutflow = purchasesList.reduce((sum, p) => sum + p.amount, 0) + cashOutsCombined.reduce((sum, c) => sum + c.amount, 0);
-  const netOperatingCashflow = totalInflow - totalOutflow;
-
-  const tabsConfig = [
-    { id: 'sales' as ActivityTab, label: 'Sales Book', icon: <ShoppingBag className="w-4 h-4" />, count: salesList.length, color: 'text-emerald-600' },
-    { id: 'purchases' as ActivityTab, label: 'Purchases Book', icon: <Truck className="w-4 h-4" />, count: purchasesList.length, color: 'text-blue-600' },
-    { id: 'cash_in' as ActivityTab, label: 'Cash In Journal', icon: <ArrowDownLeft className="w-4 h-4" />, count: cashInsList.length, color: 'text-teal-600' },
-    { id: 'cash_out' as ActivityTab, label: 'Cash Out & OPEX', icon: <ArrowUpRight className="w-4 h-4" />, count: cashOutsCombined.length, color: 'text-amber-600' },
-    { id: 'other' as ActivityTab, label: 'General Journal', icon: <Star className="w-4 h-4" />, count: otherList.length, color: 'text-purple-600' }
-  ];
-
-  const handleDeleteActivity = (item: typeof allActivities[0]) => {
-    if (!window.confirm(`Delete activity record "${item.title}"?`)) return;
-    if (item.id.startsWith('sale-')) {
-      deleteSale(activeSme.id, item.originalId);
-    } else if (item.id.startsWith('purch-')) {
-      deletePurchase(activeSme.id, item.originalId);
-    } else if (item.id.startsWith('exp-')) {
-      deleteExpense(activeSme.id, item.originalId as number);
-    } else if (item.id.startsWith('cashin-')) {
-      deleteCashIn(activeSme.id, item.originalId);
-    } else if (item.id.startsWith('cashout-')) {
-      deleteCashOut(activeSme.id, item.originalId);
-    } else if (item.id.startsWith('other-')) {
-      deleteOtherActivity(activeSme.id, item.originalId);
-    }
-    showToast('Activity record removed.');
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Toast Notification */}
-      {toastMessage && (
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -20 }}
-          className="fixed top-20 right-6 z-50 bg-emerald-700 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 border border-emerald-500"
-        >
-          <CheckCircle className="w-4 h-4 text-emerald-200" />
-          <span className="font-medium">{toastMessage}</span>
-        </motion.div>
-      )}
-
+if (startIndex === -1 || endIndex === -1) {
+  console.error('Markers not found! start:', startIndex, 'end:', endIndex);
+  process.exit(1);
+}
+
+const replacement = `      {/* ========================================================================= */}
+      {/* 1. TOP ATTENTION NOTIFICATION BANNER (from screenshot) */}
       {/* ========================================================================= */}
-      {/* 1. TOP ATTENTION NOTIFICATION BANNER (Functional Desktop Notifications) */}
-      {/* ========================================================================= */}
-      {showAttentionBanner && notificationPermission !== 'granted' && (
-        <div className="flex items-center justify-between rounded-[4px] bg-[#ffa834] px-3.5 sm:px-4 py-2 text-white shadow-xs transition-all">
-          <div
-            onClick={handleEnableNotifications}
-            className="flex items-center gap-2 sm:gap-2.5 text-xs sm:text-[13px] font-semibold cursor-pointer hover:opacity-95 select-none transition-opacity"
-            title="Click to allow desktop notifications"
-          >
-            <Bell className="w-4 h-4 shrink-0 text-white animate-pulse" />
+      {showAttentionBanner && (
+        <div className="flex items-center justify-between rounded-[4px] bg-[#ffa834] px-4 py-2 text-white shadow-xs">
+          <div className="flex items-center gap-2 text-xs sm:text-[13px] font-semibold">
             <span className="font-bold">Attention!</span>
             <span>Click to allow displaying of desktop notifications.</span>
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                handleEnableNotifications();
-              }}
-              className="ml-1 sm:ml-2 px-2.5 py-0.5 rounded-[4px] bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold border border-white/40 shadow-xs transition-colors cursor-pointer"
-            >
-              Allow Notifications
-            </button>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -743,7 +35,6 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               onClick={() => setShowAttentionBanner(false)}
               className="rounded-full p-1 text-white/80 hover:bg-white/20 hover:text-white transition-colors cursor-pointer"
               aria-label="Dismiss banner"
-              title="Dismiss notification prompt"
             >
               <X className="w-4 h-4" />
             </button>
@@ -760,86 +51,43 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       )}
 
       {/* ========================================================================= */}
-      {/* 2. MAIN ACCOUNTING BOOKS & JOURNAL ENTRY CARD (Folder Tab Design) */}
+      {/* 2. MAIN ACCOUNTING BOOKS & JOURNAL ENTRY CARD */}
       {/* ========================================================================= */}
-      <div className="relative">
-        {/* EYE-CATCHING FOLDER TABS BAR (Connected to Card Body) */}
-        <div className="flex items-end overflow-x-auto scrollbar-none z-10 relative space-x-1 sm:space-x-1.5 -mb-[1px]">
-          {tabsConfig.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => handleSelectTab(tab.id)}
-                className={`group relative flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-[6px] text-xs sm:text-sm transition-all duration-150 cursor-pointer whitespace-nowrap select-none border-t border-x ${
-                  isActive
-                    ? 'bg-white text-slate-900 font-bold border-[#cbd5e1] border-b-white border-b-2 shadow-xs z-20 -mb-[1px] pt-3 sm:pt-3.5 pb-2.5 sm:pb-3 ring-0'
-                    : 'bg-[#f1f5f9] hover:bg-[#e4eaf2] text-[#475569] font-medium border-[#cbd5e1] border-b-[#cbd5e1] hover:text-[#0f172a]'
-                }`}
-              >
-                {/* Active Indicator Accent Top Strip */}
-                {isActive && (
-                  <span className="absolute top-0 left-0 right-0 h-[3px] bg-[#2998d6] rounded-t-[6px]" />
-                )}
-
-                <span className={`shrink-0 transition-transform group-hover:scale-110 ${isActive ? tab.color : 'text-slate-400 group-hover:text-slate-600'}`}>
-                  {tab.icon}
-                </span>
-
-                <span className="tracking-tight">{tab.label}</span>
-
-                {/* Count Badge */}
-                <span
-                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold transition-colors ${
-                    isActive
-                      ? 'bg-[#2998d6] text-white shadow-xs'
-                      : 'bg-[#cbd5e1] text-[#334155] group-hover:bg-[#94a3b8] group-hover:text-white'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* MAIN WHITE CARD CONTAINER */}
-        <div className="accounting-card p-5 sm:p-7 relative z-0 border-[#cbd5e1] rounded-t-none">
-          {/* Card Header Title & Action Buttons */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#e2e8f0]">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-normal text-[#1e293b] font-heading">
-                {activeTab === 'sales' && 'Add a new sale / customer invoice'}
-                {activeTab === 'purchases' && 'Add a new purchase / stock intake'}
-                {activeTab === 'cash_in' && 'Add a new cash inflow / capital receipt'}
-                {activeTab === 'cash_out' && 'Add a new cash outflow / expense voucher'}
-                {activeTab === 'other' && 'Add a new milestone / general activity'}
-              </h2>
-            </div>
-
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                type="button"
-                onClick={() => setShowLedgerView(!showLedgerView)}
-                className="accounting-btn-primary"
-              >
-                <Edit3 className="w-3.5 h-3.5" />
-                <span>{showLedgerView ? 'Hide Audit Ledger' : 'Edit Fields / View Ledger'}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="accounting-btn-secondary"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>New Master Product</span>
-              </button>
-            </div>
+      <div className="accounting-card p-5 sm:p-7">
+        {/* Card Header Title & Action Buttons */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#e2e8f0]">
+          <div>
+            <h2 className="text-xl sm:text-2xl font-normal text-[#1e293b] font-heading">
+              {activeTab === 'sales' && 'Add a new sale / customer invoice'}
+              {activeTab === 'purchases' && 'Add a new purchase / stock intake'}
+              {activeTab === 'cash_in' && 'Add a new cash inflow / capital receipt'}
+              {activeTab === 'cash_out' && 'Add a new cash outflow / expense voucher'}
+              {activeTab === 'other' && 'Add a new milestone / general activity'}
+            </h2>
           </div>
 
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setShowLedgerView(!showLedgerView)}
+              className="accounting-btn-primary"
+            >
+              <Edit3 className="w-3.5 h-3.5" />
+              <span>{showLedgerView ? 'Hide Audit Ledger' : 'Edit Fields / View Ledger'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(true)}
+              className="accounting-btn-secondary"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>New Master Product</span>
+            </button>
+          </div>
+        </div>
+
         {/* Top 3 Solid Cyan Select Dropdowns (matching the 3 selects in screenshot) */}
-        <div className="pt-3 pb-2">
+        <div className="pt-4 pb-2">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
             <div>
               <label className="accounting-label">Activity Journal</label>
@@ -848,11 +96,11 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 onChange={(e) => handleSelectTab(e.target.value as ActivityTab)}
                 className="accounting-select w-full"
               >
-                <option value="sales">Sales (Client Orders & Receipts)</option>
-                <option value="purchases">Purchases (Supplier Intake & COGS)</option>
-                <option value="cash_in">Cash In (Capital & Inflows)</option>
-                <option value="cash_out">Cash Out & Operational Expenses</option>
-                <option value="other">General Activities & Milestones</option>
+                <option value="sales">Sales (Client Orders &amp; Receipts)</option>
+                <option value="purchases">Purchases (Supplier Intake &amp; COGS)</option>
+                <option value="cash_in">Cash In (Capital &amp; Inflows)</option>
+                <option value="cash_out">Cash Out &amp; Operational Expenses</option>
+                <option value="other">General Activities &amp; Milestones</option>
               </select>
             </div>
 
@@ -889,10 +137,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               <label className="accounting-label">Ledger Status</label>
               <select
                 value="Cleared"
-                className="accounting-select w-full opacity-80 cursor-not-allowed"
-                disabled
+                className="accounting-select w-full"
+                readOnly
               >
-                <option value="Cleared">Cleared & Confirmed</option>
+                <option value="Cleared">Cleared &amp; Confirmed</option>
                 <option value="Pending">Pending Reconciliation</option>
                 <option value="Hold">Audit Hold</option>
               </select>
@@ -930,7 +178,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   </select>
                 </div>
                 <div>
-                  <label className="accounting-label">Delivery Location / City (Optional)</label>
+                  <label className="accounting-label">Delivery Location / City</label>
                   <input
                     type="text"
                     placeholder="e.g. Kigali Central or Musanze"
@@ -964,12 +212,12 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   />
                 </div>
                 <div>
-                  <label className="accounting-label">Payment Method</label>
-                  <select className="accounting-select w-full" defaultValue="Cash">
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank</option>
-                    <option value="Mobile money">Mobile money</option>
-                  </select>
+                  <label className="accounting-label">Payment Terms</label>
+                  <input
+                    type="text"
+                    placeholder="Immediate / Net 15 Days"
+                    className="accounting-input w-full"
+                  />
                 </div>
               </div>
 
@@ -991,6 +239,14 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                     className="accounting-input w-full"
                   />
                 </div>
+                <div>
+                  <label className="accounting-label">Sales Representative / Agent</label>
+                  <input
+                    type="text"
+                    placeholder={activeSme.ownerName || 'Branch Manager'}
+                    className="accounting-input w-full"
+                  />
+                </div>
               </div>
             </div>
 
@@ -998,7 +254,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
             <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
                 <label className="accounting-label font-bold text-slate-800">
-                  Product Line Items & Inventory Decrement <span className="text-rose-600">*</span>
+                  Product Line Items &amp; Inventory Decrement <span className="text-rose-600">*</span>
                 </label>
                 <button
                   type="button"
@@ -1182,12 +438,12 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   </select>
                 </div>
                 <div>
-                  <label className="accounting-label">Payment Method</label>
-                  <select className="accounting-select w-full" defaultValue="Cash">
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank</option>
-                    <option value="Mobile money">Mobile money</option>
-                  </select>
+                  <label className="accounting-label">Payment Terms</label>
+                  <input
+                    type="text"
+                    placeholder="Immediate Cash / 30 Days Payable"
+                    className="accounting-input w-full"
+                  />
                 </div>
               </div>
 
@@ -1259,11 +515,11 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
             <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
                 <label className="accounting-label font-bold text-slate-800">
-                  Purchased Goods & Stock Intake Lines <span className="text-rose-600">*</span>
+                  Purchased Goods &amp; Stock Intake Lines <span className="text-rose-600">*</span>
                 </label>
                 <button
                   type="button"
-                  onClick={handleAddPurchaseRow}
+                  onClick={handleAddPurchaseItem}
                   className="text-xs font-semibold text-[#0284c7] hover:text-[#0369a1] flex items-center gap-1 cursor-pointer"
                 >
                   <Plus className="w-3.5 h-3.5" />
@@ -1626,12 +882,12 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                       >
                         <optgroup label="Operational Expenses">
                           <option value="Utilities">Utilities (Water, Power, Internet)</option>
-                          <option value="Rent">Rent & Facility Leases</option>
-                          <option value="Salaries">Staff Payroll & Direct Wages</option>
-                          <option value="Repairs">Machinery Repairs & Maintenance</option>
-                          <option value="Transport">Transport, Fuel & Haulage</option>
-                          <option value="Marketing">Marketing, Ads & Promotions</option>
-                          <option value="Taxes">Taxes, Municipal Levies & RRA</option>
+                          <option value="Rent">Rent &amp; Facility Leases</option>
+                          <option value="Salaries">Staff Payroll &amp; Direct Wages</option>
+                          <option value="Repairs">Machinery Repairs &amp; Maintenance</option>
+                          <option value="Transport">Transport, Fuel &amp; Haulage</option>
+                          <option value="Marketing">Marketing, Ads &amp; Promotions</option>
+                          <option value="Taxes">Taxes, Municipal Levies &amp; RRA</option>
                           <option value="General Expenses">General Office Operations</option>
                         </optgroup>
                         <optgroup label="Financial Outflows">
@@ -1852,7 +1108,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
         {/* TAB 5: OTHER ACTIVITIES FORM (3-Column Accounting Grid) */}
         {/* ===================================================================== */}
         {activeTab === 'other' && (
-          <form onSubmit={handleRecordOtherActivity} className="space-y-4">
+          <form onSubmit={handleRecordOther} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
               {/* Column 1 */}
               <div className="space-y-3">
@@ -1980,168 +1236,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
             </div>
           </form>
         )}
-        </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* UNIFIED ACTIVITIES HISTORY LEDGER */}
-      {/* ========================================================================= */}
-      {showLedgerView && (
-        <Card className="bg-white border border-gray-200 shadow-sm overflow-hidden">
-        <div className="p-5 border-b border-gray-100 flex flex-col md:flex-row md:items-center md:justify-between gap-3 bg-white">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900 font-heading flex items-center gap-2">
-              <FileText className="w-4 h-4 text-slate-600" />
-              <span>Consolidated Business Activities Log &amp; Ledger</span>
-            </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Live audit trail of all transactions and operations recorded for {activeSme.name}.
-            </p>
-          </div>
+`;
 
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <Input
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search activities or parties..."
-                className="pl-8 h-8 text-xs w-48 sm:w-60 bg-slate-50 border-slate-200 rounded-lg"
-              />
-            </div>
-
-            <select
-              value={ledgerFilter}
-              onChange={e => setLedgerFilter(e.target.value as any)}
-              className="px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 h-8 outline-none"
-            >
-              <option value="all">All Activities ({allActivities.length})</option>
-              <option value="sales">Sales Only ({salesList.length})</option>
-              <option value="purchases">Purchases Only ({purchasesList.length})</option>
-              <option value="cash_in">Cash In Only ({cashInsList.length})</option>
-              <option value="cash_out">Cash Out &amp; Expenses ({cashOutsCombined.length})</option>
-              <option value="other">Other Milestones ({otherList.length})</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-100 text-[10px] uppercase tracking-wider">
-                <th className="py-3 px-4">Date</th>
-                <th className="py-3 px-4">Activity Type</th>
-                <th className="py-3 px-4">Title / Description</th>
-                <th className="py-3 px-4">Entity / Counterparty</th>
-                <th className="py-3 px-4">Category / Channel</th>
-                <th className="py-3 px-4 text-right">Amount (FRW)</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-center w-14">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {filteredActivities.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-400">
-                    <Activity className="w-8 h-8 mx-auto mb-2 text-slate-300" />
-                    <p className="font-semibold text-xs text-slate-600">No activities recorded matching criteria</p>
-                    <p className="text-[11px] mt-0.5">Use the forms above to log sales, purchases, cashflow, or milestones.</p>
-                  </td>
-                </tr>
-              ) : (
-                filteredActivities.map((act) => {
-                  const getBadge = () => {
-                    switch (act.type) {
-                      case 'sales':
-                        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-                      case 'purchases':
-                        return 'bg-blue-50 text-blue-700 border-blue-200';
-                      case 'cash_in':
-                        return 'bg-teal-50 text-teal-700 border-teal-200';
-                      case 'cash_out':
-                        return 'bg-amber-50 text-amber-700 border-amber-200';
-                      case 'other':
-                        return 'bg-purple-50 text-purple-700 border-purple-200';
-                    }
-                  };
-
-                  return (
-                    <tr key={act.id} className="hover:bg-slate-50/70 transition-colors">
-                      <td className="py-3 px-4 font-mono text-slate-500 whitespace-nowrap">
-                        {act.date}
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${getBadge()}`}>
-                          {act.typeLabel}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">
-                        {act.title}
-                      </td>
-                      <td className="py-3 px-4 text-slate-600 font-medium">
-                        {act.party || '—'}
-                      </td>
-                      <td className="py-3 px-4 text-slate-500 text-[11px]">
-                        {act.category}
-                      </td>
-                      <td className="py-3 px-4 text-right font-mono font-bold whitespace-nowrap">
-                        {act.amount > 0 ? (
-                          act.isPositive ? (
-                            <span className="text-emerald-600">+{formatRWF(act.amount)}</span>
-                          ) : (
-                            <span className="text-rose-600">-{formatRWF(act.amount)}</span>
-                          )
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
-                          {act.status || 'Logged'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteActivity(act)}
-                          className="p-1 text-slate-400 hover:text-rose-600 rounded transition cursor-pointer"
-                          title="Delete record"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-      )}
-
-      {/* Modal for Creating Master Products */}
-      <CreateProductModal
-        isOpen={isCreateModalOpen}
-        onClose={() => setIsCreateModalOpen(false)}
-        onSubmit={async (data) => {
-          const newProd = await createProduct(data);
-          showToast(`Created new catalog item: "${newProd.name}"`);
-        }}
-      />
-
-      {/* Modal for Editing Master Products */}
-      {editingProduct && (
-        <EditProductModal
-          isOpen={!!editingProduct}
-          product={editingProduct}
-          onClose={() => setEditingProduct(null)}
-          onSubmit={async (id: string, data: any) => {
-            await updateProduct(id, data);
-            showToast(`Product updated successfully.`);
-          }}
-        />
-      )}
-    </div>
-  );
-}
+const newContent = content.substring(0, startIndex) + replacement + content.substring(endIndex);
+fs.writeFileSync(targetFile, newContent, 'utf8');
+console.log('Successfully updated BusinessActivities.tsx with enterprise 3-column form layout!');

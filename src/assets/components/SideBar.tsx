@@ -4,39 +4,48 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import logo from '../images/elevata_logo.png';
 import {
-  LayoutDashboard,
-  Building2,
   RotateCcw,
-  Package,
   ShoppingBag,
-  FileBarChart,
-  Target,
-  FileText,
-  Users,
-  Briefcase,
-  Bot,
-  Layers,
-  Megaphone,
-  Landmark,
-  Activity,
   Truck,
   ArrowDownLeft,
   ArrowUpRight,
   Star,
-  GraduationCap
+  Phone,
+  PieChart,
+  Folder,
+  MessageSquare,
+  Share2,
+  Mail,
+  CheckSquare,
+  Settings,
+  Monitor,
+  ChevronRight,
+  ChevronLeft,
+  X
 } from 'lucide-react';
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
+  isCollapsed?: boolean;
+  onCollapse?: () => void;
+  onExpand?: () => void;
+  onToggleCollapse?: () => void;
 }
 
-export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+export default function Sidebar({
+  isOpen,
+  onClose,
+  isCollapsed = true,
+  onCollapse,
+  onExpand,
+  onToggleCollapse
+}: SidebarProps) {
   const location = useLocation();
   const { activeSme, resetAll } = useApp();
   const { user } = useAuth();
 
-  // Close sidebar on Escape key
+  // Close sidebar on Escape key for mobile
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) {
@@ -77,386 +86,370 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const currentActivitySubtab = getActiveActivitySubtab();
 
   const activitySubtabs = [
-    { id: 'sales', label: 'Sales', path: '/activities?tab=sales', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
-    { id: 'purchases', label: 'Purchases', path: '/activities?tab=purchases', icon: <Truck className="w-3.5 h-3.5" /> },
-    { id: 'cash_in', label: 'Cash In', path: '/activities?tab=cash_in', icon: <ArrowDownLeft className="w-3.5 h-3.5" /> },
-    { id: 'cash_out', label: 'Cash Out', path: '/activities?tab=cash_out', icon: <ArrowUpRight className="w-3.5 h-3.5" /> },
-    { id: 'other', label: 'Other Activities', path: '/activities?tab=other', icon: <Star className="w-3.5 h-3.5" /> }
+    { id: 'sales', label: 'Sales Book', path: '/activities?tab=sales', icon: <ShoppingBag className="w-3.5 h-3.5" /> },
+    { id: 'purchases', label: 'Purchases Book', path: '/activities?tab=purchases', icon: <Truck className="w-3.5 h-3.5" /> },
+    { id: 'cash_in', label: 'Cash In Journal', path: '/activities?tab=cash_in', icon: <ArrowDownLeft className="w-3.5 h-3.5" /> },
+    { id: 'cash_out', label: 'Cash Out & OPEX', path: '/activities?tab=cash_out', icon: <ArrowUpRight className="w-3.5 h-3.5" /> },
+    { id: 'other', label: 'General Journal', path: '/activities?tab=other', icon: <Star className="w-3.5 h-3.5" /> }
   ];
 
-  const isActive = (path: string) => {
-    const isMatch = location.pathname === path || (path === '/activities' && isActivitiesRoute);
-    return isMatch
-      ? 'bg-white/10 text-white font-bold rounded-xl'
-      : 'text-slate-400 hover:bg-white/5 hover:text-white transition duration-150';
+  // Navigation Items modeled after the screenshot icon rail
+  const smeNavItems = [
+    {
+      id: 'hotline',
+      path: '/trainings',
+      label: 'Virtual Training',
+      tooltip: 'Live Training & Communications',
+      icon: <Phone className="w-5 h-5" />,
+      highlightTop: true
+    },
+    {
+      id: 'dashboard',
+      path: '/',
+      label: 'SME Analytics Dashboard',
+      tooltip: 'Analytics & Overview',
+      icon: <PieChart className="w-5 h-5" />
+    },
+    {
+      id: 'activities',
+      path: '/activities',
+      label: 'Business Activities & Ledger',
+      tooltip: 'Accounting Books & Ledger',
+      icon: <Folder className="w-5 h-5" />
+    },
+    {
+      id: 'opportunities',
+      path: '/opportunity-hub',
+      label: 'Opportunity Hub',
+      tooltip: 'Market Opportunities & Grants',
+      icon: <Share2 className="w-5 h-5" />
+    },
+    {
+      id: 'compliance',
+      path: '/trainings',
+      label: 'Compliance & Training',
+      tooltip: 'Certifications & Training',
+      icon: <CheckSquare className="w-5 h-5" />
+    },
+    {
+    id: 'reports',
+    path: '/reports',
+    label: 'Financial Statements & Reports',
+    tooltip: 'Statements & Audit Logs',
+    icon: <Mail className="w-5 h-5" />
+  },
+    {
+      id: 'copilot',
+      path: '/ai-bot',
+      label: 'Elevata AI Copilot',
+      tooltip: 'AI Financial Advisor',
+      icon: <MessageSquare className="w-5 h-5" />
+    }
+  ];
+
+  const bankerNavItems = [
+    {
+      id: 'banker-training',
+      path: '/banker/trainings',
+      label: 'Training Manager & Sessions',
+      tooltip: 'Banker Training Delivery',
+      icon: <Phone className="w-5 h-5" />,
+      highlightTop: true
+    },
+    {
+      id: 'banker-panel',
+      path: '/banker',
+      label: 'Credit Institution Panel',
+      tooltip: 'Banker Portfolio Overview',
+      icon: <PieChart className="w-5 h-5" />
+    },
+    {
+      id: 'applications',
+      path: '/banker/applications',
+      label: 'Credit Applications',
+      tooltip: 'Loan & Grant Underwriting',
+      icon: <Folder className="w-5 h-5" />
+    },
+    {
+      id: 'publisher',
+      path: '/banker/publisher',
+      label: 'Publish Credit Opportunities',
+      tooltip: 'Opportunity Management',
+      icon: <Share2 className="w-5 h-5" />
+    },
+    {
+      id: 'banker-copilot',
+      path: '/ai-bot',
+      label: 'AI Banker Copilot',
+      tooltip: 'AI Credit Risk Evaluation',
+      icon: <MessageSquare className="w-5 h-5" />
+    },
+    {
+      id: 'monitoring',
+      path: '/banker/monitoring',
+      label: 'SME Monitoring Matrix',
+      tooltip: 'Borrower Risk & Health',
+      icon: <Monitor className="w-5 h-5" />
+    }
+  ];
+
+  const currentNavItems =
+    user?.role === 'FINANCIAL_INSTITUTION' ? bankerNavItems : smeNavItems;
+
+  const isItemActive = (path: string) => {
+    if (path === '/activities') {
+      return isActivitiesRoute;
+    }
+    if (path === '/') {
+      return location.pathname === '/';
+    }
+    return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
-
-  const adminLinks = [
-    { path: '/admin/users', label: 'User Approvals', icon: <Users className="w-4 h-4" /> },
-    { path: '/admin/categories', label: 'Business Categories', icon: <Layers className="w-4 h-4" /> }
-  ];
-
-  const smeLinks = [
-    { path: '/', label: 'SME Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { path: '/profile', label: 'Business Profile', icon: <Briefcase className="w-4 h-4" /> },
-    //{ path: '/inventory', label: 'Inventory Catalog', icon: <Package className="w-4 h-4" /> },
-    { path: '/activities', label: 'Business Activities', icon: <Activity className="w-4 h-4" /> },
-    { path: '/opportunity-hub', label: 'Opportunity Hub', icon: <Target className="w-4 h-4" /> },
-    { path: '/trainings', label: 'Training', icon: <GraduationCap className="w-4 h-4" /> },
-    { path: '/reports', label: 'Financial Reports', icon: <FileBarChart className="w-4 h-4" /> }
-  ];
-
-  const aiLinks = [
-    { path: '/ai-bot', label: 'Elevata AI Copilot', icon: <Bot className="w-4 h-4" /> },
-
-  ];
-
-  const bankerLinks = [
-    { path: '/profile', label: 'Institution Profile', icon: <Building2 className="w-4 h-4" /> },
-    { path: '/ai-bot', label: 'AI Banker Copilot', icon: <Bot className="w-4 h-4" /> },
-    { path: '/banker', label: 'Bank Officer Panel', icon: <Landmark className="w-4 h-4" /> },
-    { path: '/banker/publisher', label: 'Opportunity Publisher', icon: <Megaphone className="w-4 h-4" /> },
-    { path: '/banker/trainings', label: 'Training Manager', icon: <GraduationCap className="w-4 h-4" /> },
-    { path: '/banker/applications', label: 'Applications', icon: <FileText className="w-4 h-4" /> },
-    { path: '/banker/monitoring', label: 'SMEs Monitoring', icon: <LayoutDashboard className="w-4 h-4" /> }
-  ];
 
   return (
     <>
-      {/* Desktop Sidebar */}
-      <aside className="z-35 hidden md:flex h-full w-64 flex-col fixed bg-[#0f1724] text-slate-300">
-        {/* Logo Section */}
-        <div className="border-b border-white/10 bg-[#0f1724] p-5">
-          <div className="flex items-center space-x-3">
-            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl bg-white">
-              <img src={logo} alt="Elevata Logo" className="h-9 w-9 object-contain" />
-            </div>
-            <div>
-              <h1 className="font-heading text-sm font-bold leading-none tracking-tight text-white">Elevata</h1>
-              <p className="mt-1 text-[9px] font-semibold uppercase tracking-wider text-slate-400">Intelligent Finance</p>
-            </div>
-          </div>
-        </div>
+      {/* ========================================================================= */}
+      {/* DESKTOP SIDEBAR (Icon Rail / Collapsible - matches screenshot) */}
+      {/* ========================================================================= */}
+      <aside
+        onMouseEnter={() => {
+          if (isCollapsed) onExpand?.();
+        }}
+        className={`z-35 hidden md:flex h-full flex-col fixed top-14 bottom-0 bg-[#1a2332] text-slate-300 border-r border-[#2a384c] transition-all duration-200 select-none ${
+          isCollapsed ? 'w-[68px]' : 'w-64'
+        }`}
+      >
+        {/* Main Icon Navigation Stack */}
+        <nav className="flex-1 px-2.5 py-4 space-y-2 overflow-y-auto overflow-x-hidden">
+          {currentNavItems.map((item) => {
+            const active = isItemActive(item.path);
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 space-y-4 overflow-y-auto mt-2">
-          {/* SME Segment */}
-          {user?.role !== 'FINANCIAL_INSTITUTION' && (
-            <div>
-              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-slate-500">SME Workspace</h3>
-              <div className="space-y-1">
-                {smeLinks.map((link) => {
-                  if (link.path === '/activities') {
-                    return (
-                      <div key={link.path} className="space-y-1">
+            return (
+              <div key={item.id} className="relative group">
+                <Link
+                  to={item.path}
+                  onClick={onCollapse}
+                  className={`flex items-center gap-3.5 rounded-[6px] transition-all duration-150 ${
+                    isCollapsed
+                      ? 'h-11 w-11 justify-center mx-auto'
+                      : 'h-10 px-3 justify-start'
+                  } ${
+                    active
+                      ? 'bg-[#2998d6] text-white shadow-xs'
+                      : 'text-slate-400 hover:bg-white/10 hover:text-white'
+                  }`}
+                >
+                  <span className="shrink-0">{item.icon}</span>
+                  {!isCollapsed && (
+                    <span className="truncate text-xs font-semibold">{item.label}</span>
+                  )}
+                </Link>
+
+                {/* Tooltip in collapsed mode */}
+                {isCollapsed && (
+                  <div className="pointer-events-none fixed left-[74px] z-50 hidden -translate-y-10 whitespace-nowrap rounded-md bg-[#0f1724] px-2.5 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block border border-[#2d3d52]">
+                    <div className="flex items-center gap-1.5">
+                      <span>{item.tooltip}</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subtabs for Business Activities in expanded mode */}
+                {!isCollapsed && item.id === 'activities' && isActivitiesRoute && (
+                  <div className="my-1.5 ml-4 space-y-1 border-l-2 border-white/10 pl-3">
+                    {activitySubtabs.map((sub) => {
+                      const isSubActive = currentActivitySubtab === sub.id;
+                      return (
                         <Link
-                          to="/activities"
-                          className={`flex items-center justify-between px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
+                          key={sub.id}
+                          to={sub.path}
+                          onClick={onCollapse}
+                          className={`flex items-center space-x-2 rounded-md px-2 py-1 text-[11px] transition-all ${
+                            isSubActive
+                              ? 'bg-[#2998d6]/20 font-bold text-[#38bdf8]'
+                              : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                          }`}
                         >
-                          <div className="flex items-center space-x-3">
-                            <span>{link.icon}</span>
-                            <span>{link.label}</span>
-                          </div>
+                          <span>{sub.icon}</span>
+                          <span>{sub.label}</span>
                         </Link>
-
-                        {/* Nested Subtabs inside Business Activities */}
-                        <div className="my-1 ml-3 space-y-0.5 border-l-2 border-white/10 py-1 pl-3">
-                          {activitySubtabs.map((sub) => {
-                            const isSubActive = isActivitiesRoute && currentActivitySubtab === sub.id;
-                            return (
-                              <Link
-                                key={sub.id}
-                                to={sub.path}
-                                className={`flex items-center space-x-2.5 rounded-lg px-2.5 py-1.5 text-[11px] transition-all duration-150 ${
-                                  isSubActive
-                                    ? 'bg-white/10 font-bold text-white'
-                                    : 'font-medium text-slate-400 hover:bg-white/5 hover:text-white'
-                                }`}
-                              >
-                                <span className={isSubActive ? 'text-white' : 'text-slate-500'}>{sub.icon}</span>
-                                <span>{sub.label}</span>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    );
-                  }
-
-                  return (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
-                    >
-                      <span>{link.icon}</span>
-                      <span>{link.label}</span>
-                    </Link>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* AI Segment */}
-          {user?.role !== 'FINANCIAL_INSTITUTION' && (
-            <div>
-              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-slate-500">Advisory & Planning</h3>
-              <div className="space-y-1">
-                {aiLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Admin Segment */}
-          {user?.role === 'ADMIN' && (
-            <div>
-              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-violet-300">Administration</h3>
-              <div className="space-y-1">
-                {adminLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Banker Segment */}
-          {(user?.role === 'ADMIN' || user?.role === 'FINANCIAL_INSTITUTION') && (
-            <div>
-              <h3 className="mb-2 px-3 text-[9px] font-bold uppercase tracking-widest text-slate-500">Credit Institution</h3>
-              <div className="space-y-1">
-                {bankerLinks.map((link) => (
-                  <Link
-                    key={link.path}
-                    to={link.path}
-                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-150 ease-in-out text-xs font-semibold ${isActive(link.path)}`}
-                  >
-                    <span>{link.icon}</span>
-                    <span>{link.label}</span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
+            );
+          })}
         </nav>
 
-        {/* Sidebar Info & Reset */}
-        {user?.role !== 'FINANCIAL_INSTITUTION' && (
-          <div className="space-y-3 border-t border-white/10 p-4">
-            {/* Active SME Overview Widget */}
-            <div className="space-y-2 rounded-xl border border-white/10 bg-white/5 p-3">
-              <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-slate-400">
-                <span>Active Subject</span>
-                <span className={`h-2 w-2 rounded-full ${
-                  activeSme.healthScore >= 80 ? 'bg-emerald-500' : activeSme.healthScore >= 60 ? 'bg-amber-500' : 'bg-rose-500'
-                }`} />
-              </div>
-              <div>
-                <span className="block text-xs font-bold leading-tight text-white">{activeSme.name}</span>
-                <span className="mt-0.5 block text-[9px] font-semibold text-slate-400">{activeSme.sector} • Score: {activeSme.healthScore}</span>
-              </div>
-            </div>
-
-            {/* Reset button */}
-            <button
-              onClick={resetAll}
-              className="flex w-full items-center justify-center space-x-2 rounded-xl border border-white/10 bg-white/5 py-2 text-xs font-bold text-slate-200 transition duration-150 hover:bg-white/10 hover:text-white"
+        {/* Bottom Utility Controls (Settings, Reset, Collapse Toggle) */}
+        <div className="border-t border-[#2a384c] p-2.5 space-y-1.5 bg-[#17202d]">
+          {/* Settings / Profile */}
+          <div className="relative group">
+            <Link
+              to="/profile"
+              onClick={onCollapse}
+              className={`flex items-center gap-3 rounded-[6px] text-slate-400 hover:bg-white/10 hover:text-white transition-all ${
+                isCollapsed
+                  ? 'h-10 w-11 justify-center mx-auto'
+                  : 'h-9 px-3 justify-start'
+              }`}
             >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset Simulations</span>
-            </button>
+              <Settings className="w-4 h-4 shrink-0" />
+              {!isCollapsed && <span className="text-xs font-semibold">Settings</span>}
+            </Link>
+            {isCollapsed && (
+              <div className="pointer-events-none fixed left-[74px] z-50 hidden -translate-y-8 whitespace-nowrap rounded-md bg-[#0f1724] px-2.5 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block border border-[#2d3d52]">
+                Enterprise Settings
+              </div>
+            )}
           </div>
-        )}
+
+          {/* Reset Simulations (SME mode) */}
+          {user?.role !== 'FINANCIAL_INSTITUTION' && (
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Reset all financial simulation records back to demo state?')) {
+                    resetAll();
+                  }
+                }}
+                className={`flex items-center gap-3 rounded-[6px] text-slate-400 hover:bg-white/10 hover:text-white transition-all cursor-pointer ${
+                  isCollapsed
+                    ? 'h-10 w-11 justify-center mx-auto'
+                    : 'h-9 px-3 justify-start'
+                }`}
+              >
+                <RotateCcw className="w-4 h-4 shrink-0" />
+                {!isCollapsed && <span className="text-xs font-semibold">Reset Data</span>}
+              </button>
+              {isCollapsed && (
+                <div className="pointer-events-none fixed left-[74px] z-50 hidden -translate-y-8 whitespace-nowrap rounded-md bg-[#0f1724] px-2.5 py-1.5 text-xs font-semibold text-white shadow-xl group-hover:block border border-[#2d3d52]">
+                  Reset Simulations
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Collapse / Expand Rail Toggle */}
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              title={isCollapsed ? 'Expand navigation drawer' : 'Collapse to icon rail'}
+              className={`flex items-center gap-3 rounded-[6px] text-slate-400 hover:bg-white/10 hover:text-white transition-all cursor-pointer ${
+                isCollapsed
+                  ? 'h-10 w-11 justify-center mx-auto'
+                  : 'h-9 px-3 justify-between w-full'
+              }`}
+            >
+              {isCollapsed ? (
+                <ChevronRight className="w-4 h-4 text-slate-400" />
+              ) : (
+                <>
+                  <span className="text-xs font-semibold text-slate-400">Collapse Rail</span>
+                  <ChevronLeft className="w-4 h-4 text-slate-400" />
+                </>
+              )}
+            </button>
+          )}
+        </div>
       </aside>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* ========================================================================= */}
+      {/* MOBILE DRAWER SIDEBAR */}
+      {/* ========================================================================= */}
       <div
-        className={`md:hidden fixed inset-0 z-50 bg-black transition-all duration-300 ${
-          isOpen ? 'bg-opacity-50 visible' : 'bg-opacity-0 invisible'
+        className={`fixed inset-0 z-50 transition-opacity duration-200 md:hidden ${
+          isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
         }`}
-        onClick={onClose}
       >
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={onClose} />
         <aside
-          className={`h-full w-64 transform bg-[#0f1724] text-slate-300 transition-transform duration-300 ease-in-out ${
+          className={`fixed inset-y-0 left-0 w-72 bg-[#1a2332] text-slate-300 shadow-2xl transition-transform duration-200 ease-in-out ${
             isOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
-          onClick={(e) => e.stopPropagation()}
         >
           {/* Mobile Header */}
-          <div className="flex items-center justify-between border-b border-white/10 bg-[#0f1724] p-5">
-            <div className="flex items-center space-x-3">
-              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl bg-white">
-                <img src={logo} alt="Elevata Logo" className="h-7 w-7 object-contain" />
+          <div className="flex items-center justify-between border-b border-[#2d3b4e] bg-[#17202d] p-4">
+            <div className="flex items-center space-x-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-[#0284c7] to-[#38bdf8] p-1">
+                <img src={logo} alt="Elevata" className="h-6 w-6 object-contain" />
               </div>
               <div>
-                <h1 className="font-heading text-sm font-bold leading-none text-white">Elevata</h1>
-                <p className="mt-1 text-[8px] font-semibold uppercase text-slate-400">Financial Intelligence</p>
+                <h1 className="font-heading text-sm font-bold text-white">ELEVATA 360</h1>
+                <p className="text-[9px] font-semibold uppercase text-[#38bdf8]">Intelligent Accounting</p>
               </div>
             </div>
             <button
               onClick={onClose}
-              className="rounded-full p-1 text-slate-400 transition hover:bg-white/10 hover:text-white"
+              className="rounded-md p-1.5 text-slate-400 hover:bg-white/10 hover:text-white"
               aria-label="Close menu"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
+              <X className="h-5 w-5" />
             </button>
           </div>
 
-          {/* Mobile Navigation */}
-          <nav className="p-4 space-y-4 overflow-y-auto h-[calc(100%-180px)]">
-            {/* SME Segment */}
-            {user?.role !== 'FINANCIAL_INSTITUTION' && (
-              <div>
-                <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">SME Workspace</h3>
-                <div className="space-y-1">
-                  {smeLinks.map((link) => {
-                    if (link.path === '/activities') {
-                      return (
-                        <div key={link.path} className="space-y-1">
+          {/* Mobile Navigation List */}
+          <nav className="p-3 space-y-1.5 overflow-y-auto h-[calc(100%-140px)]">
+            {currentNavItems.map((item) => {
+              const active = isItemActive(item.path);
+
+              return (
+                <div key={item.id} className="space-y-1">
+                  <Link
+                    to={item.path}
+                    onClick={onClose}
+                    className={`flex items-center space-x-3 px-3 py-2.5 rounded-md text-xs font-semibold transition-colors ${
+                      active
+                        ? 'bg-[#2998d6] text-white'
+                        : 'text-slate-300 hover:bg-white/10 hover:text-white'
+                    }`}
+                  >
+                    <span className="shrink-0">{item.icon}</span>
+                    <span>{item.label}</span>
+                  </Link>
+
+                  {/* Mobile Subtabs */}
+                  {item.id === 'activities' && isActivitiesRoute && (
+                    <div className="my-1 ml-4 space-y-1 border-l-2 border-white/10 pl-3">
+                      {activitySubtabs.map((sub) => {
+                        const isSubActive = currentActivitySubtab === sub.id;
+                        return (
                           <Link
-                            to="/activities"
-                            className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
+                            key={sub.id}
+                            to={sub.path}
                             onClick={onClose}
+                            className={`flex items-center space-x-2 rounded-md px-2.5 py-1.5 text-[11px] transition-colors ${
+                              isSubActive
+                                ? 'bg-[#2998d6]/20 font-bold text-[#38bdf8]'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                            }`}
                           >
-                            <span>{link.icon}</span>
-                            <span>{link.label}</span>
+                            <span>{sub.icon}</span>
+                            <span>{sub.label}</span>
                           </Link>
-
-                          {/* Mobile Subtabs */}
-                          <div className="my-1 ml-3 space-y-0.5 border-l-2 border-white/10 py-1 pl-3">
-                            {activitySubtabs.map((sub) => {
-                              const isSubActive = isActivitiesRoute && currentActivitySubtab === sub.id;
-                              return (
-                                <Link
-                                  key={sub.id}
-                                  to={sub.path}
-                                  className={`flex items-center space-x-2.5 rounded-lg px-2 py-1.5 text-[11px] transition-all duration-150 ${
-                                    isSubActive
-                                      ? 'bg-white/10 font-bold text-white'
-                                      : 'font-medium text-slate-400 hover:bg-white/5 hover:text-white'
-                                  }`}
-                                  onClick={onClose}
-                                >
-                                  <span className={isSubActive ? 'text-white' : 'text-slate-500'}>{sub.icon}</span>
-                                  <span>{sub.label}</span>
-                                </Link>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      );
-                    }
-
-                    return (
-                      <Link
-                        key={link.path}
-                        to={link.path}
-                        className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
-                        onClick={onClose}
-                      >
-                        <span>{link.icon}</span>
-                        <span>{link.label}</span>
-                      </Link>
-                    );
-                  })}
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-
-            {/* AI Segment */}
-            {user?.role !== 'FINANCIAL_INSTITUTION' && (
-              <div>
-                <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">Advisory & Planning</h3>
-                <div className="space-y-1">
-                  {aiLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
-                      onClick={onClose}
-                    >
-                      <span>{link.icon}</span>
-                      <span>{link.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Admin Segment */}
-            {user?.role === 'ADMIN' && (
-              <div>
-                <h3 className="mb-1.5 px-3 text-[9px] font-bold uppercase tracking-widest text-violet-300">Administration</h3>
-                <div className="space-y-1">
-                  {adminLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
-                      onClick={onClose}
-                    >
-                      <span>{link.icon}</span>
-                      <span>{link.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Banker Segment */}
-            {(user?.role === 'ADMIN' || user?.role === 'FINANCIAL_INSTITUTION') && (
-              <div>
-                <h3 className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1.5 px-3">Credit Institution</h3>
-                <div className="space-y-1">
-                  {bankerLinks.map((link) => (
-                    <Link
-                      key={link.path}
-                      to={link.path}
-                      className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-xs font-semibold ${isActive(link.path)}`}
-                      onClick={onClose}
-                    >
-                      <span>{link.icon}</span>
-                      <span>{link.label}</span>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
+              );
+            })}
           </nav>
 
           {/* Mobile Footer */}
-          {user?.role !== 'FINANCIAL_INSTITUTION' && (
-            <div className="space-y-3 border-t border-white/10 bg-[#0f1724] p-4">
-              <button
-                onClick={() => {
-                  resetAll();
-                  onClose();
-                }}
-                className="flex w-full items-center justify-center space-x-2 rounded-lg border border-white/10 bg-white/5 py-2 text-xs font-bold text-slate-200 transition hover:bg-white/10 hover:text-white"
-              >
-                <RotateCcw className="h-3.5 w-3.5" />
-                <span>Reset Simulations</span>
-              </button>
-            </div>
-          )}
+          <div className="border-t border-[#2d3b4e] p-3 space-y-2 bg-[#17202d] text-xs">
+            <Link
+              to="/profile"
+              onClick={onClose}
+              className="flex items-center gap-2 rounded-md px-3 py-2 text-slate-300 hover:bg-white/10"
+            >
+              <Settings className="w-4 h-4" />
+              <span>Business Settings</span>
+            </Link>
+          </div>
         </aside>
       </div>
     </>

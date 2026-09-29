@@ -1,29 +1,20 @@
 import React, { useState } from 'react';
 import {
-  Video,
   Calendar,
-  Clock,
   Users,
   Award,
   BookOpen,
   Search,
-  Filter,
   CheckCircle2,
   Radio,
   Sparkles,
   ExternalLink,
-  ChevronRight,
-  Download,
-  Share2,
   Printer,
-  ShieldCheck,
   Building2,
-  Check,
   GraduationCap,
   CalendarPlus,
   PlayCircle,
   Globe,
-  Layers,
   X
 } from 'lucide-react';
 import { Training, useApp } from '../context/AppContext';
@@ -441,7 +432,7 @@ export default function SmeTrainingManager() {
                             className="w-full py-2 bg-white hover:bg-[#f3f2f0] text-[#181818] border border-[#cccccc] rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition"
                           >
                             <BookOpen className="w-3.5 h-3.5" />
-                            <span>Review Slides</span>
+                            <span>Open Session</span>
                           </button>
                         </div>
                       ) : isEnrolled ? (

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp, Training } from '../context/AppContext';
+import { useAuth } from '../context/AuthContext';
 import { formatRWF } from '../lib/mockData';
 import {
   Sparkles,
@@ -29,13 +30,42 @@ import {
   Loader2,
   Mail,
   Phone,
-  Globe
+  Globe,
+  AlertTriangle,
+  Lock,
+  ShieldAlert,
+  Info,
+  FileUp,
+  FileSpreadsheet,
+  FileCheck,
+  FileBadge,
+  CheckCircle2,
+  Paperclip,
+  HelpCircle,
+  Briefcase,
+  Layers,
+  ArrowRight
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 import FormattedText from '../assets/components/ui/FormattedText';
 import VirtualTrainingAttendeeModal from '../assets/components/VirtualTrainingAttendeeModal';
 
+const getDocIcon = (docName: string, className = "w-4 h-4") => {
+  const lower = docName.toLowerCase();
+  if (lower.includes('tax') || lower.includes('compliance') || lower.includes('rra')) {
+    return <FileCheck className={className} />;
+  }
+  if (lower.includes('financial') || lower.includes('ledger') || lower.includes('statement') || lower.includes('audit') || lower.includes('cashflow') || lower.includes('bank')) {
+    return <FileSpreadsheet className={className} />;
+  }
+  if (lower.includes('license') || lower.includes('rdb') || lower.includes('registration') || lower.includes('certificate') || lower.includes('id') || lower.includes('profile')) {
+    return <FileBadge className={className} />;
+  }
+  return <FileText className={className} />;
+};
+
 export default function OpportunityHub() {
+  const { user } = useAuth();
   const {
     opportunities,
     applications,
@@ -45,6 +75,27 @@ export default function OpportunityHub() {
     bookmarkOpportunity,
     bookmarkedOpportunities
   } = useApp();
+
+  // 90-Day evaluation policy calculation for SME account maturity
+  const EVALUATION_PERIOD_DAYS = 90;
+  const smeSystemDays = useMemo(() => {
+    if (user?.createdAt) {
+      const createdDate = new Date(user.createdAt);
+      if (!isNaN(createdDate.getTime())) {
+        const diffMs = Date.now() - createdDate.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        return Math.max(1, diffDays);
+      }
+    }
+    if (typeof activeSme.age === 'number' && activeSme.age > 0) {
+      return activeSme.age;
+    }
+    return 28; // Default initial trial period (under 90 days)
+  }, [user?.createdAt, activeSme.age]);
+
+  const isUnder90Days = smeSystemDays < EVALUATION_PERIOD_DAYS;
+  const remainingEvaluationDays = Math.max(0, EVALUATION_PERIOD_DAYS - smeSystemDays);
+  const evaluationProgressPercent = Math.min(100, Math.round((smeSystemDays / EVALUATION_PERIOD_DAYS) * 100));
 
   // Tab control inside SME Hub
   const [activeTab, setActiveTab] = useState<'marketplace' | 'readiness' | 'trainings' | 'applications'>('marketplace');
@@ -98,7 +149,7 @@ export default function OpportunityHub() {
 
   // AI Matching for Marketplace List
   const scoredOpportunities = useMemo(() => {
-    return opportunities.map(opp => {
+    const list = opportunities.map(opp => {
       let score = 0;
       const reasons: string[] = [];
       const missing: string[] = [];
@@ -149,12 +200,18 @@ export default function OpportunityHub() {
         reasons,
         missing
       };
-    }).sort((a, b) => b.matchPercent - a.matchPercent);
-  }, [opportunities, activeSme, calculatedReadiness]);
+    });
+
+    // When under 90 days, do NOT rank by recommendation match score; keep neutral listing
+    if (isUnder90Days) {
+      return list;
+    }
+    return list.sort((a, b) => b.matchPercent - a.matchPercent);
+  }, [opportunities, activeSme, calculatedReadiness, isUnder90Days]);
 
   const recommendedOpp = useMemo(() => {
-    return scoredOpportunities[0];
-  }, [scoredOpportunities]);
+    return isUnder90Days ? null : scoredOpportunities[0];
+  }, [scoredOpportunities, isUnder90Days]);
 
   const selectedOpp = useMemo(() => {
     return scoredOpportunities.find(o => o.id === selectedOppId) || null;
@@ -352,20 +409,81 @@ export default function OpportunityHub() {
         </div>
       )}
 
+      {/* 90-Day Policy Red Flag Alert Banner for Under-90 Days SMEs */}
+      {isUnder90Days && (
+        <div className="rounded-xl border-2 border-red-500/90 bg-red-50 p-5 shadow-sm space-y-3.5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-start gap-3">
+              <div className="p-2.5 bg-red-600 text-white rounded-xl shrink-0 shadow-sm mt-0.5">
+                <AlertTriangle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[10px] font-bold bg-red-600 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
+                    Account Baseline Active
+                  </span>
+                  <span className="text-xs font-bold text-red-950">
+                    90-Day Historical Data Required
+                  </span>
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-red-950">
+                  AI Funding Recommendations Locked ({remainingEvaluationDays} Days Remaining)
+                </h3>
+                <p className="text-xs text-red-900/90 leading-relaxed max-w-3xl">
+                  Your business account has been active for <strong>{smeSystemDays} days</strong>. Elevata AI requires at least <strong>90 days of consistent trade transactions</strong> (sales, purchases, cash flows, and inventory records) to generate authenticated credit match scores and automated product recommendations.
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 sm:text-right bg-white border border-red-200 rounded-xl p-3 min-w-[170px] shadow-sm">
+              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Evaluation Window</span>
+              <span className="text-base font-extrabold text-red-600 font-mono block mt-0.5">
+                {remainingEvaluationDays} Days Left
+              </span>
+              <span className="text-[10px] text-slate-500 block">
+                Day {smeSystemDays} of 90 Completed
+              </span>
+            </div>
+          </div>
+
+          {/* Progress Bar & Subtitle */}
+          <div className="pt-2.5 border-t border-red-200/90 space-y-1.5">
+            <div className="flex justify-between text-[11px] font-bold text-red-950">
+              <span>System Maturity Progress: {evaluationProgressPercent}%</span>
+              <span>Automated Matching Unlocks on Day 90</span>
+            </div>
+            <div className="h-2.5 w-full bg-red-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-red-600 to-amber-500 rounded-full transition-all duration-500"
+                style={{ width: `${Math.max(6, evaluationProgressPercent)}%` }}
+              />
+            </div>
+            <p className="text-[11px] text-red-800 font-medium pt-0.5 flex items-center gap-1.5">
+              <Info className="w-3.5 h-3.5 shrink-0 text-red-600" />
+              <span>All <strong>{opportunities.length} marketplace opportunities</strong> are listed below for standard manual review and direct application.</span>
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Hero Header */}
       <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
         <div className="space-y-1 z-10">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded border border-emerald-100 uppercase tracking-widest flex items-center gap-1">
               <Sparkles className="w-3 h-3 text-emerald-600 animate-pulse" />
-              Elevata AI Insight
+              Elevata AI Marketplace
             </span>
           </div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight font-heading">
             {activeSme.ownerName ? `Welcome back, ${activeSme.ownerName.split(' ')[0]}!` : 'Welcome to Opportunity Hub'}
           </h1>
           <p className="text-xs text-slate-500 max-w-xl font-sans">
-            AI matched <strong className="text-slate-900 font-bold">{scoredOpportunities.filter(o => o.matchPercent >= 60).length} financial opportunities</strong> against your current business profile.
+            {isUnder90Days ? (
+              <>Displaying all <strong className="text-slate-900 font-bold">{opportunities.length} available opportunities</strong>. Automated AI recommendations will activate in <strong className="text-amber-700 font-bold">{remainingEvaluationDays} days</strong>.</>
+            ) : (
+              <>AI matched <strong className="text-slate-900 font-bold">{scoredOpportunities.filter(o => o.matchPercent >= 60).length} financial opportunities</strong> against your current business profile.</>
+            )}
           </p>
         </div>
 
@@ -394,7 +512,62 @@ export default function OpportunityHub() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recommended Card Left 2 Columns */}
         <div className="lg:col-span-2">
-          {recommendedOpp ? (
+          {isUnder90Days ? (
+            /* 90-Day Policy: Locked Recommendations Placeholder */
+            <div className="p-5 border border-amber-300 rounded-lg bg-amber-50/50 flex flex-col md:flex-row justify-between gap-5 shadow-sm">
+              <div className="space-y-3 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] font-bold bg-amber-600 text-white px-2 py-0.5 rounded uppercase tracking-wider flex items-center gap-1">
+                    <Lock className="w-2.5 h-2.5" />
+                    AI Recommendation Locked
+                  </span>
+                  <span className="text-[10px] font-bold text-amber-800 font-mono">
+                    {remainingEvaluationDays} Days Remaining
+                  </span>
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Personalized Product Recommendations Pending</h3>
+                  <p className="text-[10px] text-slate-500">System Policy: 90-Day Verified Trade Ledger Required</p>
+                </div>
+
+                <p className="text-[11px] text-slate-600 leading-relaxed max-w-lg">
+                  Elevata AI does not bias or prioritize specific funding products during your first 90 days. This guarantees financial institutions receive verified, unskewed performance data when reviewing your profile.
+                </p>
+
+                <div className="p-3 bg-white border border-amber-200 rounded-lg text-[10px] text-slate-500 space-y-1.5 max-w-lg shadow-sm">
+                  <span className="font-bold text-slate-700 uppercase tracking-wider block text-[9px] flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-amber-600" />
+                    How to ensure high match scores on Day 90
+                  </span>
+                  <ul className="list-disc pl-4 space-y-1 text-slate-600">
+                    <li>Consistently register daily sales transactions and invoices.</li>
+                    <li>Record operating expenses, rent, utilities, and supplier purchase bills.</li>
+                    <li>Update your product inventory stock levels to verify operational turnover.</li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="flex flex-row md:flex-col justify-between items-center md:items-end gap-3 shrink-0 self-end md:self-auto pt-3 md:pt-0 border-t md:border-t-0 border-slate-100 md:border-l md:pl-5 border-amber-200">
+                <div className="text-left md:text-right font-mono">
+                  <span className="text-[8px] text-slate-400 block uppercase font-semibold">Available Catalog</span>
+                  <span className="text-base font-bold text-slate-900 block">{opportunities.length} Programs</span>
+                  <span className="text-[9px] text-amber-800 block mt-1 font-semibold">Manual applications active</span>
+                </div>
+
+                <button
+                  onClick={() => {
+                    setActiveTab('marketplace');
+                    const listElement = document.getElementById('marketplace-list');
+                    if (listElement) listElement.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold rounded-md shadow-sm transition"
+                >
+                  Browse Catalog
+                </button>
+              </div>
+            </div>
+          ) : recommendedOpp ? (
             <div className="p-5 border border-emerald-500 ring-1 ring-emerald-500/10 rounded-lg bg-emerald-50/10 hover:bg-emerald-50/20 transition flex flex-col md:flex-row justify-between gap-5">
               <div className="space-y-3 flex-1">
                 <div className="flex items-center gap-2">
@@ -402,7 +575,7 @@ export default function OpportunityHub() {
                     Recommended Today
                   </span>
                   <span className="text-[10px] font-bold text-emerald-600 font-mono">
-                    {recommendedOpp.matchPercent}% AI Match Match
+                    {recommendedOpp.matchPercent}% AI Match
                   </span>
                 </div>
 
@@ -514,7 +687,11 @@ export default function OpportunityHub() {
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
               <div>
                 <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Browse Financial Marketplace</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Filter and apply to verified grants and loans.</p>
+                <p className="text-[10px] text-slate-400 mt-0.5 font-sans">
+                  {isUnder90Days
+                    ? `Explore all published programs (${remainingEvaluationDays} days remaining in baseline period).`
+                    : 'Filter and apply to verified grants and loans.'}
+                </p>
               </div>
 
               {/* Filters */}
@@ -580,14 +757,28 @@ export default function OpportunityHub() {
 
                     <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
                       <div className="p-1.5 bg-slate-50 border border-slate-100 rounded">
-                        <span className="text-slate-400 block text-[8px] uppercase">AI Match</span>
-                        <span className="font-bold text-emerald-600 font-mono">{opp.matchPercent}%</span>
+                        <span className="text-slate-400 block text-[8px] uppercase">
+                          {isUnder90Days ? 'Status' : 'AI Match'}
+                        </span>
+                        {isUnder90Days ? (
+                          <span className="font-bold text-emerald-700 font-mono text-[9px] flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> Open Catalog
+                          </span>
+                        ) : (
+                          <span className="font-bold text-emerald-600 font-mono">{opp.matchPercent}%</span>
+                        )}
                       </div>
                       <div className="p-1.5 bg-slate-50 border border-slate-100 rounded">
-                        <span className="text-slate-400 block text-[8px] uppercase">App Chance</span>
-                        <span className={`font-bold font-mono ${
-                          opp.chance === 'High' ? 'text-emerald-600' : opp.chance === 'Medium' ? 'text-amber-600' : 'text-rose-600'
-                        }`}>{opp.chance}</span>
+                        <span className="text-slate-400 block text-[8px] uppercase">
+                          {isUnder90Days ? 'Application' : 'App Chance'}
+                        </span>
+                        {isUnder90Days ? (
+                          <span className="font-bold text-slate-700 font-mono text-[9px]">Direct Apply</span>
+                        ) : (
+                          <span className={`font-bold font-mono ${
+                            opp.chance === 'High' ? 'text-emerald-600' : opp.chance === 'Medium' ? 'text-amber-600' : 'text-rose-600'
+                          }`}>{opp.chance}</span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -781,8 +972,8 @@ export default function OpportunityHub() {
                             <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-ping" /> LIVE NOW
                           </span>
                         ) : isCompleted ? (
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-wider">
-                            ✓ Certified
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-emerald-50 text-emerald-700 border-emerald-200 uppercase tracking-wider flex items-center gap-1">
+                            <Check className="w-3 h-3" /> Certified
                           </span>
                         ) : (
                           <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-100 uppercase tracking-wider">
@@ -909,6 +1100,7 @@ export default function OpportunityHub() {
           </div>
         )}
       </div>
+
       {selectedOpp && (() => {
         const activeSmeLocation = 'Not provided';
         const activeSmeAnnualRevenue = activeSme.monthlyData.reduce((sum, item) => sum + item.revenue, 0);
@@ -916,107 +1108,124 @@ export default function OpportunityHub() {
         const minMonthly = selectedOpp.minMonthlyRevenue || Math.round(selectedOpp.minRevenue / 12);
 
         return (
-          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] z-50 flex items-center justify-center p-4">
-            <div className="bg-white border border-slate-200 rounded-lg shadow-2xl w-full max-w-4xl h-[560px] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-150">
-              <div className="flex-1 p-5 overflow-y-auto space-y-4 border-r border-slate-100">
-                <div className="flex justify-between items-start">
-                  <div className="flex flex-wrap gap-1.5 items-center">
-                    <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded uppercase">
-                      {selectedOpp.category}
-                    </span>
-                    {selectedOpp.category === 'Loan' && (
-                      <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                        <Coins className="w-3 h-3 text-indigo-600" />
-                        Financing
+          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-5xl h-[650px] max-h-[92vh] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-150">
+              
+              {/* Left Column: Opportunity Core Details & Criteria */}
+              <div className="flex-1 p-6 overflow-y-auto space-y-5 border-r border-slate-100">
+                
+                {/* Header info */}
+                <div className="flex justify-between items-start gap-4">
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <span className="text-[10px] font-bold bg-slate-900 text-white px-2.5 py-0.5 rounded uppercase tracking-wider">
+                        {selectedOpp.category}
                       </span>
-                    )}
-                    {selectedOpp.sectors.includes('Agriculture') && (
-                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded uppercase flex items-center gap-1">
-                        <Sprout className="w-3 h-3 text-emerald-600" />
-                        Agrisolutions
-                      </span>
-                    )}
+                      {selectedOpp.category === 'Loan' && (
+                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded uppercase flex items-center gap-1">
+                          <Coins className="w-3 h-3 text-indigo-600" />
+                          Credit Facility
+                        </span>
+                      )}
+                      {selectedOpp.sectors.includes('Agriculture') && (
+                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded uppercase flex items-center gap-1">
+                          <Sprout className="w-3 h-3 text-emerald-600" />
+                          Agrisolutions
+                        </span>
+                      )}
+                    </div>
+                    
+                    <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-snug">
+                      {selectedOpp.title}
+                    </h3>
+                    <p className="text-[11px] text-slate-500 flex items-center gap-2 flex-wrap">
+                      <span>Offered by <strong className="text-slate-800 font-semibold">{selectedOpp.institution}</strong></span>
+                      <span>·</span>
+                      <span className="font-mono text-slate-600">Deadline: {selectedOpp.deadline}</span>
+                    </p>
                   </div>
                   
                   <button
                     onClick={() => setSelectedOppId(null)}
-                    className="p-1 text-slate-400 hover:text-slate-600 transition md:hidden"
+                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition shrink-0 md:hidden"
                   >
                     <X className="w-4 h-4" />
                   </button>
                 </div>
 
-                <div>
-                  <h3 className="text-sm font-bold text-slate-955 font-heading">{selectedOpp.title}</h3>
-                  <p className="text-[10px] text-slate-400">Published by {selectedOpp.institution} · Deadline: {selectedOpp.deadline}</p>
-                </div>
-
-                <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-3">
+                {/* Verified Institution strip */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
                   <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#0a66c2]">Verified financial institution</span>
-                      <p className="mt-1 text-xs font-bold text-slate-900">{selectedOpp.publisher?.institutionName || selectedOpp.institution}</p>
-                      {selectedOpp.publisher?.representativeName && <p className="text-[10px] text-slate-500">Contact: {selectedOpp.publisher.representativeName}</p>}
+                    <div className="space-y-0.5">
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#0a66c2] flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#0a66c2]" />
+                        Verified Financial Institution
+                      </span>
+                      <p className="text-xs font-bold text-slate-900">{selectedOpp.publisher?.institutionName || selectedOpp.institution}</p>
+                      {selectedOpp.publisher?.representativeName && (
+                        <p className="text-[10px] text-slate-500">Officer / Desk: {selectedOpp.publisher.representativeName}</p>
+                      )}
                     </div>
-                    <ShieldCheck className="h-5 w-5 shrink-0 text-[#057642]" />
+                    <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-bold rounded-full uppercase tracking-wider">
+                      Active
+                    </span>
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {selectedOpp.publisher?.phone && <a href={`tel:${selectedOpp.publisher.phone}`} className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm"><Phone className="h-3 w-3 text-[#0a66c2]" />{selectedOpp.publisher.phone}</a>}
-                    {selectedOpp.publisher?.email && <a href={`mailto:${selectedOpp.publisher.email}`} className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm"><Mail className="h-3 w-3 text-[#0a66c2]" />Email officer</a>}
-                    {selectedOpp.publisher?.website && <a href={selectedOpp.publisher.website} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-[10px] font-bold text-slate-700 shadow-sm"><Globe className="h-3 w-3 text-[#0a66c2]" />Website</a>}
+
+                  <div className="mt-2.5 flex flex-wrap gap-2 pt-2 border-t border-slate-200/60">
+                    {selectedOpp.publisher?.phone && (
+                      <a href={`tel:${selectedOpp.publisher.phone}`} className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
+                        <Phone className="h-3 w-3 text-[#0a66c2]" />
+                        {selectedOpp.publisher.phone}
+                      </a>
+                    )}
+                    {selectedOpp.publisher?.email && (
+                      <a href={`mailto:${selectedOpp.publisher.email}`} className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
+                        <Mail className="h-3 w-3 text-[#0a66c2]" />
+                        Email Desk
+                      </a>
+                    )}
+                    {selectedOpp.publisher?.website && (
+                      <a href={selectedOpp.publisher.website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
+                        <Globe className="h-3 w-3 text-[#0a66c2]" />
+                        Web Portal
+                      </a>
+                    )}
                   </div>
                 </div>
 
-                {selectedOpp.sectors.includes('Agriculture') && (
-                  <div className="bg-gradient-to-r from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/20 rounded-xl p-4 flex items-center gap-3.5 shadow-sm">
-                    <div className="h-10 w-10 rounded-xl bg-emerald-500/20 flex items-center justify-center shrink-0 border border-emerald-500/30">
-                      <Sprout className="w-5 h-5 text-emerald-600" />
-                    </div>
-                    <div className="space-y-0.5">
-                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-widest block font-sans">Agribusiness / Agrisolutions Program</span>
-                      <p className="text-xs text-slate-650 leading-relaxed font-sans font-medium">
-                        Specialized support, inventory logistics, or equity-free grants designed for agricultural cooperatives and local farming supply chains.
-                      </p>
-                    </div>
-                  </div>
-                )}
-
+                {/* Key Financing Terms Breakdown */}
                 {selectedOpp.category === 'Loan' && (
-                  <div className="bg-gradient-to-r from-indigo-500/10 via-blue-500/5 to-transparent border border-indigo-500/20 rounded-xl p-4 space-y-3 shadow-sm">
-                    <div className="flex items-center gap-3.5">
-                      <div className="h-10 w-10 rounded-xl bg-indigo-500/20 flex items-center justify-center shrink-0 border border-indigo-500/30">
-                        <Coins className="w-5 h-5 text-indigo-600" />
-                      </div>
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-widest block font-sans">Financing Terms &amp; Cost Breakdown</span>
-                        <p className="text-xs text-slate-650 leading-relaxed font-sans font-medium">
-                          Detailed cost of borrowing based on your digital ledger transactions.
-                        </p>
-                      </div>
+                  <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <Coins className="w-3.5 h-3.5 text-indigo-600" />
+                        Financing Terms &amp; Cost Structure
+                      </span>
+                      <span className="text-[9px] font-mono text-slate-500">Ledger-backed</span>
                     </div>
                     
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs pt-2 border-t border-indigo-500/10">
-                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
                         <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Interest Rate</span>
-                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
-                          {selectedOpp.loanRate ? `${selectedOpp.loanRate}% p.a. fixed` : 'Not specified'}
+                        <span className="font-bold text-slate-900 block text-xs mt-0.5">
+                          {selectedOpp.loanRate ? `${selectedOpp.loanRate}% p.a.` : 'Standard'}
                         </span>
                       </div>
-                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
                         <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Repayment Term</span>
-                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
-                          {selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : 'Not specified'}
+                        <span className="font-bold text-slate-900 block text-xs mt-0.5">
+                          {selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : 'Negotiable'}
                         </span>
                       </div>
-                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
-                        <span className="text-slate-400 block text-[8px] tracking-wider uppercase font-semibold">Grace Period</span>
-                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5">
-                          {selectedOpp.loanGrace ? `${selectedOpp.loanGrace} Months` : 'Not specified'}
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Grace Period</span>
+                        <span className="font-bold text-slate-900 block text-xs mt-0.5">
+                          {selectedOpp.loanGrace ? `${selectedOpp.loanGrace} Months` : 'None'}
                         </span>
                       </div>
-                      <div className="p-2 bg-white rounded-lg border border-indigo-500/10 shadow-sm">
-                        <span className="text-slate-400 block text-[8px] tracking-wider uppercase font-semibold">Collateral type</span>
-                        <span className="font-bold text-slate-800 font-sans block text-sm mt-0.5 truncate" title={selectedOpp.collateralRequired ? (selectedOpp.collateralType || 'Asset Registration') : 'No Land Collateral'}>
+                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Collateral Type</span>
+                        <span className="font-bold text-slate-900 block text-xs mt-0.5 truncate" title={selectedOpp.collateralRequired ? (selectedOpp.collateralType || 'Asset Registration') : 'No Land Collateral'}>
                           {selectedOpp.collateralRequired ? (selectedOpp.collateralType || 'Asset Registration') : 'No Land Collateral'}
                         </span>
                       </div>
@@ -1024,29 +1233,38 @@ export default function OpportunityHub() {
                   </div>
                 )}
 
+                {/* Scope & Description */}
                 <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Overview &amp; Scope</h4>
-                  <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
+                    Overview &amp; Scope
+                  </h4>
+                  <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-xl leading-relaxed">
                     <FormattedText text={selectedOpp.description} />
                   </div>
                 </div>
 
+                {/* Benefits */}
                 <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Benefits &amp; Terms</h4>
-                  <div className="p-3 bg-slate-50/70 border border-slate-200/80 rounded-lg">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
+                    Program Benefits &amp; Terms
+                  </h4>
+                  <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-xl leading-relaxed">
                     <FormattedText text={selectedOpp.benefits} />
                   </div>
                 </div>
 
-                <div className="space-y-1.5 pt-2 border-t border-slate-100">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Published Requirements Summary</h4>
+                {/* Published Requirements Summary Cards */}
+                <div className="space-y-1.5 pt-2 border-t border-slate-150">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
+                    Published Program Requirements
+                  </h4>
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                     <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
                       <div className="flex items-center gap-1.5 text-slate-400">
                         <TrendingUp className="w-3.5 h-3.5 shrink-0" />
                         <span className="text-[8px] uppercase tracking-wider font-bold">Min Turnover</span>
                       </div>
-                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate" title={`${formatRWF(minMonthly)}/mo`}>
+                      <strong className="text-slate-900 block text-xs font-mono font-bold truncate" title={`${formatRWF(minMonthly)}/mo`}>
                         {formatRWF(minMonthly)}/mo
                       </strong>
                     </div>
@@ -1055,7 +1273,7 @@ export default function OpportunityHub() {
                         <Coins className="w-3.5 h-3.5 shrink-0" />
                         <span className="text-[8px] uppercase tracking-wider font-bold">Max Funding</span>
                       </div>
-                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate">
+                      <strong className="text-slate-900 block text-xs font-mono font-bold truncate">
                         {selectedOpp.maxFunding}
                       </strong>
                     </div>
@@ -1064,8 +1282,8 @@ export default function OpportunityHub() {
                         <Calendar className="w-3.5 h-3.5 shrink-0" />
                         <span className="text-[8px] uppercase tracking-wider font-bold">Operating Age</span>
                       </div>
-                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate">
-                        {selectedOpp.minAge === 0 ? 'Any Age' : `${selectedOpp.minAge}+ Year${selectedOpp.minAge > 1 ? 's' : ''}`}
+                      <strong className="text-slate-900 block text-xs font-bold truncate">
+                        {selectedOpp.minAge === 0 ? 'Any Age' : `${selectedOpp.minAge}+ Years`}
                       </strong>
                     </div>
                     <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
@@ -1073,26 +1291,29 @@ export default function OpportunityHub() {
                         <MapPin className="w-3.5 h-3.5 shrink-0" />
                         <span className="text-[8px] uppercase tracking-wider font-bold">Target Districts</span>
                       </div>
-                      <strong className="text-slate-900 block text-xs font-sans font-extrabold truncate" title={selectedOpp.eligLocations?.join(', ') || 'All districts'}>
+                      <strong className="text-slate-900 block text-xs font-bold truncate" title={selectedOpp.eligLocations?.join(', ') || 'All districts'}>
                         {selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'All districts'}
                       </strong>
                     </div>
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Dynamic SME Eligibility Match</h4>
-                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+                {/* Eligibility Match Table */}
+                <div className="space-y-2 pt-2 border-t border-slate-150">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
+                    Business Profile Eligibility Match
+                  </h4>
+                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
                     <table className="w-full text-left text-xs font-sans border-collapse bg-white">
                       <thead>
                         <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[9px] tracking-wider">
-                          <th className="px-4 py-2">Requirement</th>
-                          <th className="px-4 py-2">Criteria Threshold</th>
-                          <th className="px-4 py-2">Your Business Profile</th>
-                          <th className="px-4 py-2 text-right">Status</th>
+                          <th className="px-4 py-2.5">Requirement</th>
+                          <th className="px-4 py-2.5">Criteria Threshold</th>
+                          <th className="px-4 py-2.5">Your Profile</th>
+                          <th className="px-4 py-2.5 text-right">Status</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-slate-150">
+                      <tbody className="divide-y divide-slate-100">
                         {[
                           {
                             name: 'Target Sector',
@@ -1137,16 +1358,17 @@ export default function OpportunityHub() {
                             met: !selectedOpp.eligLocations || selectedOpp.eligLocations.length === 0
                           }
                         ].map((chk, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/50 transition duration-75">
+                          <tr key={idx} className="hover:bg-slate-50/60 transition">
                             <td className="px-4 py-2.5 font-semibold text-slate-800 text-[10.5px]">{chk.name}</td>
-                            <td className="px-4 py-2.5 text-slate-650 font-mono text-[10px]">{chk.req}</td>
+                            <td className="px-4 py-2.5 text-slate-600 font-mono text-[10px]">{chk.req}</td>
                             <td className="px-4 py-2.5 text-slate-600 font-mono text-[10px]">{chk.val}</td>
                             <td className="px-4 py-2.5 text-right">
                               <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
                                 chk.met 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-150' 
-                                  : 'bg-rose-50 text-rose-700 border-rose-150'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
                               }`}>
+                                {chk.met ? <Check className="w-2.5 h-2.5" /> : <AlertCircle className="w-2.5 h-2.5" />}
                                 {chk.met ? 'Met' : 'Not Met'}
                               </span>
                             </td>
@@ -1157,8 +1379,11 @@ export default function OpportunityHub() {
                   </div>
                 </div>
 
-                <div className="space-y-2 pt-2 border-t border-slate-100">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">Required Documentation Checklist</h4>
+                {/* Required Documentation Checklist */}
+                <div className="space-y-2 pt-2 border-t border-slate-150">
+                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
+                    Required Verification Files &amp; Checklist
+                  </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     {selectedOpp.requiredDocs.map((doc, i) => {
                       const isTax = doc.toLowerCase().includes('tax') || doc.toLowerCase().includes('compliance') || doc.toLowerCase().includes('rra');
@@ -1195,25 +1420,28 @@ export default function OpportunityHub() {
                         action = () => {
                           triggerToast(`"${doc}" uploaded successfully!`);
                         };
-                        label = "Upload Document";
+                        label = "Upload File";
                       }
 
                       return (
-                        <div key={i} className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center gap-3">
-                          <div className="flex items-center gap-2 text-[10.5px] font-semibold text-slate-750 truncate max-w-[65%]">
-                            <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+                        <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center gap-3">
+                          <div className="flex items-center gap-2.5 text-[10.5px] font-semibold text-slate-800 truncate max-w-[65%]">
+                            <span className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 shrink-0">
+                              {getDocIcon(doc, "w-3.5 h-3.5 text-slate-600")}
+                            </span>
                             <span title={doc} className="truncate">{doc}</span>
                           </div>
                           {isUploaded ? (
-                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-150 text-[9px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider font-sans shrink-0">
-                              <CheckCircle className="w-3.5 h-3.5 text-emerald-500" />
+                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 uppercase tracking-wider font-sans shrink-0">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
                               Uploaded
                             </span>
                           ) : (
                             <button
                               onClick={action}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white text-[9.5px] font-bold px-2.5 py-1 rounded-md shadow-sm transition border-none shrink-0"
+                              className="bg-slate-900 hover:bg-slate-800 text-white text-[9.5px] font-bold px-3 py-1.5 rounded-lg shadow-2xs transition flex items-center gap-1 shrink-0"
                             >
+                              <FileUp className="w-3 h-3 text-slate-300" />
                               {label}
                             </button>
                           )}
@@ -1225,21 +1453,23 @@ export default function OpportunityHub() {
 
               </div>
 
-              {/* Right 40%: AI Assistant Panel */}
-              <div className="w-full md:w-80 bg-slate-50/50 p-5 flex flex-col justify-between h-full">
-                <div className="flex-1 flex flex-col justify-between h-[90%] overflow-hidden">
+              {/* Right Column: AI Assistant Panel & Action Footer */}
+              <div className="w-full md:w-88 bg-slate-50/70 p-5 flex flex-col justify-between h-full border-t md:border-t-0 md:border-l border-slate-200">
+                <div className="flex-1 flex flex-col justify-between h-[88%] overflow-hidden">
                   <div className="pb-3 border-b border-slate-200 flex justify-between items-center">
-                    <div className="flex items-center gap-1.5">
-                      <Sparkles className="w-4 h-4 text-emerald-600 animate-pulse" />
+                    <div className="flex items-center gap-2">
+                      <div className="p-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                      </div>
                       <div>
-                        <h4 className="text-[11px] font-bold text-slate-900 font-heading">Ask AI Assistant</h4>
-                        <p className="text-[8px] text-slate-400 font-sans uppercase">Elevata advisor online</p>
+                        <h4 className="text-xs font-bold text-slate-900">Elevata AI Advisor</h4>
+                        <p className="text-[9px] text-slate-400 uppercase tracking-wider">Opportunity Copilot</p>
                       </div>
                     </div>
                     
                     <button
                       onClick={() => setSelectedOppId(null)}
-                      className="p-1 text-slate-400 hover:text-slate-600 transition hidden md:block"
+                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition hidden md:block"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -1249,8 +1479,10 @@ export default function OpportunityHub() {
                   <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 text-xs">
                     {chatHistory.map((msg, i) => (
                       <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-2.5 rounded-lg max-w-[85%] leading-relaxed ${
-                          msg.sender === 'user' ? 'bg-slate-950 text-white font-medium' : 'bg-white border border-slate-200 text-slate-700'
+                        <div className={`p-3 rounded-xl max-w-[88%] leading-relaxed ${
+                          msg.sender === 'user'
+                            ? 'bg-slate-900 text-white font-medium shadow-2xs'
+                            : 'bg-white border border-slate-200 text-slate-700 shadow-2xs'
                         }`}>
                           {msg.text}
                         </div>
@@ -1258,41 +1490,43 @@ export default function OpportunityHub() {
                     ))}
                     {isTyping && (
                       <div className="flex justify-start">
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 font-sans">
-                          AI Assistant is typing...
+                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 font-sans flex items-center gap-2">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                          <span>AI Assistant is typing...</span>
                         </div>
                       </div>
                     )}
                   </div>
 
                   {/* Input query box */}
-                  <form onSubmit={handleSendMessage} className="flex gap-2 pt-2 border-t border-slate-200">
+                  <form onSubmit={handleSendMessage} className="flex gap-2 pt-2.5 border-t border-slate-200">
                     <input
                       type="text"
                       placeholder="Ask about collateral, interest rates..."
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
-                      className="flex-1 border border-slate-250 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:border-slate-400 bg-white"
+                      className="flex-1 border border-slate-250 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white"
                     />
                     <button
                       type="submit"
-                      className="p-2 bg-slate-950 hover:bg-slate-900 text-white rounded-lg shadow-sm transition"
+                      className="p-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-2xs transition"
                     >
                       <Send className="w-3.5 h-3.5" />
                     </button>
                   </form>
                 </div>
 
-                <div className="pt-4 border-t border-slate-200 mt-4">
+                <div className="pt-3 border-t border-slate-200 mt-3">
                   <button
                     onClick={() => {
                       const oppToApply = selectedOpp;
                       setSelectedOppId(null);
                       if (oppToApply) handleOpenApplyModal(oppToApply);
                     }}
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-md transition"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
                   >
-                    Apply Now
+                    <span>Proceed to Quick Apply</span>
+                    <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
@@ -1303,23 +1537,24 @@ export default function OpportunityHub() {
 
       {/* QUICK APPLY & DYNAMIC DOCUMENT UPLOAD MODAL */}
       {applyingOpp && (
-        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[90vh]">
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+            
             {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-150 bg-slate-50 flex justify-between items-start shrink-0">
+            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-start shrink-0">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-100 uppercase tracking-wider">
+                  <span className="text-[9px] font-bold bg-slate-900 text-white px-2.5 py-0.5 rounded uppercase tracking-wider">
                     {applyingOpp.category} Application
                   </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
+                  <span className="text-[10px] text-slate-500 font-mono">
                     Max: {applyingOpp.maxFunding}
                   </span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-950 font-heading">
+                <h3 className="text-sm font-extrabold text-slate-900">
                   Apply for {applyingOpp.title}
                 </h3>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[10.5px] text-slate-500">
                   Offered by <strong className="text-slate-800 font-semibold">{applyingOpp.institution}</strong> · Deadline: <span className="font-mono text-slate-700">{applyingOpp.deadline}</span>
                 </p>
               </div>
@@ -1327,7 +1562,7 @@ export default function OpportunityHub() {
               <button
                 type="button"
                 onClick={() => setApplyingOpp(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 transition"
+                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1337,15 +1572,15 @@ export default function OpportunityHub() {
             <form onSubmit={handleSubmitApplication} className="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
               
               {/* Top Section: Pre-filled Business Profile Dossier */}
-              <div className="p-3 bg-slate-50/80 border border-slate-200 rounded-xl space-y-2">
+              <div className="p-3.5 bg-slate-50/90 border border-slate-200 rounded-xl space-y-2.5">
                 <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
-                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                    <Building2 className="w-3 h-3 text-slate-400" />
+                  <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Building2 className="w-3.5 h-3.5 text-slate-400" />
                     Applicant Business Dossier
                   </span>
-                  <span className="text-[9px] text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-100 flex items-center gap-1">
+                  <span className="text-[9px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 flex items-center gap-1">
                     <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                    Verified on Elevata
+                    Verified SME
                   </span>
                 </div>
 
@@ -1371,7 +1606,7 @@ export default function OpportunityHub() {
 
               {/* Funding Request Details */}
               <div className="space-y-3 pt-1">
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block border-b pb-1">
+                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block border-b pb-1">
                   1. Funding &amp; Facility Request
                 </span>
 
@@ -1383,25 +1618,31 @@ export default function OpportunityHub() {
                       </label>
                       <span className="text-[9px] text-slate-400 font-mono">Max: {applyingOpp.maxFunding}</span>
                     </div>
-                    <input
-                      type="number"
-                      value={applyAmount}
-                      onChange={e => {
-                        setApplyAmount(e.target.value);
-                        if (applyErrors.applyAmount) {
-                          setApplyErrors(prev => {
-                            const copy = { ...prev };
-                            delete copy.applyAmount;
-                            return copy;
-                          });
-                        }
-                      }}
-                      placeholder="e.g. 5000000"
-                      className={`w-full p-2.5 rounded-lg border text-xs font-mono transition ${
-                        applyErrors.applyAmount ? 'border-rose-500 ring-1 ring-rose-500/20 bg-rose-50/20' : 'border-slate-250 bg-slate-50/30 focus:ring-1 focus:ring-emerald-500'
-                      } focus:outline-none`}
-                      required
-                    />
+                    <div className="relative">
+                      <input
+                        type="number"
+                        value={applyAmount}
+                        onChange={e => {
+                          setApplyAmount(e.target.value);
+                          if (applyErrors.applyAmount) {
+                            setApplyErrors(prev => {
+                              const copy = { ...prev };
+                              delete copy.applyAmount;
+                              return copy;
+                            });
+                          }
+                        }}
+                        placeholder="e.g. 5000000"
+                        className={`w-full p-2.5 rounded-lg border text-xs font-mono transition ${
+                          applyErrors.applyAmount ? 'border-rose-500 ring-1 ring-rose-500/20 bg-rose-50/20' : 'border-slate-250 bg-slate-50/40 focus:ring-1 focus:ring-slate-400'
+                        } focus:outline-none`}
+                        required
+                      />
+                    </div>
+                    <div className="flex justify-between items-center text-[9.5px] text-slate-400 font-mono">
+                      <span>Preview:</span>
+                      <span className="font-semibold text-slate-700">{formatRWF(Number(applyAmount) || 0)}</span>
+                    </div>
                     {applyErrors.applyAmount && (
                       <p className="text-[9.5px] font-bold text-rose-600 mt-1 flex items-center gap-1">
                         <AlertCircle className="w-3 h-3 text-rose-600 shrink-0" /> {applyErrors.applyAmount}
@@ -1416,7 +1657,7 @@ export default function OpportunityHub() {
                     <select
                       value={applyPurpose}
                       onChange={e => setApplyPurpose(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-white text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none"
+                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-white text-xs focus:ring-1 focus:ring-slate-400 focus:outline-none"
                     >
                       <option value="Working Capital & Inventory Purchase">Working Capital &amp; Inventory Purchase</option>
                       <option value="Machinery & Equipment Acquisition">Machinery &amp; Equipment Acquisition</option>
@@ -1452,7 +1693,7 @@ export default function OpportunityHub() {
                       type="text"
                       value={applyPhone}
                       onChange={e => setApplyPhone(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/30 text-xs focus:outline-none font-mono"
+                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/40 text-xs focus:outline-none font-mono"
                       required
                     />
                   </div>
@@ -1465,7 +1706,7 @@ export default function OpportunityHub() {
                       type="email"
                       value={applyEmail}
                       onChange={e => setApplyEmail(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/30 text-xs focus:outline-none"
+                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/40 text-xs focus:outline-none"
                       required
                     />
                   </div>
@@ -1483,8 +1724,8 @@ export default function OpportunityHub() {
                       Upload verification files mapped to {applyingOpp.institution}'s underwriting checklist.
                     </p>
                   </div>
-                  <span className="text-[9px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                    {Object.keys(uploadedDocs).length} / {applyingOpp.requiredDocs.length || 1} Uploaded
+                  <span className="text-[9px] font-mono text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full font-bold">
+                    {Object.keys(uploadedDocs).length} / {applyingOpp.requiredDocs.length || 1} Attached
                   </span>
                 </div>
 
@@ -1505,31 +1746,33 @@ export default function OpportunityHub() {
                         <div
                           key={idx}
                           className={`p-3 rounded-xl border transition flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 ${
-                            isUploaded ? 'bg-emerald-50/30 border-emerald-200' : 'bg-slate-50/60 border-slate-200 hover:border-slate-300'
+                            isUploaded ? 'bg-emerald-50/40 border-emerald-200' : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                           }`}
                         >
-                          <div className="space-y-0.5 max-w-sm">
+                          <div className="space-y-1 max-w-sm">
                             <div className="flex items-center gap-2">
-                              <FileText className={`w-3.5 h-3.5 ${isUploaded ? 'text-emerald-600' : 'text-slate-400'}`} />
+                              <span className="p-1 bg-white border border-slate-200 rounded-md text-slate-600 shrink-0">
+                                {getDocIcon(doc, `w-3.5 h-3.5 ${isUploaded ? 'text-emerald-600' : 'text-slate-500'}`)}
+                              </span>
                               <strong className="text-xs font-bold text-slate-900">{doc}</strong>
-                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-200/70 text-slate-600 uppercase tracking-wider">
+                              <span className="text-[8px] font-bold px-1.5 py-0.5 rounded bg-slate-200/80 text-slate-700 uppercase tracking-wider">
                                 Required
                               </span>
                             </div>
 
                             {isUploaded ? (
-                              <p className="text-[9.5px] text-emerald-700 font-mono pl-5.5 flex items-center gap-2">
+                              <p className="text-[9.5px] text-emerald-700 font-mono pl-6 flex items-center gap-2">
                                 <span className="truncate max-w-[200px]">{uploadedInfo.fileName}</span>
                                 <span className="text-slate-400">({uploadedInfo.fileSize})</span>
                                 <span className="text-slate-400">· {uploadedInfo.uploadedAt}</span>
                               </p>
                             ) : (
                               <>
-                                <p className="text-[9px] text-slate-400 pl-5.5">
-                                  PDF, images, Office, CSV/text, audio or MP4/WebM · Max 10 MB
+                                <p className="text-[9px] text-slate-400 pl-6">
+                                  PDF, PNG, JPG, XLSX, DOCX · Max 10 MB
                                 </p>
                                 {applyErrors[doc] && (
-                                  <p className="text-[9px] font-semibold text-rose-600 pl-5.5">{applyErrors[doc]}</p>
+                                  <p className="text-[9px] font-semibold text-rose-600 pl-6">{applyErrors[doc]}</p>
                                 )}
                               </>
                             )}
@@ -1538,14 +1781,14 @@ export default function OpportunityHub() {
                           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                             {isUploaded ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-full flex items-center gap-1">
-                                  <Check className="w-2.5 h-2.5 text-emerald-700 stroke-[3]" />
+                                <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-lg flex items-center gap-1">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                                   Attached
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveUploadedDoc(doc)}
-                                  className="p-1 text-slate-400 hover:text-rose-600 rounded transition"
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition"
                                   title="Remove file"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -1553,8 +1796,8 @@ export default function OpportunityHub() {
                               </div>
                             ) : (
                               <label className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 shadow-2xs">
-                                <UploadCloud className="w-3.5 h-3.5 text-emerald-600" />
-                                <span>Attach Document</span>
+                                <FileUp className="w-3.5 h-3.5 text-slate-600" />
+                                <span>Attach File</span>
                                 <input
                                   type="file"
                                   accept=".pdf,.jpg,.jpeg,.png,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif,.csv,.txt,.rtf,.json,.xml,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.mp3,.wav,.ogg,.mp4,.webm"
@@ -1585,12 +1828,12 @@ export default function OpportunityHub() {
                   placeholder="Provide additional context regarding your operational cashflows, upcoming supplier contracts, or specific financing timelines..."
                   value={applyNotes}
                   onChange={e => setApplyNotes(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/30 text-xs focus:ring-1 focus:ring-emerald-500 focus:outline-none leading-relaxed"
+                  className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/40 text-xs focus:ring-1 focus:ring-slate-400 focus:outline-none leading-relaxed"
                 />
               </div>
 
               {/* Consent and terms checkbox */}
-              <div className="pt-2 border-t border-slate-200/80">
+              <div className="pt-2 border-t border-slate-200">
                 <label className="flex items-start gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1598,7 +1841,7 @@ export default function OpportunityHub() {
                     onChange={e => setApplyAgreed(e.target.checked)}
                     className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span className="text-[10px] text-slate-600 leading-snug">
+                  <span className="text-[10.5px] text-slate-600 leading-snug">
                     I declare that the information and documents uploaded are authentic and accurately represent the current trading records of <strong className="text-slate-900 font-bold">{activeSme.name}</strong> on Elevata.
                   </span>
                 </label>
@@ -1615,7 +1858,7 @@ export default function OpportunityHub() {
                   {applyErrors.submit}
                 </div>
               )}
-              <div className="pt-3 border-t border-slate-150 flex justify-between items-center shrink-0">
+              <div className="pt-3 border-t border-slate-200 flex justify-between items-center shrink-0">
                 <button
                   type="button"
                   onClick={() => setApplyingOpp(null)}

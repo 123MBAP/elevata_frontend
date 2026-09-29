@@ -1,136 +1,80 @@
-import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import React from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useApp } from "../../context/AppContext";
+import { useAuth } from "../../context/AuthContext";
 import ElevataLogo from '../images/elevata_logo.png';
+import { Building, LogOut } from 'lucide-react';
 
 const Navigationbar: React.FC = () => {
-    const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const location = useLocation();
+    const { activeSme } = useApp();
+    const { user, logout } = useAuth();
+    const navigate = useNavigate();
 
-    const menuClose = () => setIsMenuOpen(false);
-    const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-    const isActive = (path: string) => location.pathname === path ? 'bg-black text-white' : 'text-gray-800 hover:bg-gray-100';
+    const businessName = user?.role === 'FINANCIAL_INSTITUTION'
+        ? (user.financialInstitution?.institutionName || 'Credit Institution')
+        : (activeSme.name || user?.business?.businessName || 'Business Entity');
+
+    const userInitials = user?.role === 'ADMIN'
+        ? 'AD'
+        : user?.role === 'FINANCIAL_INSTITUTION'
+        ? (user?.financialInstitution?.representativeName || 'FI').split(' ').map((n) => n[0]).slice(0, 2).join('')
+        : (user?.business?.ownerName || 'BO').split(' ').map((n) => n[0]).slice(0, 2).join('');
 
     return (
-        <header className="bg-white border-b border-gray-200 text-black sticky top-0 z-50 shadow-md">
+        <header className="sticky top-0 z-50 border-b border-[#2d3b4e] bg-[#1a2536] text-slate-200 shadow-md">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                    {/* Logo and brand name */}
-                    <div className="flex items-center">
-                        <img src={ElevataLogo} alt="FinovatrAI Logo" className="h-10 md:h-12" />
-                        <h1 className="ml-3 text-xl font-bold text-black">Elevata</h1>
+                <div className="flex justify-between items-center h-14">
+                    {/* Left: Elevata Logo, Brand name & Active Business Name */}
+                    <div className="flex items-center gap-3">
+                        <Link to="/" className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-[#0284c7] to-[#38bdf8] p-1 shadow-sm">
+                                <img src={ElevataLogo} alt="Elevata Logo" className="h-6 w-6 object-contain" />
+                            </div>
+                            <div className="flex items-baseline gap-1">
+                                <span className="font-heading text-base font-extrabold tracking-wider text-white">
+                                    ELEVATA
+                                </span>
+                            </div>
+                        </Link>
+
+                        {/* Active Business Name Badge (No Dropdown) */}
+                        <div className="flex items-center gap-1.5 rounded-md border border-[#364962] bg-[#243346] px-2.5 py-1 text-xs font-semibold text-slate-200 ml-2">
+                            <Building className="h-3.5 w-3.5 shrink-0 text-[#38bdf8]" />
+                            <span className="truncate max-w-[160px] sm:max-w-[240px]">{businessName}</span>
+                        </div>
                     </div>
 
-                    {/* Desktop Navigation */}
-                    <nav className="hidden md:flex space-x-1 items-center">
-                        <Link 
-                            to="/" 
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive('/')}`}
-                            onClick={menuClose}
+                    {/* Right: Profile Link & Sign Out Button (No Dropdowns) */}
+                    <div className="flex items-center gap-2 sm:gap-3">
+                        <Link
+                            to="/profile"
+                            title="Business Profile"
+                            className="flex items-center gap-2 rounded-full p-1 transition hover:bg-white/10 focus:outline-none cursor-pointer"
                         >
-                            Home
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0284c7] text-white text-[11px] font-bold ring-2 ring-white/20">
+                                {userInitials}
+                            </div>
+                            <span className="hidden md:inline text-xs font-semibold text-slate-300 hover:text-white truncate max-w-[120px]">
+                                {user?.role === 'ADMIN'
+                                    ? 'Admin'
+                                    : user?.role === 'FINANCIAL_INSTITUTION'
+                                    ? (user?.financialInstitution?.representativeName || 'Banker')
+                                    : (user?.business?.ownerName || 'Profile')}
+                            </span>
                         </Link>
-                        <Link 
-                            to="/inventory-management-engine" 
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive('/inventory-management-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Inventory Management
-                        </Link>
-                        <Link 
-                            to="/loan-suggestion-engine" 
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive('/loan-suggestion-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Loan Suggestions
-                        </Link>
-                        <Link 
-                            to="/business-suggestion-engine" 
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive('/business-suggestion-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Business Suggestions
-                        </Link>
-                        <Link 
-                            to="/technology-adoptiion-engine" 
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive('/technology-adoptiion-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Technology Adoption
-                        </Link>
-                        <Link 
-                            to="/register" 
-                            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 ${isActive('/register')}`}
-                            onClick={menuClose}
-                        >
-                            Register
-                        </Link>
-                    </nav>
 
-                    {/* Mobile menu button */}
-                    <button 
-                        className="md:hidden p-2 rounded-md text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-black"
-                        onClick={toggleMenu}
-                    >
-                        <svg className="h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            {isMenuOpen ? (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            ) : (
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                            )}
-                        </svg>
-                    </button>
+                        <button
+                            onClick={async () => {
+                                await logout();
+                            }}
+                            title="Sign Out"
+                            className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                        >
+                            <LogOut className="h-4 w-4" />
+                        </button>
+                    </div>
                 </div>
             </div>
-
-            {/* Mobile Navigation Menu */}
-            {isMenuOpen && (
-                <div className="md:hidden bg-white border-t border-gray-200">
-                    <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3">
-                        <Link 
-                            to="/" 
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/')}`}
-                            onClick={menuClose}
-                        >
-                            Home
-                        </Link>
-                        <Link 
-                            to="/inventory-management-engine" 
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/inventory-management-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Inventory Management
-                        </Link>
-                        <Link 
-                            to="/loan-suggestion-engine" 
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/loan-suggestion-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Loan Suggestions
-                        </Link>
-                        <Link 
-                            to="/business-suggestion-engine" 
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/business-suggestion-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Business Suggestions
-                        </Link>
-                        <Link 
-                            to="/technology-adoptiion-engine" 
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/technology-adoptiion-engine')}`}
-                            onClick={menuClose}
-                        >
-                            Technology Adoption
-                        </Link>
-                        <Link 
-                            to="/register" 
-                            className={`block px-3 py-2 rounded-md text-base font-medium ${isActive('/register')}`}
-                            onClick={menuClose}
-                        >
-                            Register
-                        </Link>
-                    </div>
-                </div>
-            )}
         </header>
     );
 };
