@@ -10,21 +10,23 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Star,
-  Phone,
-  PieChart,
-  Folder,
-  MessageSquare,
-  Share2,
-  Mail,
-  CheckSquare,
-  Settings,
-  Monitor,
-  ChevronRight,
-  ChevronLeft,
-  X,
+  LayoutDashboard,
+  BookOpen,
+  Package,
+  Target,
+  BarChart3,
+  GraduationCap,
+  Bot,
+  Landmark,
+  ClipboardCheck,
+  Megaphone,
+  Activity,
   Users,
   Layers,
-  ShieldCheck
+  Settings,
+  ChevronRight,
+  ChevronLeft,
+  X
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -96,103 +98,101 @@ export default function Sidebar({
     { id: 'other', label: 'General Journal', path: '/activities?tab=other', icon: <Star className="w-3.5 h-3.5" /> }
   ];
 
-  // Navigation Items modeled after the screenshot icon rail
+  // Navigation Items accurately mapped to page content & purpose
   const smeNavItems = [
-    {
-      id: 'hotline',
-      path: '/trainings',
-      label: 'Virtual Training',
-      tooltip: 'Live Training & Communications',
-      icon: <Phone className="w-5 h-5" />,
-      highlightTop: true
-    },
     {
       id: 'dashboard',
       path: '/',
       label: 'SME Analytics Dashboard',
-      tooltip: 'Analytics & Overview',
-      icon: <PieChart className="w-5 h-5" />
+      tooltip: 'Executive Financial Overview',
+      icon: <LayoutDashboard className="w-5 h-5" />
     },
     {
       id: 'activities',
       path: '/activities',
       label: 'Business Activities & Ledger',
-      tooltip: 'Accounting Books & Ledger',
-      icon: <Folder className="w-5 h-5" />
+      tooltip: 'Accounting Books & Audit Ledger',
+      icon: <BookOpen className="w-5 h-5" />
+    },
+    {
+      id: 'inventory',
+      path: '/inventory',
+      label: 'Inventory & Catalog',
+      tooltip: 'Products & Stock Management',
+      icon: <Package className="w-5 h-5" />
     },
     {
       id: 'opportunities',
       path: '/opportunity-hub',
       label: 'Opportunity Hub',
-      tooltip: 'Market Opportunities & Grants',
-      icon: <Share2 className="w-5 h-5" />
+      tooltip: 'Matched Loans, Grants & Financing',
+      icon: <Target className="w-5 h-5" />
     },
     {
-      id: 'compliance',
+      id: 'reports',
+      path: '/reports',
+      label: 'Financial Statements & Reports',
+      tooltip: 'P&L, Cashflow & Audit Reports',
+      icon: <BarChart3 className="w-5 h-5" />
+    },
+    {
+      id: 'trainings',
       path: '/trainings',
-      label: 'Compliance & Training',
-      tooltip: 'Certifications & Training',
-      icon: <CheckSquare className="w-5 h-5" />
+      label: 'Virtual Academy & Readiness',
+      tooltip: 'SME Readiness & Training Sessions',
+      icon: <GraduationCap className="w-5 h-5" />
     },
-    {
-    id: 'reports',
-    path: '/reports',
-    label: 'Financial Statements & Reports',
-    tooltip: 'Statements & Audit Logs',
-    icon: <Mail className="w-5 h-5" />
-  },
     {
       id: 'copilot',
       path: '/ai-bot',
       label: 'Elevata AI Copilot',
-      tooltip: 'AI Financial Advisor',
-      icon: <MessageSquare className="w-5 h-5" />
+      tooltip: 'Intelligent Advisory & AI Assistance',
+      icon: <Bot className="w-5 h-5" />
     }
   ];
 
   const bankerNavItems = [
     {
-      id: 'banker-training',
-      path: '/banker/trainings',
-      label: 'Training Manager & Sessions',
-      tooltip: 'Banker Training Delivery',
-      icon: <Phone className="w-5 h-5" />,
-      highlightTop: true
-    },
-    {
       id: 'banker-panel',
       path: '/banker',
       label: 'Credit Institution Panel',
-      tooltip: 'Banker Portfolio Overview',
-      icon: <PieChart className="w-5 h-5" />
+      tooltip: 'Banker Portfolio & Pipelines',
+      icon: <Landmark className="w-5 h-5" />
     },
     {
       id: 'applications',
       path: '/banker/applications',
       label: 'Credit Applications',
-      tooltip: 'Loan & Grant Underwriting',
-      icon: <Folder className="w-5 h-5" />
+      tooltip: 'Underwriting & Loan Reviews',
+      icon: <ClipboardCheck className="w-5 h-5" />
     },
     {
       id: 'publisher',
       path: '/banker/publisher',
       label: 'Publish Credit Opportunities',
-      tooltip: 'Opportunity Management',
-      icon: <Share2 className="w-5 h-5" />
-    },
-    {
-      id: 'banker-copilot',
-      path: '/ai-bot',
-      label: 'AI Banker Copilot',
-      tooltip: 'AI Credit Risk Evaluation',
-      icon: <MessageSquare className="w-5 h-5" />
+      tooltip: 'Publish Loans, Grants & Products',
+      icon: <Megaphone className="w-5 h-5" />
     },
     {
       id: 'monitoring',
       path: '/banker/monitoring',
       label: 'SME Monitoring Matrix',
-      tooltip: 'Borrower Risk & Health',
-      icon: <Monitor className="w-5 h-5" />
+      tooltip: 'Borrower Risk & Health Surveillance',
+      icon: <Activity className="w-5 h-5" />
+    },
+    {
+      id: 'banker-training',
+      path: '/banker/trainings',
+      label: 'Training Manager & Sessions',
+      tooltip: 'Banker Training Delivery & Courses',
+      icon: <GraduationCap className="w-5 h-5" />
+    },
+    {
+      id: 'banker-copilot',
+      path: '/ai-bot',
+      label: 'AI Banker Copilot',
+      tooltip: 'AI Credit Risk & Underwriting Assistant',
+      icon: <Bot className="w-5 h-5" />
     }
   ];
 
@@ -202,8 +202,7 @@ export default function Sidebar({
       path: '/admin/users',
       label: 'User & KYC Management',
       tooltip: 'Manage Users, SMEs & Institutions',
-      icon: <Users className="w-5 h-5" />,
-      highlightTop: true
+      icon: <Users className="w-5 h-5" />
     },
     {
       id: 'admin-categories',
@@ -217,42 +216,42 @@ export default function Sidebar({
       path: '/banker',
       label: 'Credit Institutions Panel',
       tooltip: 'Institutional Portfolio & Pipelines',
-      icon: <PieChart className="w-5 h-5" />
+      icon: <Landmark className="w-5 h-5" />
     },
     {
       id: 'admin-applications',
       path: '/banker/applications',
       label: 'Financing Applications',
       tooltip: 'Credit Applications Across Platform',
-      icon: <Folder className="w-5 h-5" />
+      icon: <ClipboardCheck className="w-5 h-5" />
     },
     {
       id: 'admin-publisher',
       path: '/banker/publisher',
       label: 'Credit Opportunities',
       tooltip: 'Published Institutional Products',
-      icon: <Share2 className="w-5 h-5" />
+      icon: <Megaphone className="w-5 h-5" />
+    },
+    {
+      id: 'admin-monitoring',
+      path: '/banker/monitoring',
+      label: 'SME Monitoring Matrix',
+      tooltip: 'Borrower Risk & Health Surveillance',
+      icon: <Activity className="w-5 h-5" />
     },
     {
       id: 'admin-trainings',
       path: '/banker/trainings',
       label: 'Training Sessions & Manager',
       tooltip: 'Virtual Training Management',
-      icon: <Phone className="w-5 h-5" />
-    },
-    {
-      id: 'admin-monitoring',
-      path: '/banker/monitoring',
-      label: 'SME Monitoring Matrix',
-      tooltip: 'Borrower Risk & Health',
-      icon: <Monitor className="w-5 h-5" />
+      icon: <GraduationCap className="w-5 h-5" />
     },
     {
       id: 'admin-copilot',
       path: '/ai-bot',
       label: 'Elevata AI Platform Copilot',
       tooltip: 'AI Platform & Risk Assistant',
-      icon: <MessageSquare className="w-5 h-5" />
+      icon: <Bot className="w-5 h-5" />
     }
   ];
 
@@ -275,6 +274,12 @@ export default function Sidebar({
     }
     if (path === '/admin/users') {
       return location.pathname === '/admin/users';
+    }
+    if (path === '/trainings') {
+      return location.pathname === '/trainings' || location.pathname === '/training-manager';
+    }
+    if (path === '/banker/trainings') {
+      return location.pathname === '/banker/trainings' || location.pathname === '/banker/training-manager';
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
