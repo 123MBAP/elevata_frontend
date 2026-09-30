@@ -29,8 +29,8 @@ export default function Header({ onMenuClick, onToggleCollapse, isCollapsed }: H
 
   return (
     <header className="sticky top-0 z-40 border-b border-[#2d3b4e] bg-[#1a2536] text-slate-200 shadow-md">
-      <div className="flex h-14 items-center justify-between gap-2 px-3 sm:px-4">
-        {/* Left Section: Menu Toggle, Brand Logo & Business Name */}
+      <div className="relative flex h-14 items-center justify-between gap-2 px-3 sm:px-4">
+        {/* Left Section: Menu Toggle & Brand Logo */}
         <div className="flex min-w-0 items-center gap-2 sm:gap-3">
           <button
             onClick={() => {
@@ -64,10 +64,11 @@ export default function Header({ onMenuClick, onToggleCollapse, isCollapsed }: H
             </div>
           </div>
 
-          {/* Business Name (Clean static display, no dropdown) */}
-          <div className="flex items-center gap-1.5  px-2.5 py-1 text-xs font-semibold text-slate-200 ml-1 sm:ml-2">
-            <span className="truncate max-w-[150px] sm:max-w-[240px]">{businessName}</span>
-          </div>
+        </div>
+
+        {/* Active Business Name */}
+        <div className="pointer-events-none absolute left-1/2 max-w-[42%] -translate-x-1/2 truncate text-center text-xs font-semibold text-slate-200 sm:max-w-[48%]">
+          {businessName}
         </div>
 
         {/* Right Section: Profile & Sign Out (No dropdowns) */}

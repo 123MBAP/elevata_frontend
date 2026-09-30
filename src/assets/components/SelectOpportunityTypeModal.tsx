@@ -31,8 +31,8 @@ export default function SelectOpportunityTypeModal({
       category: 'Loan',
       title: 'Loan & Credit Facility',
       badge: 'Debt Financing',
-      badgeColor: 'bg-[#0a66c2]/10 text-[#0a66c2] border-[#0a66c2]/20',
-      icon: <Landmark className="w-5 h-5 text-[#0a66c2]" />,
+      badgeColor: 'bg-sky-50 text-[#2998d6] border-sky-200',
+      icon: <Landmark className="w-5 h-5 text-[#2998d6]" />,
       desc: 'Working capital, inventory financing, term loans, and credit lines with custom interest & grace periods.'
     },
     {
@@ -115,7 +115,7 @@ export default function SelectOpportunityTypeModal({
               <div
                 key={item.type}
                 onClick={() => onSelectType(item.type, item.category)}
-                className="group p-4 rounded-[10px] border border-[#e0e0e0] hover:border-[#0a66c2] bg-white hover:bg-[#f3f2f0]/50 transition-all cursor-pointer shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(10,102,194,0.12)] flex flex-col justify-between"
+                className="group p-4 rounded-[10px] border border-[#e0e0e0] hover:border-[#2998d6] bg-white hover:bg-[#f3f2f0]/50 transition-all cursor-pointer shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(41,152,214,0.12)] flex flex-col justify-between"
               >
                 <div className="space-y-2.5">
                   <div className="flex items-center justify-between">
@@ -127,7 +127,7 @@ export default function SelectOpportunityTypeModal({
                     </span>
                   </div>
                   <div>
-                    <h4 className="text-sm font-bold text-[#181818] group-hover:text-[#0a66c2] transition-colors font-heading">
+                    <h4 className="text-sm font-bold text-[#181818] group-hover:text-[#2998d6] transition-colors font-heading">
                       {item.title}
                     </h4>
                     <p className="text-[12px] text-[#5e5e5e] mt-1 leading-relaxed font-sans line-clamp-2">
@@ -136,7 +136,7 @@ export default function SelectOpportunityTypeModal({
                   </div>
                 </div>
 
-                <div className="pt-3 mt-3 border-t border-[#f3f2f0] flex items-center justify-between text-xs font-semibold text-[#0a66c2] group-hover:translate-x-0.5 transition-transform">
+                <div className="pt-3 mt-3 border-t border-[#f3f2f0] flex items-center justify-between text-xs font-semibold text-[#2998d6] group-hover:translate-x-0.5 transition-transform">
                   <span>Configure Form</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>

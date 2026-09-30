@@ -19,10 +19,10 @@ export default function ElevataBotWidget() {
     <div className="fixed bottom-6 right-6 z-50 pointer-events-auto select-none">
       <button
         onClick={() => navigate('/ai-bot')}
-        className={`flex items-center gap-2.5 px-4 py-3 rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.15)] text-white font-semibold text-xs transition-all hover:scale-105 active:scale-95 border ${
+        className={`flex items-center gap-2.5 px-4 py-3 rounded-full text-white font-semibold text-xs transition-all hover:scale-105 active:scale-95 border cursor-pointer ${
           isFI
-            ? 'bg-slate-900 hover:bg-slate-800 border-slate-700'
-            : 'bg-emerald-600 hover:bg-emerald-700 border-emerald-500'
+            ? 'bg-[#1a2332] hover:bg-[#24334a] border-[#2a384c] shadow-[0_8px_24px_rgba(26,35,50,0.35)]'
+            : 'bg-[#2998d6] hover:bg-[#1f85be] border-[#2998d6]/40 shadow-[0_8px_24px_rgba(41,152,214,0.35)]'
         }`}
         title="Open Elevata AI Copilot"
       >

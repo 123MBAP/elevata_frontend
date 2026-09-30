@@ -119,17 +119,17 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2 }}
-          className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-xl overflow-hidden my-8"
+          className="bg-white rounded-[4px] shadow-2xl border border-[#d8e2ec] w-full max-w-2xl overflow-hidden my-8"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 p-6 text-white flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-white/15 rounded-xl backdrop-blur-md border border-white/20">
-                <PackagePlus className="w-6 h-6 text-emerald-100" />
+          <div className="bg-[#1a2332] px-5 py-4 text-white flex items-center justify-between border-b border-[#2a384c]">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-[4px] bg-[#2998d6]">
+                <PackagePlus className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-lg font-bold font-heading">Register New Product</h3>
-                <p className="text-xs text-emerald-100 mt-0.5">
+                <h3 className="text-base font-bold font-heading">New Master Product</h3>
+                <p className="text-[11px] text-slate-300 mt-0.5">
                   Add product master with units, pricing, and initial stock balance
                 </p>
               </div>
@@ -137,16 +137,16 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
             <button
               onClick={onClose}
               disabled={isSubmitting}
-              className="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition"
+              className="rounded-[4px] p-1.5 text-white/70 hover:bg-white/10 hover:text-white transition"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
             {error && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center space-x-2">
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-[4px] flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" />
                 <span>{error}</span>
               </div>
@@ -154,14 +154,14 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
 
             {/* Product Name */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="accounting-label">
                 Product Name <span className="text-rose-500">*</span>
               </label>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Maize Flour Grade 1, Cotton Textile, Timber Planks"
-                className="border-slate-200 text-xs h-10 font-medium"
+                className="accounting-input w-full font-medium"
                 required
                 autoFocus
               />
@@ -170,14 +170,14 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
             {/* Category & Unit Selector */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
+                <label className="accounting-label flex items-center gap-1.5">
                   <Tag className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Category</span>
+                  Category
                 </label>
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none h-10 font-medium"
+                  className="accounting-select w-full font-medium"
                 >
                   {CATEGORY_OPTIONS.map((cat) => (
                     <option key={cat} value={cat}>
@@ -188,14 +188,14 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-                  <Scale className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Unit of Measurement <span className="text-rose-500">*</span></span>
+                <label className="accounting-label flex items-center gap-1.5">
+                  <Scale className="w-3.5 h-3.5 text-[#2998d6]" />
+                  Unit of Measurement <span className="text-rose-500">*</span>
                 </label>
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
-                  className="w-full px-3 py-2 border border-emerald-300 rounded-lg text-xs bg-emerald-50/40 text-emerald-900 font-semibold focus:ring-2 focus:ring-emerald-500 focus:outline-none h-10"
+                  className="accounting-select w-full font-semibold"
                   required
                 >
                   {UNIT_OPTIONS.map((u) => (
@@ -210,9 +210,9 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
             {/* Quantity & Reorder Threshold */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
+                <label className="accounting-label flex items-center gap-1.5">
                   <Layers className="w-3.5 h-3.5 text-slate-500" />
-                  <span>Initial Stock Quantity ({unit}) <span className="text-rose-500">*</span></span>
+                  Initial Stock Quantity ({unit}) <span className="text-rose-500">*</span>
                 </label>
                 <Input
                   type="number"
@@ -221,13 +221,13 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
                   value={stockQuantity}
                   onChange={(e) => setStockQuantity(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder={`e.g. 100 ${unit}`}
-                  className="border-slate-200 text-xs h-10 font-mono"
+                  className="accounting-input w-full font-mono"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="accounting-label">
                   Low Stock Alert Level ({unit})
                 </label>
                 <Input
@@ -237,7 +237,7 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
                   value={reorderLevel}
                   onChange={(e) => setReorderLevel(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="e.g. 10"
-                  className="border-slate-200 text-xs h-10 font-mono"
+                  className="accounting-input w-full font-mono"
                 />
               </div>
             </div>
@@ -245,9 +245,9 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
             {/* Pricing Details */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Selling Price per {unit} (RWF) <span className="text-rose-500">*</span></span>
+                <label className="accounting-label flex items-center gap-1.5">
+                  <DollarSign className="w-3.5 h-3.5 text-[#2998d6]" />
+                  Selling Price per {unit} (RWF) <span className="text-rose-500">*</span>
                 </label>
                 <Input
                   type="number"
@@ -256,13 +256,13 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
                   value={unitPrice}
                   onChange={(e) => setUnitPrice(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="e.g. 1500"
-                  className="border-slate-200 text-xs h-10 font-mono font-bold text-emerald-700"
+                  className="accounting-input w-full font-mono font-bold text-slate-900"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
+                <label className="accounting-label">
                   Cost / Purchase Price per {unit} (RWF)
                 </label>
                 <Input
@@ -272,27 +272,27 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
                   value={costPrice}
                   onChange={(e) => setCostPrice(e.target.value === '' ? '' : Number(e.target.value))}
                   placeholder="e.g. 1200 (optional)"
-                  className="border-slate-200 text-xs h-10 font-mono"
+                  className="accounting-input w-full font-mono"
                 />
               </div>
             </div>
 
             {/* Description */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">
+              <label className="accounting-label">
                 Description / Specifications
               </label>
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Details regarding grade, packaging, source supplier, or specifications..."
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none min-h-[70px]"
+                className="accounting-textarea w-full min-h-[70px]"
                 rows={2}
               />
             </div>
 
             {/* Live Inventory Valuation Preview Card */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3.5 flex items-center justify-between">
+            <div className="bg-[#f1f5f9] border border-[#cbd5e1] rounded-[4px] p-3 flex items-center justify-between gap-3">
               <div>
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block font-heading">
                   Initial Inventory Valuation
@@ -301,26 +301,26 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
                   {stockQuantity || 0} {unit} @ {formatRWF(Number(unitPrice) || 0)} / {unit}
                 </span>
               </div>
-              <span className="text-base font-bold font-mono text-emerald-600">
+              <span className="text-base font-bold font-mono text-[#1f85be]">
                 {formatRWF(totalValue)}
               </span>
             </div>
 
             {/* Footer Buttons */}
-            <div className="flex items-center justify-end space-x-3 pt-3 border-t border-slate-100">
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#e2e8f0]">
               <Button
                 type="button"
                 variant="outline"
                 onClick={onClose}
                 disabled={isSubmitting}
-                className="text-xs h-10 px-4"
+                className="accounting-btn-secondary"
               >
                 Cancel
               </Button>
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-6 shadow-md shadow-emerald-600/20"
+                className="accounting-btn-primary"
               >
                 {isSubmitting ? 'Saving to Database...' : 'Create & Save Product'}
               </Button>

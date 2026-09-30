@@ -373,8 +373,8 @@ export default function PublishOpportunityForm({
         return {
           title: 'Loan & Credit Facility',
           badge: 'Debt Financing',
-          badgeColor: 'bg-[#0a66c2]/10 text-[#0a66c2] border-[#0a66c2]/20',
-          icon: <Landmark className="w-4 h-4 text-[#0a66c2]" />
+          badgeColor: 'bg-[#2998d6]/10 text-[#2998d6] border-[#2998d6]/20',
+          icon: <Landmark className="w-4 h-4 text-[#2998d6]" />
         };
     }
   };
@@ -423,7 +423,7 @@ export default function PublishOpportunityForm({
           <button
             type="button"
             onClick={() => handleSubmit()}
-            className="flex items-center justify-center space-x-1.5 px-6 py-2 rounded-full bg-[#0a66c2] hover:bg-[#004182] text-white text-xs font-bold transition-colors shadow-xs border-none cursor-pointer"
+            className="flex items-center justify-center space-x-1.5 px-6 py-2 rounded-full bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold transition-colors shadow-xs border-none cursor-pointer"
           >
             <span>Publish {typeMeta.title}</span>
           </button>
@@ -449,7 +449,7 @@ export default function PublishOpportunityForm({
             }}
             className={`px-3.5 py-2 rounded-[6px] text-xs font-semibold transition-colors flex items-center gap-2 ${
               activeTab === tab.id
-                ? 'bg-[#0a66c2] text-white shadow-xs'
+                ? 'bg-[#2998d6] text-white shadow-xs'
                 : 'text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0]'
             }`}
           >
@@ -464,7 +464,7 @@ export default function PublishOpportunityForm({
       <div id="section-basic" className="bg-white border border-[#e0e0e0] rounded-[10px] p-6 sm:p-7 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
         <div className="border-b border-[#e0e0e0] pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-full bg-[#0a66c2]/10 text-[#0a66c2] text-xs font-bold flex items-center justify-center font-mono">
+            <span className="w-6 h-6 rounded-full bg-[#2998d6]/10 text-[#2998d6] text-xs font-bold flex items-center justify-center font-mono">
               1
             </span>
             <h3 className="text-sm font-bold text-[#181818] font-heading uppercase tracking-wider">
@@ -491,7 +491,7 @@ export default function PublishOpportunityForm({
               className={`h-11 w-full rounded-[6px] border bg-white px-3.5 text-[14px] text-[#181818] outline-none transition-colors ${
                 errors.oppName
                   ? 'border-red-500 bg-red-50/20 focus:border-red-600 focus:ring-1 focus:ring-red-600'
-                  : 'border-[#666666] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]'
+                  : 'border-[#666666] focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]'
               }`}
             />
             {errors.oppName && (
@@ -513,7 +513,7 @@ export default function PublishOpportunityForm({
                 setOppProvider(e.target.value);
                 clearError('oppProvider');
               }}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -538,7 +538,7 @@ export default function PublishOpportunityForm({
             <select
               value={oppStage}
               onChange={e => setOppStage(e.target.value)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             >
               <option value="Early Stage">Early Stage (0 - 2 Years)</option>
               <option value="Growth">Growth &amp; Expansion Stage</option>
@@ -556,7 +556,7 @@ export default function PublishOpportunityForm({
               type="date"
               value={oppDeadline}
               onChange={e => setOppDeadline(e.target.value)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -586,7 +586,7 @@ export default function PublishOpportunityForm({
                       'Tourism & Hospitality'
                     ])
                   }
-                  className="text-[#0a66c2] hover:underline font-semibold cursor-pointer"
+                  className="text-[#2998d6] hover:underline font-semibold cursor-pointer"
                 >
                   Select All
                 </button>
@@ -623,8 +623,8 @@ export default function PublishOpportunityForm({
                     key={sector.id}
                     className={`flex items-center justify-between p-3.5 rounded-[6px] border cursor-pointer transition-all duration-150 ${
                       isSelected
-                        ? 'bg-[#0a66c2]/5 border-[#0a66c2] shadow-[0_1px_3px_rgba(10,102,194,0.08)]'
-                        : 'bg-white border-[#e0e0e0] hover:border-[#0a66c2] hover:bg-[#fafafa]'
+                        ? 'bg-[#2998d6]/5 border-[#2998d6] shadow-[0_1px_3px_rgba(10,102,194,0.08)]'
+                        : 'bg-white border-[#e0e0e0] hover:border-[#2998d6] hover:bg-[#fafafa]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -636,7 +636,7 @@ export default function PublishOpportunityForm({
                             isSelected ? prev.filter(s => s !== sector.id) : [...prev, sector.id]
                           );
                         }}
-                        className="h-4 w-4 rounded-[3px] accent-[#0a66c2] cursor-pointer"
+                        className="h-4 w-4 rounded-[3px] accent-[#2998d6] cursor-pointer"
                       />
                       <div>
                         <div className="text-xs font-semibold text-[#181818]">
@@ -648,7 +648,7 @@ export default function PublishOpportunityForm({
                       </div>
                     </div>
                     {isSelected && (
-                      <span className="shrink-0 ml-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#0a66c2] bg-[#0a66c2]/10 px-2.5 py-0.5 rounded-full">
+                      <span className="shrink-0 ml-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#2998d6] bg-[#2998d6]/10 px-2.5 py-0.5 rounded-full">
                         <Check className="w-3 h-3 stroke-[2.5]" />
                         Selected
                       </span>
@@ -675,7 +675,7 @@ export default function PublishOpportunityForm({
                   type="button"
                   onClick={() => setDescViewMode('write')}
                   className={`px-3.5 py-1.5 text-xs font-semibold rounded-[6px] transition-colors cursor-pointer ${
-                    descViewMode === 'write' ? 'bg-[#0a66c2] text-white shadow-xs' : 'text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0]'
+                    descViewMode === 'write' ? 'bg-[#2998d6] text-white shadow-xs' : 'text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0]'
                   }`}
                 >
                   Write Mode
@@ -684,7 +684,7 @@ export default function PublishOpportunityForm({
                   type="button"
                   onClick={() => setDescViewMode('preview')}
                   className={`px-3.5 py-1.5 text-xs font-semibold rounded-[6px] transition-colors cursor-pointer ${
-                    descViewMode === 'preview' ? 'bg-[#0a66c2] text-white shadow-xs' : 'text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0]'
+                    descViewMode === 'preview' ? 'bg-[#2998d6] text-white shadow-xs' : 'text-[#5e5e5e] hover:text-[#181818] hover:bg-[#f3f2f0]'
                   }`}
                 >
                   Preview Rendered
@@ -693,7 +693,7 @@ export default function PublishOpportunityForm({
             </div>
 
             {descViewMode === 'write' ? (
-              <div className="border border-[#666666] rounded-[8px] overflow-hidden focus-within:border-[#0a66c2] focus-within:ring-1 focus-within:ring-[#0a66c2] bg-white shadow-xs transition-all">
+              <div className="border border-[#666666] rounded-[8px] overflow-hidden focus-within:border-[#2998d6] focus-within:ring-1 focus-within:ring-[#2998d6] bg-white shadow-xs transition-all">
                 {/* Formatting Toolbar */}
                 <div className="bg-[#f3f2f0] border-b border-[#e0e0e0] px-3.5 py-2.5 flex flex-wrap items-center justify-between gap-2 text-xs">
                   <div className="flex flex-wrap items-center gap-1">
@@ -731,7 +731,7 @@ export default function PublishOpportunityForm({
                     <button
                       type="button"
                       onClick={insertTemplate}
-                      className="bg-white hover:bg-[#0a66c2]/10 border border-[#0a66c2]/30 text-[#0a66c2] px-2.5 py-1 rounded-[5px] font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      className="bg-white hover:bg-[#2998d6]/10 border border-[#2998d6]/30 text-[#2998d6] px-2.5 py-1 rounded-[5px] font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
                     >
                       <Sparkles className="w-3.5 h-3.5" /> Auto-Fill {typeMeta.title} Template
                     </button>
@@ -778,14 +778,14 @@ export default function PublishOpportunityForm({
       <div id="section-product" className="bg-white border border-[#e0e0e0] rounded-[10px] p-6 sm:p-7 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
         <div className="border-b border-[#e0e0e0] pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-full bg-[#0a66c2]/10 text-[#0a66c2] text-xs font-bold flex items-center justify-center font-mono">
+            <span className="w-6 h-6 rounded-full bg-[#2998d6]/10 text-[#2998d6] text-xs font-bold flex items-center justify-center font-mono">
               2
             </span>
             <h3 className="text-sm font-bold text-[#181818] font-heading uppercase tracking-wider">
               Product Specific Parameters ({typeMeta.title})
             </h3>
           </div>
-          <span className="text-[11px] text-[#0a66c2] font-semibold">Customized by chosen opportunity type</span>
+          <span className="text-[11px] text-[#2998d6] font-semibold">Customized by chosen opportunity type</span>
         </div>
 
         {/* Loan Product Fields (Single-column relaxed stack) */}
@@ -796,7 +796,7 @@ export default function PublishOpportunityForm({
               <select
                 value={loanType}
                 onChange={e => setLoanType(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               >
                 <option value="Working Capital">Working Capital &amp; Inventory</option>
                 <option value="Asset Financing">Machinery &amp; Equipment Financing</option>
@@ -811,7 +811,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={loanMinAmt}
                 onChange={e => setLoanMinAmt(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -829,7 +829,7 @@ export default function PublishOpportunityForm({
                 className={`h-11 w-full rounded-[6px] border bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none transition-colors ${
                   errors.loanMaxAmt
                     ? 'border-red-500 bg-red-50/20 focus:border-red-600 focus:ring-1 focus:ring-red-600'
-                    : 'border-[#666666] focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]'
+                    : 'border-[#666666] focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]'
                 }`}
               />
               {errors.loanMaxAmt && (
@@ -848,7 +848,7 @@ export default function PublishOpportunityForm({
                 step="0.1"
                 value={loanRate}
                 onChange={e => setLoanRate(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -860,7 +860,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={loanTerm}
                 onChange={e => setLoanTerm(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -870,7 +870,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={loanGrace}
                 onChange={e => setLoanGrace(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -883,7 +883,7 @@ export default function PublishOpportunityForm({
                 type="checkbox"
                 checked={loanCollateralReq}
                 onChange={e => setLoanCollateralReq(e.target.checked)}
-                className="rounded-[3px] accent-[#0a66c2] h-4 w-4 cursor-pointer"
+                className="rounded-[3px] accent-[#2998d6] h-4 w-4 cursor-pointer"
               />
             </div>
           </div>
@@ -903,7 +903,7 @@ export default function PublishOpportunityForm({
                   setGrantAmt(e.target.value);
                   clearError('grantAmt');
                 }}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -915,7 +915,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={grantDuration}
                 onChange={e => setGrantDuration(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -926,7 +926,7 @@ export default function PublishOpportunityForm({
                 value={grantImpact}
                 onChange={e => setGrantImpact(e.target.value)}
                 placeholder="e.g. Job creation, female entrepreneurship empowerment, green technologies"
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -939,7 +939,7 @@ export default function PublishOpportunityForm({
                 type="checkbox"
                 checked={grantCoFundingReq}
                 onChange={e => setGrantCoFundingReq(e.target.checked)}
-                className="rounded-[3px] accent-[#0a66c2] h-4 w-4 cursor-pointer"
+                className="rounded-[3px] accent-[#2998d6] h-4 w-4 cursor-pointer"
               />
             </div>
           </div>
@@ -953,7 +953,7 @@ export default function PublishOpportunityForm({
               <select
                 value={fintechType}
                 onChange={e => setFintechType(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               >
                 <option value="POS Payments">Smart POS Terminal</option>
                 <option value="Mobile Banking SDK">Mobile Money QR &amp; SDK</option>
@@ -968,7 +968,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={fintechFee}
                 onChange={e => setFintechFee(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -978,7 +978,7 @@ export default function PublishOpportunityForm({
                 type="text"
                 value={fintechTxFee}
                 onChange={e => setFintechTxFee(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
           </div>
@@ -993,7 +993,7 @@ export default function PublishOpportunityForm({
                 type="text"
                 value={equityStake}
                 onChange={e => setEquityStake(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -1003,7 +1003,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={equityValuation}
                 onChange={e => setEquityValuation(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
           </div>
@@ -1018,7 +1018,7 @@ export default function PublishOpportunityForm({
                 type="text"
                 value={agriSeasonCycle}
                 onChange={e => setAgriSeasonCycle(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -1028,7 +1028,7 @@ export default function PublishOpportunityForm({
                 type="text"
                 value={agriGracePeriod}
                 onChange={e => setAgriGracePeriod(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -1038,7 +1038,7 @@ export default function PublishOpportunityForm({
                 type="text"
                 value={agriCropFocus}
                 onChange={e => setAgriCropFocus(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
           </div>
@@ -1053,7 +1053,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={guaranteeCoverage}
                 onChange={e => setGuaranteeCoverage(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -1063,7 +1063,7 @@ export default function PublishOpportunityForm({
                 type="number"
                 value={guaranteeMaxLoss}
                 onChange={e => setGuaranteeMaxLoss(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
@@ -1073,7 +1073,7 @@ export default function PublishOpportunityForm({
                 type="text"
                 value={guaranteeInstitution}
                 onChange={e => setGuaranteeInstitution(e.target.value)}
-                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
           </div>
@@ -1086,7 +1086,7 @@ export default function PublishOpportunityForm({
       <div id="section-financial" className="bg-white border border-[#e0e0e0] rounded-[10px] p-6 sm:p-7 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
         <div className="border-b border-[#e0e0e0] pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-full bg-[#0a66c2]/10 text-[#0a66c2] text-xs font-bold flex items-center justify-center font-mono">
+            <span className="w-6 h-6 rounded-full bg-[#2998d6]/10 text-[#2998d6] text-xs font-bold flex items-center justify-center font-mono">
               3
             </span>
             <h3 className="text-sm font-bold text-[#181818] font-heading uppercase tracking-wider">
@@ -1109,8 +1109,8 @@ export default function PublishOpportunityForm({
                 { label: 'Cooperative / SACCO', val: eligCooperative, set: setEligCooperative },
                 { label: 'Tech Startup / Incubator', val: eligStartup, set: setEligStartup }
               ].map((typeItem, i) => (
-                <label key={i} className="flex items-center gap-3 p-3 bg-white border border-[#e0e0e0] rounded-[6px] hover:border-[#0a66c2] cursor-pointer transition-colors">
-                  <input type="checkbox" checked={typeItem.val} onChange={e => typeItem.set(e.target.checked)} className="rounded-[3px] accent-[#0a66c2] h-4 w-4" />
+                <label key={i} className="flex items-center gap-3 p-3 bg-white border border-[#e0e0e0] rounded-[6px] hover:border-[#2998d6] cursor-pointer transition-colors">
+                  <input type="checkbox" checked={typeItem.val} onChange={e => typeItem.set(e.target.checked)} className="rounded-[3px] accent-[#2998d6] h-4 w-4" />
                   <span className="text-xs text-[#181818] font-semibold">{typeItem.label}</span>
                 </label>
               ))}
@@ -1124,7 +1124,7 @@ export default function PublishOpportunityForm({
               type="number"
               value={finMinMonthlyRev}
               onChange={e => setFinMinMonthlyRev(parseInt(e.target.value) || 0)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -1135,7 +1135,7 @@ export default function PublishOpportunityForm({
               type="number"
               value={finMinAnnualRev}
               onChange={e => setFinMinAnnualRev(parseInt(e.target.value) || 0)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -1147,7 +1147,7 @@ export default function PublishOpportunityForm({
               max="100"
               value={finMinReadiness}
               onChange={e => setFinMinReadiness(parseInt(e.target.value) || 0)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -1159,7 +1159,7 @@ export default function PublishOpportunityForm({
               max="100"
               value={finMinHealth}
               onChange={e => setFinMinHealth(parseInt(e.target.value) || 0)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -1170,7 +1170,7 @@ export default function PublishOpportunityForm({
               type="number"
               value={eligMinAge}
               onChange={e => setEligMinAge(parseInt(e.target.value) || 0)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -1181,7 +1181,7 @@ export default function PublishOpportunityForm({
               type="number"
               value={eligMinEmployees}
               onChange={e => setEligMinEmployees(parseInt(e.target.value) || 0)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -1192,7 +1192,7 @@ export default function PublishOpportunityForm({
               type="number"
               value={finMaxDebtToRevenue}
               onChange={e => setFinMaxDebtToRevenue(parseInt(e.target.value) || 0)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-mono text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             />
           </div>
 
@@ -1221,7 +1221,7 @@ export default function PublishOpportunityForm({
                       'Southern Province'
                     ])
                   }
-                  className="text-[#0a66c2] hover:underline font-semibold cursor-pointer"
+                  className="text-[#2998d6] hover:underline font-semibold cursor-pointer"
                 >
                   Select All
                 </button>
@@ -1257,8 +1257,8 @@ export default function PublishOpportunityForm({
                     key={loc.id}
                     className={`flex items-center justify-between p-3.5 rounded-[6px] border cursor-pointer transition-all duration-150 ${
                       isSelected
-                        ? 'bg-[#0a66c2]/5 border-[#0a66c2] shadow-[0_1px_3px_rgba(10,102,194,0.08)]'
-                        : 'bg-white border-[#e0e0e0] hover:border-[#0a66c2] hover:bg-[#fafafa]'
+                        ? 'bg-[#2998d6]/5 border-[#2998d6] shadow-[0_1px_3px_rgba(10,102,194,0.08)]'
+                        : 'bg-white border-[#e0e0e0] hover:border-[#2998d6] hover:bg-[#fafafa]'
                     }`}
                   >
                     <div className="flex items-center gap-3">
@@ -1270,7 +1270,7 @@ export default function PublishOpportunityForm({
                             isSelected ? prev.filter(x => x !== loc.id) : [...prev, loc.id]
                           );
                         }}
-                        className="h-4 w-4 rounded-[3px] accent-[#0a66c2] cursor-pointer"
+                        className="h-4 w-4 rounded-[3px] accent-[#2998d6] cursor-pointer"
                       />
                       <div>
                         <div className="text-xs font-semibold text-[#181818]">
@@ -1282,7 +1282,7 @@ export default function PublishOpportunityForm({
                       </div>
                     </div>
                     {isSelected && (
-                      <span className="shrink-0 ml-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#0a66c2] bg-[#0a66c2]/10 px-2.5 py-0.5 rounded-full">
+                      <span className="shrink-0 ml-3 inline-flex items-center gap-1 text-[11px] font-bold text-[#2998d6] bg-[#2998d6]/10 px-2.5 py-0.5 rounded-full">
                         <Check className="w-3 h-3 stroke-[2.5]" />
                         Selected
                       </span>
@@ -1301,7 +1301,7 @@ export default function PublishOpportunityForm({
       <div id="section-docs" className="bg-white border border-[#e0e0e0] rounded-[10px] p-6 sm:p-7 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
         <div className="border-b border-[#e0e0e0] pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-full bg-[#0a66c2]/10 text-[#0a66c2] text-xs font-bold flex items-center justify-center font-mono">
+            <span className="w-6 h-6 rounded-full bg-[#2998d6]/10 text-[#2998d6] text-xs font-bold flex items-center justify-center font-mono">
               4
             </span>
             <h3 className="text-sm font-bold text-[#181818] font-heading uppercase tracking-wider">
@@ -1339,7 +1339,7 @@ export default function PublishOpportunityForm({
                 key={doc}
                 className={`p-3.5 bg-white border rounded-[8px] transition-all duration-150 flex flex-col sm:flex-row sm:items-center justify-between gap-3 relative ${
                   status === 'Required'
-                    ? 'border-[#0a66c2]/40 shadow-[0_1px_4px_rgba(10,102,194,0.06)]'
+                    ? 'border-[#2998d6]/40 shadow-[0_1px_4px_rgba(10,102,194,0.06)]'
                     : status === 'Optional'
                     ? 'border-[#e0e0e0]'
                     : 'border-[#e8e8e8] bg-[#fafafa]/80 opacity-70'
@@ -1350,7 +1350,7 @@ export default function PublishOpportunityForm({
                   <FileText
                     className={`w-4 h-4 shrink-0 ${
                       status === 'Required'
-                        ? 'text-[#0a66c2]'
+                        ? 'text-[#2998d6]'
                         : status === 'Optional'
                         ? 'text-[#057642]'
                         : 'text-gray-400'
@@ -1378,7 +1378,7 @@ export default function PublishOpportunityForm({
                         onClick={() => setOpenFormatDoc(openFormatDoc === doc ? null : doc)}
                         className={`h-8 px-2.5 rounded-[6px] border text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
                           openFormatDoc === doc
-                            ? 'bg-[#0a66c2]/10 border-[#0a66c2] text-[#0a66c2] ring-2 ring-[#0a66c2]/20'
+                            ? 'bg-[#2998d6]/10 border-[#2998d6] text-[#2998d6] ring-2 ring-[#2998d6]/20'
                             : 'bg-[#f8f9fa] border-[#d0d0d0] text-[#181818] hover:bg-[#f3f2f0] hover:border-[#a0a0a0]'
                         }`}
                         title="Select accepted file formats"
@@ -1386,7 +1386,7 @@ export default function PublishOpportunityForm({
                         <span className="text-[11px] font-semibold">{formatLabel()}</span>
                         <ChevronDown
                           className={`w-3.5 h-3.5 text-[#5e5e5e] transition-transform duration-150 ${
-                            openFormatDoc === doc ? 'rotate-180 text-[#0a66c2]' : ''
+                            openFormatDoc === doc ? 'rotate-180 text-[#2998d6]' : ''
                           }`}
                         />
                       </button>
@@ -1412,7 +1412,7 @@ export default function PublishOpportunityForm({
                                       [doc]: formatOptions.map(f => f.id)
                                     }))
                                   }
-                                  className="text-[#0a66c2] hover:underline font-semibold cursor-pointer"
+                                  className="text-[#2998d6] hover:underline font-semibold cursor-pointer"
                                 >
                                   All
                                 </button>
@@ -1440,7 +1440,7 @@ export default function PublishOpportunityForm({
                                     key={fmt.id}
                                     className={`flex items-center justify-between px-2.5 py-1.5 rounded-[5px] text-xs cursor-pointer transition-colors ${
                                       isChecked
-                                        ? 'bg-[#0a66c2]/8 text-[#0a66c2] font-semibold'
+                                        ? 'bg-[#2998d6]/8 text-[#2998d6] font-semibold'
                                         : 'text-[#181818] hover:bg-[#f3f2f0]'
                                     }`}
                                   >
@@ -1460,11 +1460,11 @@ export default function PublishOpportunityForm({
                                             };
                                           });
                                         }}
-                                        className="h-3.5 w-3.5 rounded-[3px] accent-[#0a66c2] cursor-pointer"
+                                        className="h-3.5 w-3.5 rounded-[3px] accent-[#2998d6] cursor-pointer"
                                       />
                                       <span className="text-xs">{fmt.label}</span>
                                     </div>
-                                    {isChecked && <Check className="w-3 h-3 text-[#0a66c2] stroke-[2.5]" />}
+                                    {isChecked && <Check className="w-3 h-3 text-[#2998d6] stroke-[2.5]" />}
                                   </label>
                                 );
                               })}
@@ -1490,7 +1490,7 @@ export default function PublishOpportunityForm({
                         className={`px-3 py-1 rounded-full text-xs font-semibold border transition cursor-pointer ${
                           docRequirements[doc] === lvl
                             ? lvl === 'Required'
-                              ? 'bg-[#0a66c2] text-white border-[#0a66c2]'
+                              ? 'bg-[#2998d6] text-white border-[#2998d6]'
                               : lvl === 'Optional'
                               ? 'bg-[#057642] text-white border-[#057642]'
                               : 'bg-gray-700 text-white border-gray-700'
@@ -1514,7 +1514,7 @@ export default function PublishOpportunityForm({
       <div id="section-matching" className="bg-white border border-[#e0e0e0] rounded-[10px] p-6 sm:p-7 shadow-[0_2px_8px_rgba(0,0,0,0.04)] space-y-6">
         <div className="border-b border-[#e0e0e0] pb-3 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <span className="w-6 h-6 rounded-full bg-[#0a66c2]/10 text-[#0a66c2] text-xs font-bold flex items-center justify-center font-mono">
+            <span className="w-6 h-6 rounded-full bg-[#2998d6]/10 text-[#2998d6] text-xs font-bold flex items-center justify-center font-mono">
               5
             </span>
             <h3 className="text-sm font-bold text-[#181818] font-heading uppercase tracking-wider">
@@ -1533,7 +1533,7 @@ export default function PublishOpportunityForm({
             <select
               value={appMethod}
               onChange={e => setAppMethod(e.target.value)}
-              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-semibold text-[#181818] outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+              className="h-11 w-full rounded-[6px] border border-[#666666] bg-white px-3.5 text-[14px] font-semibold text-[#181818] outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             >
               <option value="Apply directly through Elevata">Apply directly through Elevata Engine (Instant)</option>
               <option value="External application link">External Partner Portal Link</option>
@@ -1570,7 +1570,7 @@ export default function PublishOpportunityForm({
                         onClick={() => setWeights(prev => ({ ...prev, [factor]: wLvl as any }))}
                         className={`px-3 py-1 rounded-full text-xs font-semibold border transition ${
                           weights[factor] === wLvl
-                            ? 'bg-[#0a66c2] text-white border-[#0a66c2]'
+                            ? 'bg-[#2998d6] text-white border-[#2998d6]'
                             : 'bg-white text-[#5e5e5e] border-[#e0e0e0] hover:bg-[#f3f2f0]'
                         }`}
                       >
@@ -1588,7 +1588,7 @@ export default function PublishOpportunityForm({
             <button
               type="button"
               onClick={() => handleSubmit()}
-              className="flex h-12 items-center justify-center gap-2 rounded-full bg-[#0a66c2] hover:bg-[#004182] px-12 text-[15px] font-bold text-white transition-all shadow-md hover:shadow-lg border-none cursor-pointer"
+              className="flex h-12 items-center justify-center gap-2 rounded-full bg-[#2998d6] hover:bg-[#1f85be] px-12 text-[15px] font-bold text-white transition-all shadow-md hover:shadow-lg border-none cursor-pointer"
             >
               <span>Publish {typeMeta.title}</span>
             </button>

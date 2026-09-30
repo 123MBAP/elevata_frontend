@@ -299,7 +299,7 @@ export default function BusinessProfilePage() {
   return (
     <div className="space-y-6 max-w-7xl mx-auto font-sans pb-16">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-gradient-to-r from-[#eaf2ff] via-white to-emerald-50 border border-blue-100 rounded-2xl p-6 shadow-sm">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
@@ -307,8 +307,8 @@ export default function BusinessProfilePage() {
             </h1>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
               isFI
-                ? 'bg-blue-50 text-[#0a66c2] border-blue-200'
-                : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                ? 'bg-sky-50 text-[#2998d6] border-sky-200'
+                : 'bg-sky-50 text-[#2998d6] border-sky-200'
             }`}>
               {isFI ? 'Credit Institution' : smeForm.businessType || 'SME Business'}
             </span>
@@ -325,7 +325,7 @@ export default function BusinessProfilePage() {
           {!isEditing ? (
             <button
               onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
+              className="px-4 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
             >
               <Edit3 className="w-4 h-4" />
               <span>Edit Profile</span>
@@ -343,7 +343,7 @@ export default function BusinessProfilePage() {
               <button
                 onClick={handleSaveProfile}
                 disabled={saving}
-                className="px-5 py-2 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+                className="px-5 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
               >
                 <Save className="w-4 h-4" />
                 <span>{saving ? 'Saving...' : 'Save Changes'}</span>
@@ -377,7 +377,7 @@ export default function BusinessProfilePage() {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <Card className="rounded-xl border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+                <div className="w-9 h-9 rounded-lg bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold">
                   <Coins className="w-4 h-4" />
                 </div>
                 <div>
@@ -405,7 +405,7 @@ export default function BusinessProfilePage() {
 
             <Card className="rounded-xl border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+                <div className="w-9 h-9 rounded-lg bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold">
                   <Cpu className="w-4 h-4" />
                 </div>
                 <div>
@@ -434,7 +434,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('general')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'general'
-                  ? 'bg-[#0a66c2] text-white'
+                  ? 'bg-[#2998d6] text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -446,7 +446,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('equipment')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'equipment'
-                  ? 'bg-[#0a66c2] text-white'
+                  ? 'bg-[#2998d6] text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -458,7 +458,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('balance')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'balance'
-                  ? 'bg-[#0a66c2] text-white'
+                  ? 'bg-[#2998d6] text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -470,7 +470,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('workforce')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'workforce'
-                  ? 'bg-[#0a66c2] text-white'
+                  ? 'bg-[#2998d6] text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -482,7 +482,7 @@ export default function BusinessProfilePage() {
               onClick={() => setActiveTab('strategy')}
               className={`px-3.5 py-2 rounded-lg text-xs font-semibold transition flex items-center gap-1.5 shrink-0 ${
                 activeTab === 'strategy'
-                  ? 'bg-[#0a66c2] text-white'
+                  ? 'bg-[#2998d6] text-white shadow-sm'
                   : 'bg-white text-slate-600 hover:bg-slate-50 border border-gray-200'
               }`}
             >
@@ -1090,7 +1090,7 @@ export default function BusinessProfilePage() {
           <div className="flex items-center justify-between border-b border-gray-100 pb-3">
             <div>
               <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
-                <Building2 className="w-4 h-4 text-[#0a66c2]" />
+                <Building2 className="w-4 h-4 text-[#2998d6]" />
                 Institutional Accreditation & Licensing
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">

@@ -138,7 +138,7 @@ export default function ScheduleTrainingModal({
               placeholder="e.g. Masterclass: Preparing Tax Clearance & Financials"
               value={title}
               onChange={e => setTitle(e.target.value)}
-              className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e]"
+              className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               required
             />
           </div>
@@ -152,7 +152,7 @@ export default function ScheduleTrainingModal({
               placeholder="e.g. Dr. Agnes Kalibata"
               value={speaker}
               onChange={e => setSpeaker(e.target.value)}
-              className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e]"
+              className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               required
             />
           </div>
@@ -166,7 +166,7 @@ export default function ScheduleTrainingModal({
                 type="date"
                 value={date}
                 onChange={e => setDate(e.target.value)}
-                className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e]"
+                className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                 required
               />
             </div>
@@ -179,7 +179,7 @@ export default function ScheduleTrainingModal({
                 placeholder="10:00 AM - 12:30 PM"
                 value={time}
                 onChange={e => setTime(e.target.value)}
-                className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e]"
+                className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                 required
               />
             </div>
@@ -193,7 +193,7 @@ export default function ScheduleTrainingModal({
               type="text"
               value={meetingLink}
               onChange={e => setMeetingLink(e.target.value)}
-              className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e]"
+              className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               required
             />
           </div>
@@ -207,7 +207,7 @@ export default function ScheduleTrainingModal({
               rows={3}
               value={description}
               onChange={e => setDescription(e.target.value)}
-              className="w-full rounded-[4px] border border-[#666666] bg-white p-3 text-[13px] text-[#181818] outline-none transition-colors focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e] leading-relaxed"
+              className="w-full rounded-[4px] border border-[#666666] bg-white p-3 text-[13px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6] leading-relaxed"
               required
             />
           </div>
@@ -224,7 +224,7 @@ export default function ScheduleTrainingModal({
           </button>
           <button
             type="submit"
-            className="flex h-10 items-center justify-center rounded-full bg-[#0f766e] px-6 text-[14px] font-bold text-white transition-colors hover:bg-[#115e59] shadow-xs border-none"
+            className="flex h-10 items-center justify-center rounded-full bg-[#2998d6] px-6 text-[14px] font-bold text-white transition-colors hover:bg-[#1f85be] shadow-xs border-none"
           >
             {isEditing ? 'Save Changes' : 'Schedule Session'}
           </button>

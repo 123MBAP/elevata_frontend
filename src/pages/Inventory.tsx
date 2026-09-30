@@ -184,9 +184,9 @@ export default function Inventory() {
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="fixed top-20 right-6 z-50 bg-emerald-700 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 border border-emerald-500"
+          className="fixed top-20 right-6 z-50 bg-[#1a2332] text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 border border-[#2a384c]"
         >
-          <CheckCircle className="w-4 h-4 text-emerald-200" />
+          <CheckCircle className="w-4 h-4 text-[#38bdf8]" />
           <span className="font-medium">{toastMessage}</span>
         </motion.div>
       )}
@@ -195,7 +195,7 @@ export default function Inventory() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
         <div>
           <div className="flex items-center space-x-2.5">
-            <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-xl">
+            <div className="p-2.5 bg-sky-50 text-[#2998d6] rounded-xl">
               <Package className="w-6 h-6" />
             </div>
             <div>
@@ -203,7 +203,7 @@ export default function Inventory() {
                 Inventory & Products Catalog
               </h2>
               <p className="text-xs text-slate-500 mt-0.5">
-                Manage master products with measurement units (<span className="font-semibold text-emerald-700">kgs, meters, m², L, dozen</span>), stock balances & intakes for <span className="text-emerald-600 font-bold">{activeSme.name}</span>.
+                Manage master products with measurement units (<span className="font-semibold text-slate-700">kgs, meters, m², L, dozen</span>), stock balances & intakes for <span className="text-[#2998d6] font-bold">{activeSme.name}</span>.
               </p>
             </div>
           </div>
@@ -212,7 +212,7 @@ export default function Inventory() {
         <div className="flex items-center space-x-3">
           <Button
             onClick={() => setIsCreateModalOpen(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-10 px-5 rounded-xl shadow-md shadow-emerald-600/20 flex items-center space-x-2 transition"
+            className="bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold text-xs h-10 px-5 rounded-xl shadow-sm shadow-[#2998d6]/30 flex items-center space-x-2 transition"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Create Product</span>
@@ -229,7 +229,7 @@ export default function Inventory() {
               <span className="text-2xl font-bold text-slate-800 mt-1 block font-mono">{totalSKUs}</span>
               <span className="text-[10px] text-slate-400 mt-0.5 block">{inStockCount} currently available</span>
             </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl">
+            <div className="p-3 bg-sky-50 text-[#2998d6] rounded-xl">
               <Layers className="w-5 h-5" />
             </div>
           </CardContent>
@@ -286,7 +286,7 @@ export default function Inventory() {
         <button
           onClick={() => setActiveTab('products')}
           className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${activeTab === 'products'
-              ? 'border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-lg'
+              ? 'border-[#2998d6] text-[#2998d6] bg-sky-50/50 rounded-t-lg'
               : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
         >
@@ -297,7 +297,7 @@ export default function Inventory() {
         <button
           onClick={() => setActiveTab('intake')}
           className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${activeTab === 'intake'
-              ? 'border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-lg'
+              ? 'border-[#2998d6] text-[#2998d6] bg-sky-50/50 rounded-t-lg'
               : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
         >
@@ -308,7 +308,7 @@ export default function Inventory() {
         <button
           onClick={() => setActiveTab('alerts')}
           className={`py-3.5 px-5 font-bold text-xs flex items-center space-x-2 border-b-2 transition ${activeTab === 'alerts'
-              ? 'border-emerald-600 text-emerald-700 bg-emerald-50/40 rounded-t-lg'
+              ? 'border-[#2998d6] text-[#2998d6] bg-sky-50/50 rounded-t-lg'
               : 'border-transparent text-slate-500 hover:text-slate-800'
             }`}
         >
@@ -330,7 +330,7 @@ export default function Inventory() {
                   placeholder="Search products by name, unit, or description..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#2998d6] focus:outline-none"
                 />
               </div>
 
@@ -339,7 +339,7 @@ export default function Inventory() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-700"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#2998d6] focus:outline-none bg-white text-slate-700"
                   >
                     <option value="All">All Categories</option>
                     {allCategories.map(cat => (
@@ -352,7 +352,7 @@ export default function Inventory() {
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 focus:outline-none bg-white text-slate-700"
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:ring-2 focus:ring-[#2998d6] focus:outline-none bg-white text-slate-700"
                   >
                     <option value="All">All Statuses</option>
                     <option value="In Stock">In Stock</option>
@@ -457,7 +457,7 @@ export default function Inventory() {
                 <p className="font-semibold text-slate-600">No products found matching your search</p>
                 <Button
                   onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-4 rounded-xl"
+                  className="bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold text-xs h-9 px-4 rounded-xl shadow-sm shadow-[#2998d6]/30 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5 mr-1" />
                   Add New Product
@@ -537,7 +537,7 @@ export default function Inventory() {
                             <select
                               value={item.productId}
                               onChange={(e) => handleIntakeItemChange(item.id, 'productId', e.target.value)}
-                              className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 focus:ring-2 focus:ring-emerald-500 focus:outline-none h-8 font-medium"
+                              className="w-full px-2 py-1.5 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#2998d6] focus:outline-none h-8 font-medium"
                               required
                             >
                               <option value="">Select from master catalog...</option>
@@ -552,7 +552,7 @@ export default function Inventory() {
                             <select
                               value={item.unit || 'pcs'}
                               onChange={(e) => handleIntakeItemChange(item.id, 'unit', e.target.value)}
-                              className="border border-slate-200 h-8 text-xs font-mono w-full rounded-lg bg-white px-2 focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                              className="border border-slate-200 h-8 text-xs font-mono w-full rounded-lg bg-white px-2 focus:ring-2 focus:ring-[#2998d6] focus:outline-none"
                             >
                               {UNIT_OPTIONS.map(u => (
                                 <option key={u.value} value={u.value}>
@@ -619,7 +619,7 @@ export default function Inventory() {
                   <Button
                     type="submit"
                     disabled={isSubmittingIntake}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-6 rounded-xl shadow-md shadow-emerald-600/20"
+                    className="bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold text-xs h-9 px-6 rounded-xl shadow-sm shadow-[#2998d6]/30 transition-colors"
                   >
                     {isSubmittingIntake ? 'Recording Stock...' : 'Record Intake & Update Stock'}
                   </Button>

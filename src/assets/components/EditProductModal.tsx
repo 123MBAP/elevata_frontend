@@ -93,14 +93,14 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
           className="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-xl overflow-hidden my-8"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 p-6 text-white flex items-center justify-between">
+          <div className="bg-[#1a2332] p-6 text-white flex items-center justify-between border-b border-[#2a384c]">
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 bg-white/15 rounded-xl backdrop-blur-md border border-white/20">
-                <Edit3 className="w-6 h-6 text-blue-100" />
+              <div className="p-2.5 bg-white/10 rounded-xl backdrop-blur-md border border-white/20">
+                <Edit3 className="w-6 h-6 text-[#38bdf8]" />
               </div>
               <div>
                 <h3 className="text-lg font-bold font-heading">Edit Product Details</h3>
-                <p className="text-xs text-blue-100 mt-0.5">
+                <p className="text-xs text-slate-300 mt-0.5">
                   Update master catalog item — historical sales & purchases will preserve their original snapshot values
                 </p>
               </div>
@@ -147,7 +147,7 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
                 <select
                   value={category}
                   onChange={(e) => setCategory(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 focus:ring-2 focus:ring-blue-500 focus:outline-none h-10 font-medium"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800 focus:ring-2 focus:ring-[#2998d6] focus:outline-none h-10 font-medium"
                 >
                   {CATEGORY_OPTIONS.map((cat) => (
                     <option key={cat} value={cat}>
@@ -159,13 +159,13 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-                  <Scale className="w-3.5 h-3.5 text-blue-600" />
+                  <Scale className="w-3.5 h-3.5 text-[#2998d6]" />
                   <span>Unit of Measurement</span>
                 </label>
                 <select
                   value={unit}
                   onChange={(e) => setUnit(e.target.value as MeasurementUnit)}
-                  className="w-full px-3 py-2 border border-blue-300 rounded-lg text-xs bg-blue-50/40 text-blue-900 font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none h-10"
+                  className="w-full px-3 py-2 border border-[#2998d6]/30 rounded-lg text-xs bg-sky-50/50 text-slate-800 font-semibold focus:ring-2 focus:ring-[#2998d6] focus:outline-none h-10"
                   required
                 >
                   {UNIT_OPTIONS.map((u) => (
@@ -214,7 +214,7 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1 flex items-center space-x-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-blue-600" />
+                  <DollarSign className="w-3.5 h-3.5 text-[#2998d6]" />
                   <span>Selling Price per {unit} (RWF) <span className="text-rose-500">*</span></span>
                 </label>
                 <Input
@@ -223,7 +223,7 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
                   min="0"
                   value={unitPrice}
                   onChange={(e) => setUnitPrice(e.target.value === '' ? '' : Number(e.target.value))}
-                  className="border-slate-200 text-xs h-10 font-mono font-bold text-blue-700"
+                  className="border-slate-200 text-xs h-10 font-mono font-bold text-slate-900"
                   required
                 />
               </div>
@@ -251,7 +251,7 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
               <textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-blue-500 focus:outline-none min-h-[70px]"
+                className="w-full px-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-[#2998d6] focus:outline-none min-h-[70px]"
                 rows={2}
               />
             </div>
@@ -266,7 +266,7 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
                   {stockQuantity || 0} {unit} @ {formatRWF(Number(unitPrice) || 0)} / {unit}
                 </span>
               </div>
-              <span className="text-base font-bold font-mono text-blue-600">
+              <span className="text-base font-bold font-mono text-[#2998d6]">
                 {formatRWF(totalValue)}
               </span>
             </div>
@@ -285,7 +285,7 @@ export default function EditProductModal({ isOpen, product, onClose, onSubmit }:
               <Button
                 type="submit"
                 disabled={isSubmitting}
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs h-10 px-6 shadow-md shadow-blue-600/20"
+                className="bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold text-xs h-10 px-6 shadow-sm shadow-[#2998d6]/30 transition-colors"
               >
                 {isSubmitting ? 'Saving Changes...' : 'Save Updates'}
               </Button>

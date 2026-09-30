@@ -326,8 +326,8 @@ export default function OpportunityPublisher() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-xl font-bold text-[#181818] font-heading">Opportunity Publisher</h1>
-            <span className="bg-[#0a66c2]/10 text-[#0a66c2] text-[11px] px-2.5 py-0.5 font-bold rounded-full border border-[#0a66c2]/20 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#0a66c2] animate-pulse"></span>
+            <span className="bg-[#2998d6]/10 text-[#2998d6] text-[11px] px-2.5 py-0.5 font-bold rounded-full border border-[#2998d6]/20 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#2998d6] animate-pulse"></span>
               Live Platform
             </span>
           </div>
@@ -352,7 +352,7 @@ export default function OpportunityPublisher() {
           <button
             type="button"
             onClick={() => setIsTypeModalOpen(true)}
-            className="flex items-center justify-center space-x-1.5 px-5 py-2 rounded-full bg-[#0a66c2] hover:bg-[#004182] text-white text-xs font-bold transition-colors shadow-xs border-none"
+            className="flex items-center justify-center space-x-1.5 px-5 py-2 rounded-full bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold transition-colors shadow-xs border-none"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
             <span>Publish Opportunity</span>
@@ -368,7 +368,7 @@ export default function OpportunityPublisher() {
             value: activeOppsCount,
             sub: 'Opportunities live today',
             icon: <Layers className="w-4 h-4" />,
-            iconBg: 'bg-[#0a66c2]/10 text-[#0a66c2]'
+            iconBg: 'bg-[#2998d6]/10 text-[#2998d6]'
           },
           {
             label: 'Eligible SMEs',
@@ -413,7 +413,7 @@ export default function OpportunityPublisher() {
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
             <h2 className="text-sm font-bold text-[#181818] flex items-center gap-2">
               <span>Published Programs</span>
-              <span className="bg-white border border-[#e0e0e0] text-[#0a66c2] text-xs px-2.5 py-0.5 rounded-full font-mono font-bold shadow-2xs">
+              <span className="bg-white border border-[#e0e0e0] text-[#2998d6] text-xs px-2.5 py-0.5 rounded-full font-mono font-bold shadow-2xs">
                 {filteredOpportunities.length}
               </span>
             </h2>
@@ -427,13 +427,13 @@ export default function OpportunityPublisher() {
                   placeholder="Search opportunities..."
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
-                  className="w-full h-9 pl-9 pr-3 bg-white border border-[#666666] rounded-[4px] text-xs text-[#181818] placeholder:text-[#8c8c8c] focus:outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] transition-colors"
+                  className="w-full h-9 pl-9 pr-3 bg-white border border-[#666666] rounded-[4px] text-xs text-[#181818] placeholder:text-[#8c8c8c] focus:outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6] transition-colors"
                 />
               </div>
               <select
                 value={activeCategory}
                 onChange={e => setActiveCategory(e.target.value)}
-                className="h-9 bg-white border border-[#666666] text-xs text-[#181818] px-3 rounded-[4px] focus:outline-none focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                className="h-9 bg-white border border-[#666666] text-xs text-[#181818] px-3 rounded-[4px] focus:outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               >
                 {categories.map(c => (
                   <option key={c} value={c}>{c}</option>
@@ -450,7 +450,7 @@ export default function OpportunityPublisher() {
                 onClick={() => setSelectedOppId(opp.id)}
                 className={`p-5 bg-white rounded-[10px] shadow-[0_2px_8px_rgba(0,0,0,0.04)] cursor-pointer transition flex flex-col justify-between hover:shadow-[0_4px_16px_rgba(0,0,0,0.08)] border ${
                   selectedOppId === opp.id
-                    ? 'border-2 border-[#0a66c2] ring-2 ring-[#0a66c2]/10 bg-[#0a66c2]/[0.015]'
+                    ? 'border-2 border-[#2998d6] ring-2 ring-[#2998d6]/10 bg-[#2998d6]/[0.015]'
                     : 'border-[#e0e0e0]'
                 }`}
               >
@@ -503,7 +503,7 @@ export default function OpportunityPublisher() {
                     </div>
 
                     <div className="flex items-center gap-1.5">
-                      <span className="px-2 py-0.5 rounded-full bg-[#0a66c2]/10 text-[#0a66c2] font-bold border border-[#0a66c2]/20 text-[9px] flex items-center gap-1">
+                      <span className="px-2 py-0.5 rounded-full bg-[#2998d6]/10 text-[#2998d6] font-bold border border-[#2998d6]/20 text-[9px] flex items-center gap-1">
                          AI Matched
                       </span>
                     </div>
@@ -531,7 +531,7 @@ export default function OpportunityPublisher() {
                           document.getElementById('eligible-table')?.scrollIntoView({ behavior: 'smooth' });
                         }, 50);
                       }}
-                      className="flex-1 py-1.5 px-2 bg-[#0a66c2] hover:bg-[#004182] text-[11px] font-bold text-white rounded-full transition-colors flex items-center justify-center gap-1.5 text-center border-none shadow-2xs"
+                      className="flex-1 py-1.5 px-2 bg-[#2998d6] hover:bg-[#1f85be] text-[11px] font-bold text-white rounded-full transition-colors flex items-center justify-center gap-1.5 text-center border-none shadow-2xs"
                     >
                       <Target className="w-3.5 h-3.5 text-white" />
                       <span>Match SMEs</span>
@@ -550,7 +550,7 @@ export default function OpportunityPublisher() {
               <div>
                 <div className="pb-3.5 border-b border-[#e0e0e0]">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-[#0a66c2] uppercase tracking-widest flex items-center gap-1">
+                    <span className="text-[10px] font-bold text-[#2998d6] uppercase tracking-widest flex items-center gap-1">
                                            Elevata Match Engine
                     </span>
                     <span className="text-[11px] font-semibold text-[#5e5e5e]">Accuracy: 98%</span>
@@ -572,7 +572,7 @@ export default function OpportunityPublisher() {
                   </div>
                   <div className="flex justify-between items-center text-xs">
                     <span>Readiness threshold:</span>
-                    <span className="font-semibold text-[#0a66c2] font-mono">{selectedOpp?.minReadinessScore}%</span>
+                    <span className="font-semibold text-[#2998d6] font-mono">{selectedOpp?.minReadinessScore}%</span>
                   </div>
                 </div>
 
@@ -618,7 +618,7 @@ export default function OpportunityPublisher() {
               <div className="pt-4 border-t border-[#e0e0e0]">
                 <a
                   href="#eligible-table"
-                  className="w-full flex items-center justify-center gap-1 py-2.5 bg-[#0a66c2] hover:bg-[#004182] text-white text-xs font-bold rounded-full shadow-xs transition-colors"
+                  className="w-full flex items-center justify-center gap-1 py-2.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-full shadow-xs transition-colors"
                 >
                   View Matches Table
                 </a>
@@ -638,7 +638,7 @@ export default function OpportunityPublisher() {
             </div>
             <button
               onClick={() => triggerToast('Invited all highly qualified SMEs to apply via automated messaging.')}
-              className="px-4 py-1.5 bg-[#0a66c2] text-white text-xs font-bold rounded-full hover:bg-[#004182] transition-colors shadow-xs"
+              className="px-4 py-1.5 bg-[#2998d6] text-white text-xs font-bold rounded-full hover:bg-[#1f85be] transition-colors shadow-xs"
             >
               Invite All Matches
             </button>
@@ -747,7 +747,7 @@ export default function OpportunityPublisher() {
                     <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#717171' }} />
                     <YAxis tick={{ fontSize: 10, fill: '#717171' }} />
                     <Tooltip contentStyle={{ fontSize: 11, borderRadius: 6, borderColor: '#e0e0e0' }} />
-                    <Area type="monotone" dataKey="Views" stroke="#0a66c2" fill="#e8f0fe" />
+                    <Area type="monotone" dataKey="Views" stroke="#2998d6" fill="#e8f0fe" />
                     <Area type="monotone" dataKey="Applications" stroke="#057642" fill="#e6f4ea" />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -761,8 +761,8 @@ export default function OpportunityPublisher() {
               <h4 className="text-[11px] font-bold text-[#5e5e5e] uppercase tracking-wider mb-4">Conversion Funnel</h4>
               <div className="space-y-3.5 mt-2">
                 {[
-                  { label: 'Views', value: selectedOpp?.views || 100, pct: '100%', barBg: 'bg-[#0a66c2]' },
-                  { label: 'Interested', value: selectedOpp?.saved || 30, pct: `${Math.round(((selectedOpp?.saved || 30) / (selectedOpp?.views || 100)) * 100)}%`, barBg: 'bg-[#0a66c2]/80' },
+                  { label: 'Views', value: selectedOpp?.views || 100, pct: '100%', barBg: 'bg-[#2998d6]' },
+                  { label: 'Interested', value: selectedOpp?.saved || 30, pct: `${Math.round(((selectedOpp?.saved || 30) / (selectedOpp?.views || 100)) * 100)}%`, barBg: 'bg-[#2998d6]/80' },
                   { label: 'Applications', value: selectedOpp?.applicationsCount || 5, pct: `${Math.round(((selectedOpp?.applicationsCount || 5) / (selectedOpp?.views || 100)) * 100)}%`, barBg: 'bg-amber-500' },
                   { label: 'Approved', value: 1, pct: '20% of apps', barBg: 'bg-[#057642]' }
                 ].map((step, i) => (
@@ -797,7 +797,7 @@ export default function OpportunityPublisher() {
                       </div>
                       <button
                         onClick={() => handleCreateTrainingFromGap(item.name, item.count)}
-                        className="bg-white hover:bg-[#0a66c2]/10 text-[#0a66c2] font-bold px-3 py-1 rounded-full text-xs border border-[#0a66c2]/30 transition-colors shrink-0"
+                        className="bg-white hover:bg-[#2998d6]/10 text-[#2998d6] font-bold px-3 py-1 rounded-full text-xs border border-[#2998d6]/30 transition-colors shrink-0"
                       >
                         Create Training
                       </button>
@@ -820,7 +820,7 @@ export default function OpportunityPublisher() {
           <div className="flex items-center gap-2">
             <Link
               to="/banker/trainings"
-              className="px-4 py-1.5 bg-[#0a66c2] hover:bg-[#004182] text-white rounded-full text-xs font-bold transition-colors shadow-2xs flex items-center gap-1.5"
+              className="px-4 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-full text-xs font-bold transition-colors shadow-2xs flex items-center gap-1.5"
             >
               <GraduationCap className="w-3.5 h-3.5" />
               <span>Full Training Studio</span>
@@ -859,7 +859,7 @@ export default function OpportunityPublisher() {
                           Completed
                         </span>
                       ) : (
-                        <span className="bg-[#0a66c2]/10 text-[#0a66c2] text-[9px] px-2 py-0.5 rounded-full border border-[#0a66c2]/20 uppercase tracking-wider font-bold">
+                        <span className="bg-[#2998d6]/10 text-[#2998d6] text-[9px] px-2 py-0.5 rounded-full border border-[#2998d6]/20 uppercase tracking-wider font-bold">
                           Scheduled
                         </span>
                       )}
@@ -885,7 +885,7 @@ export default function OpportunityPublisher() {
                     <button
                       type="button"
                       onClick={() => setActiveDeliveryTraining(tr)}
-                      className="px-3.5 py-1.5 bg-[#0a66c2] hover:bg-[#004182] text-xs font-bold text-white rounded-full transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
+                      className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-xs font-bold text-white rounded-full transition-colors flex items-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <Video className="w-3.5 h-3.5" />
                       <span>{isLive ? 'Enter Live Room' : 'Deliver Training'}</span>
@@ -928,7 +928,7 @@ export default function OpportunityPublisher() {
                 </div>
                 <button
                   onClick={() => triggerToast('Invited recommended participants to the next workshop.')}
-                  className="w-full text-center py-2 bg-[#0a66c2] hover:bg-[#004182] text-xs font-bold text-white rounded-full mt-2 transition-colors shadow-xs"
+                  className="w-full text-center py-2 bg-[#2998d6] hover:bg-[#1f85be] text-xs font-bold text-white rounded-full mt-2 transition-colors shadow-xs"
                 >
                   Invite Target Participants
                 </button>

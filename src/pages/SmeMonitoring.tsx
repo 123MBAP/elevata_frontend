@@ -59,7 +59,7 @@ export default function SmeMonitoring() {
     'bg-rose-100 text-rose-805 text-rose-800';
 
   const sectorBadgeColor = (_sector: string) => {
-    return 'bg-teal-50 text-[#0f766e] border-teal-100';
+    return 'bg-sky-50 text-[#2998d6] border-sky-100';
   };
 
   const handleInspect = (id: string) => {
@@ -86,7 +86,7 @@ export default function SmeMonitoring() {
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
         {[
           { label: 'Monitored SMEs', value: `${stats.total} accounts`, sub: '', icon: <Users className="w-4 h-4 text-gray-500" />, bg: 'bg-white' },
-          { label: 'Avg Health Score', value: `${stats.avgHealth}%`, sub: '', icon: <Activity className="w-4 h-4 text-[#0f766e]" />, bg: 'bg-white' },
+          { label: 'Avg Health Score', value: `${stats.avgHealth}%`, sub: '', icon: <Activity className="w-4 h-4 text-[#2998d6]" />, bg: 'bg-white' },
           { label: 'Active Loans', value: `${stats.activeLoans}`, sub: 'Outstanding lines', icon: <DollarSign className="w-4 h-4 text-indigo-500" />, bg: 'bg-white' },
           { label: 'Critical Risks', value: `${stats.criticalRisks} accounts`, sub: '', icon: <ShieldAlert className="w-4 h-4 text-slate-500" />, bg: 'bg-white border-slate-200' }
         ].map((card, i) => (
@@ -194,7 +194,7 @@ export default function SmeMonitoring() {
                       <div className="flex items-center gap-2">
                         <div className="flex items-center gap-0.5">
                           {sme.healthTrend === 'up' ? (
-                            <TrendingUp className="w-3.5 h-3.5 text-[#0f766e]" />
+                            <TrendingUp className="w-3.5 h-3.5 text-emerald-600" />
                           ) : sme.healthTrend === 'down' ? (
                             <TrendingDown className="w-3.5 h-3.5 text-slate-500" />
                           ) : (
@@ -214,7 +214,7 @@ export default function SmeMonitoring() {
                           />
                         </div>
                       </div>
-                      <span className={`text-[9px] font-semibold ${sme.healthTrend === 'up' ? 'text-[#0f766e]' : sme.healthTrend === 'down' ? 'text-slate-500' : 'text-slate-400'}`}>
+                      <span className={`text-[9px] font-semibold ${sme.healthTrend === 'up' ? 'text-emerald-600' : sme.healthTrend === 'down' ? 'text-slate-500' : 'text-slate-400'}`}>
                         {sme.healthTrend === 'up' ? '+' : ''}{sme.healthTrendPercent}% MoM
                       </span>
                     </td>
@@ -240,7 +240,7 @@ export default function SmeMonitoring() {
                           <div className="text-[10px] text-gray-500 mt-0.5">{formatRWF(sme.loanDetails.outstandingAmount)} ({formatRWF(sme.loanDetails.monthlyInstallment)}/mo)</div>
                         </div>
                       ) : sme.loanDetails.status === 'Pending' ? (
-                        <span className="px-1.5 py-0.5 rounded-sm font-bold text-[9px] bg-teal-50 text-[#0f766e] border border-teal-100">
+                        <span className="px-1.5 py-0.5 rounded-sm font-bold text-[9px] bg-sky-50 text-[#2998d6] border border-sky-200">
                           Pending Approval
                         </span>
                       ) : (

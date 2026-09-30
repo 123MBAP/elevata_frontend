@@ -317,13 +317,13 @@ export default function ElevataBotPage() {
       <aside
         className={`${
           sidebarOpen ? 'w-64 sm:w-72' : 'w-0'
-        } transition-all duration-300 ease-in-out bg-[#0f172a] border-r border-slate-800/80 flex flex-col shrink-0 overflow-hidden z-20`}
+        } transition-all duration-300 ease-in-out bg-[#1a2332] border-r border-[#2a384c] flex flex-col shrink-0 overflow-hidden z-20`}
       >
         {/* Top: New Chat Button */}
-        <div className="p-3.5 border-b border-slate-800 flex items-center gap-2">
+        <div className="p-3.5 border-b border-[#2a384c] flex items-center gap-2">
           <button
             onClick={startNewChat}
-            className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#0f766e] hover:bg-[#0d9488] text-white rounded-xl text-xs font-bold transition shadow-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-3.5 py-2.5 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>New Chat</span>
@@ -345,14 +345,14 @@ export default function ElevataBotPage() {
                 onClick={() => setActiveChatId(chat.id)}
                 className={`group flex items-center justify-between px-3 py-2.5 rounded-xl text-xs cursor-pointer transition ${
                   chat.id === activeChatId
-                    ? 'bg-[#1e293b] text-teal-300 font-bold border border-teal-500/30'
-                    : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200 border border-transparent'
+                    ? 'bg-[#2998d6]/20 text-[#38bdf8] font-bold border border-[#2998d6]/40'
+                    : 'text-slate-400 hover:bg-white/10 hover:text-white border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-2.5 truncate">
                   <MessageSquare
                     className={`w-3.5 h-3.5 shrink-0 ${
-                      chat.id === activeChatId ? 'text-teal-400' : 'text-slate-500'
+                      chat.id === activeChatId ? 'text-[#38bdf8]' : 'text-slate-500'
                     }`}
                   />
                   <span className="truncate">{chat.title}</span>
@@ -372,8 +372,8 @@ export default function ElevataBotPage() {
         </div>
 
         {/* Bottom Sidebar User Summary */}
-        <div className="p-3 border-t border-slate-800 bg-[#0b111e] flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-[#0f766e] text-white flex items-center justify-center text-xs font-bold">
+        <div className="p-3 border-t border-[#2a384c] bg-[#17202d] flex items-center gap-2.5">
+          <div className="w-7 h-7 rounded-lg bg-[#2998d6] text-white flex items-center justify-center text-xs font-bold shadow-xs">
             <Bot className="w-4 h-4" />
           </div>
           <div className="truncate">
@@ -390,11 +390,11 @@ export default function ElevataBotPage() {
       ========================================================================== */}
       <main className="flex-1 flex flex-col min-w-0 bg-[#0c121e] relative h-full">
         {/* Top Header Bar */}
-        <header className="h-14 border-b border-slate-800/80 px-4 flex items-center justify-between bg-[#0f172a]/60 backdrop-blur shrink-0">
+        <header className="h-14 border-b border-[#2a384c] px-4 flex items-center justify-between bg-[#1a2332]/90 backdrop-blur shrink-0">
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:bg-white/10 hover:text-slate-200 transition cursor-pointer"
               title={sidebarOpen ? 'Close sidebar' : 'Open sidebar'}
             >
               {sidebarOpen ? <PanelLeftClose className="w-4 h-4" /> : <PanelLeft className="w-4 h-4" />}
@@ -409,10 +409,10 @@ export default function ElevataBotPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={startNewChat}
-              className="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition text-xs font-semibold flex items-center gap-1.5 border border-slate-700"
+              className="px-2.5 py-1.5 rounded-lg bg-[#2998d6] hover:bg-[#1f85be] text-white transition text-xs font-semibold flex items-center gap-1.5 shadow-xs cursor-pointer"
               title="Start a new chat"
             >
-              <Plus className="w-3.5 h-3.5 text-teal-400" />
+              <Plus className="w-3.5 h-3.5 text-white" />
               <span className="hidden sm:inline">New Chat</span>
             </button>
           </div>
@@ -464,9 +464,9 @@ export default function ElevataBotPage() {
                   }}
                   className="w-full"
                 >
-                  <div className="relative rounded-2xl bg-[#141d2b] border border-slate-800 focus-within:border-teal-500/60 focus-within:ring-2 focus-within:ring-teal-500/20 p-4 transition shadow-lg space-y-3">
+                  <div className="relative rounded-2xl bg-[#141d2b] border border-[#2a384c] focus-within:border-[#2998d6]/80 focus-within:ring-2 focus-within:ring-[#2998d6]/25 p-4 transition shadow-lg space-y-3">
                     {/* Top Sparkles Icon */}
-                    <div className="flex items-center text-teal-400">
+                    <div className="flex items-center text-[#38bdf8]">
                       <Sparkles className="w-4 h-4" />
                     </div>
 
@@ -493,7 +493,7 @@ export default function ElevataBotPage() {
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-xs font-semibold text-slate-300 border border-slate-700/70 transition"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-xs font-semibold text-slate-300 border border-slate-700/70 transition cursor-pointer"
                       >
                         <Paperclip className="w-3.5 h-3.5 text-slate-400" />
                         <span>Attach file</span>
@@ -502,7 +502,7 @@ export default function ElevataBotPage() {
                       <button
                         type="submit"
                         disabled={!inputMessage.trim() || loading}
-                        className="h-9 w-9 bg-[#0d9488] hover:bg-[#14b8a6] disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed shadow-md shadow-teal-950/50"
+                        className="h-9 w-9 bg-[#2998d6] hover:bg-[#1f85be] disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed shadow-md shadow-sky-950/50 cursor-pointer"
                         title="Send message"
                       >
                         <ArrowUp className="w-4 h-4 stroke-[2.5]" />
@@ -521,7 +521,7 @@ export default function ElevataBotPage() {
                   className={`flex gap-3.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   {msg.role === 'assistant' && (
-                    <div className="w-8 h-8 rounded-xl bg-[#0f766e] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                    <div className="w-8 h-8 rounded-xl bg-[#2998d6] text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                       <Bot className="w-4 h-4" />
                     </div>
                   )}
@@ -529,8 +529,8 @@ export default function ElevataBotPage() {
                   <div
                     className={`max-w-[85%] rounded-2xl p-4 shadow-sm relative group text-xs md:text-sm ${
                       msg.role === 'user'
-                        ? 'bg-[#0f766e] text-white rounded-tr-none'
-                        : 'bg-[#141d2b] text-slate-100 border border-slate-800 rounded-tl-none'
+                        ? 'bg-[#2998d6] text-white rounded-tr-none'
+                        : 'bg-[#141d2b] text-slate-100 border border-[#2a384c] rounded-tl-none'
                     }`}
                   >
                     {msg.role === 'user' ? (
@@ -543,7 +543,7 @@ export default function ElevataBotPage() {
                           className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition p-1 text-slate-400 hover:text-slate-200 bg-slate-800/80 rounded-md"
                           title="Copy text"
                         >
-                          {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-teal-400" /> : <Copy className="w-3.5 h-3.5" />}
+                          {copiedId === msg.id ? <Check className="w-3.5 h-3.5 text-[#38bdf8]" /> : <Copy className="w-3.5 h-3.5" />}
                         </button>
                       </div>
                     )}
@@ -554,7 +554,7 @@ export default function ElevataBotPage() {
                   </div>
 
                   {msg.role === 'user' && (
-                    <div className="w-8 h-8 rounded-xl bg-slate-800 text-teal-300 flex items-center justify-center shrink-0 shadow-sm mt-0.5 border border-slate-700">
+                    <div className="w-8 h-8 rounded-xl bg-slate-800 text-[#38bdf8] flex items-center justify-center shrink-0 shadow-sm mt-0.5 border border-slate-700">
                       <UserIcon className="w-4 h-4" />
                     </div>
                   )}
@@ -564,13 +564,13 @@ export default function ElevataBotPage() {
               {/* Typing indicator */}
               {loading && (
                 <div className="flex gap-3.5 items-center">
-                  <div className="w-8 h-8 rounded-xl bg-[#0f766e] text-white flex items-center justify-center shrink-0 shadow-sm">
+                  <div className="w-8 h-8 rounded-xl bg-[#2998d6] text-white flex items-center justify-center shrink-0 shadow-sm">
                     <Bot className="w-4 h-4" />
                   </div>
-                  <div className="bg-[#141d2b] border border-slate-800 rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-2">
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce [animation-delay:-0.3s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce [animation-delay:-0.15s]" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-bounce" />
+                  <div className="bg-[#141d2b] border border-[#2a384c] rounded-2xl rounded-tl-none px-4 py-3 shadow-sm flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] animate-bounce [animation-delay:-0.3s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] animate-bounce [animation-delay:-0.15s]" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] animate-bounce" />
                     <span className="text-xs text-slate-400 font-medium pl-1">Elevata AI is analyzing...</span>
                   </div>
                 </div>
@@ -583,7 +583,7 @@ export default function ElevataBotPage() {
 
         {/* Bottom Input Box during active conversation */}
         {currentMessages.length > 0 && (
-          <div className="p-4 md:p-5 bg-[#0b111e] border-t border-slate-800/80 shrink-0">
+          <div className="p-4 md:p-5 bg-[#17202d] border-t border-[#2a384c] shrink-0">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -591,9 +591,9 @@ export default function ElevataBotPage() {
               }}
               className="max-w-3xl mx-auto"
             >
-              <div className="relative rounded-2xl bg-[#141d2b] border border-slate-800 focus-within:border-teal-500/60 focus-within:ring-2 focus-within:ring-teal-500/20 p-3 transition shadow-lg space-y-2">
+              <div className="relative rounded-2xl bg-[#141d2b] border border-[#2a384c] focus-within:border-[#2998d6]/80 focus-within:ring-2 focus-within:ring-[#2998d6]/25 p-3 transition shadow-lg space-y-2">
                 <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-teal-400 shrink-0" />
+                  <Sparkles className="w-4 h-4 text-[#38bdf8] shrink-0" />
                   <textarea
                     ref={textareaRef}
                     rows={1}
@@ -616,7 +616,7 @@ export default function ElevataBotPage() {
                   <button
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 text-[11px] font-semibold text-slate-300 border border-slate-700/60 transition"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 text-[11px] font-semibold text-slate-300 border border-slate-700/60 transition cursor-pointer"
                   >
                     <Paperclip className="w-3 h-3 text-slate-400" />
                     <span>Attach file</span>
@@ -625,7 +625,7 @@ export default function ElevataBotPage() {
                   <button
                     type="submit"
                     disabled={!inputMessage.trim() || loading}
-                    className="h-8 w-8 bg-[#0d9488] hover:bg-[#14b8a6] disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed shadow-md shadow-teal-950/50"
+                    className="h-8 w-8 bg-[#2998d6] hover:bg-[#1f85be] disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed shadow-md shadow-sky-950/50 cursor-pointer"
                     title="Send message"
                   >
                     <ArrowUp className="w-3.5 h-3.5 stroke-[2.5]" />

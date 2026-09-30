@@ -87,10 +87,10 @@ export default function BankOfficerDashboard() {
       : 'bg-red-50 text-red-700';
 
   const toastStyles: Record<string, string> = {
-    success: 'bg-[#0f766e] text-white',
+    success: 'bg-[#2998d6] text-white',
     danger:  'bg-red-600 text-white',
     warning: 'bg-amber-500 text-white',
-    info:    'bg-[#0f766e] text-white',
+    info:    'bg-[#2998d6] text-white',
   };
 
   if (smes.length === 0) {
@@ -98,7 +98,7 @@ export default function BankOfficerDashboard() {
       <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center p-4">
         <Card className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm">
           <CardContent className="flex flex-col items-center px-6 py-12 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal-50 text-[#0f766e]">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-[#2998d6]">
               <Building2 className="h-6 w-6" />
             </div>
             <h1 className="mt-4 text-lg font-bold text-slate-950">No SME portfolio</h1>
@@ -139,7 +139,7 @@ export default function BankOfficerDashboard() {
             placeholder="Search…"
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#0f766e] focus:outline-none focus:ring-4 focus:ring-[#0f766e]/10"
+            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#2998d6] focus:outline-none focus:ring-4 focus:ring-[#2998d6]/10"
           />
         </div>
       </div>
@@ -151,13 +151,13 @@ export default function BankOfficerDashboard() {
             label: 'Portfolio',
             value: `${portfolioStats.totalSMEs}`,
             icon: <Users className="w-4 h-4" />,
-            iconBg: 'bg-teal-50 text-[#0f766e]',
+            iconBg: 'bg-sky-50 text-[#2998d6]',
           },
           {
             label: 'Outstanding',
             value: formatRWF(portfolioStats.totalOutstandingLoans),
             icon: <DollarSign className="w-4 h-4" />,
-            iconBg: 'bg-teal-50 text-[#0f766e]',
+            iconBg: 'bg-sky-50 text-[#2998d6]',
           },
           {
             label: 'High risk',
@@ -169,7 +169,7 @@ export default function BankOfficerDashboard() {
             label: 'Loan ready',
             value: `${portfolioStats.loanReadySMEs}`,
             icon: <Shield className="w-4 h-4" />,
-            iconBg: 'bg-teal-50 text-[#0f766e]',
+            iconBg: 'bg-sky-50 text-[#2998d6]',
           },
         ].map((c, i) => (
           <Card key={i} className="rounded-[24px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
@@ -300,7 +300,7 @@ export default function BankOfficerDashboard() {
                   { label: 'Borrowing capacity', value: formatRWF(highlightedSme.borrowingCapacity) },
                   { label: 'Current balance',    value: formatRWF(highlightedSme.currentBalance) },
                   { label: 'Leverage ratio',     value: highlightedSme.loanDetails.status === 'Active' ? 'Medium' : 'None',
-                    valueClass: highlightedSme.loanDetails.status === 'Active' ? 'text-slate-700' : 'text-[#0f766e]' },
+                    valueClass: highlightedSme.loanDetails.status === 'Active' ? 'text-slate-700' : 'text-[#2998d6]' },
                 ].map((row, i) => (
                   <div key={i} className="flex justify-between items-center text-xs">
                     <span className="text-gray-500">{row.label}</span>

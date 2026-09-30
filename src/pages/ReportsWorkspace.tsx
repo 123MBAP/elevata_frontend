@@ -150,7 +150,7 @@ export default function ReportsWorkspace() {
         row.Revenue_RWF.toLocaleString(), row.Expense_RWF.toLocaleString(), row.Net_RWF.toLocaleString()
       ]),
       styles: { fontSize: 8 },
-      headStyles: { fillColor: [15, 118, 110] }
+      headStyles: { fillColor: [41, 152, 214] }
     });
     doc.save(`${activeSme.name.replace(/\W+/g, '_')}_${from}_${to}.pdf`);
     setExportOpen(false);
@@ -167,17 +167,17 @@ export default function ReportsWorkspace() {
           <button
             onClick={() => setExportOpen((value) => !value)}
             disabled={!filtered.length}
-            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#0f172a] px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#2998d6] hover:bg-[#1f85be] px-4 text-sm font-semibold text-white shadow-xs transition disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
           >
             <Download className="h-4 w-4" /> Export
           </button>
           {exportOpen && (
             <div className="absolute right-0 z-20 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-              <button onClick={exportPdf} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                <FileText className="h-4 w-4 text-[#0f766e]" /> PDF
+              <button onClick={exportPdf} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer">
+                <FileText className="h-4 w-4 text-[#2998d6]" /> PDF
               </button>
-              <button onClick={exportExcel} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50">
-                <FileSpreadsheet className="h-4 w-4 text-[#0f766e]" /> Excel
+              <button onClick={exportExcel} className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 cursor-pointer">
+                <FileSpreadsheet className="h-4 w-4 text-[#2998d6]" /> Excel
               </button>
             </div>
           )}
@@ -191,9 +191,9 @@ export default function ReportsWorkspace() {
               <button
                 key={item}
                 onClick={() => selectPeriod(item)}
-                className={`h-9 rounded-xl px-3.5 text-xs font-bold capitalize transition ${
+                className={`h-9 rounded-xl px-3.5 text-xs font-bold capitalize transition cursor-pointer ${
                   period === item
-                    ? 'bg-[#0f766e] text-white'
+                    ? 'bg-[#2998d6] text-white shadow-xs'
                     : 'border border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
                 }`}
               >
@@ -209,7 +209,7 @@ export default function ReportsWorkspace() {
                 value={from}
                 max={to}
                 onChange={(event) => setFrom(event.target.value)}
-                className="mt-1 block h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#0f766e] focus:ring-4 focus:ring-[#0f766e]/10"
+                className="mt-1 block h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#2998d6] focus:ring-4 focus:ring-[#2998d6]/15"
               />
             </label>
             <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
@@ -219,11 +219,11 @@ export default function ReportsWorkspace() {
                 value={to}
                 min={from}
                 onChange={(event) => setTo(event.target.value)}
-                className="mt-1 block h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#0f766e] focus:ring-4 focus:ring-[#0f766e]/10"
+                className="mt-1 block h-9 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-800 outline-none focus:border-[#2998d6] focus:ring-4 focus:ring-[#2998d6]/15"
               />
             </label>
             <div className="flex h-9 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-[11px] font-bold text-slate-600">
-              <CalendarDays className="h-3.5 w-3.5 text-[#0f766e]" />
+              <CalendarDays className="h-3.5 w-3.5 text-[#2998d6]" />
               {filtered.length}
             </div>
           </div>
@@ -249,7 +249,7 @@ export default function ReportsWorkspace() {
       <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
         <div className="mb-4 flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-sm font-bold text-slate-950">
-            <TrendingUp className="h-4 w-4 text-[#0f766e]" /> Trend
+            <TrendingUp className="h-4 w-4 text-[#2998d6]" /> Trend
           </h2>
           <span className="text-[10px] text-slate-400">{from} — {to}</span>
         </div>
@@ -262,7 +262,7 @@ export default function ReportsWorkspace() {
                 <YAxis tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} tickFormatter={(value) => `${(value / 1000000).toFixed(1)}M`} />
                 <Tooltip formatter={(value: number | string) => formatRWF(Number(value))} contentStyle={{ borderRadius: 12, border: '1px solid #e2e8f0' }} />
                 <Legend />
-                <Line type="monotone" dataKey="Revenue" stroke="#0f766e" strokeWidth={2.5} dot={false} />
+                <Line type="monotone" dataKey="Revenue" stroke="#2998d6" strokeWidth={2.5} dot={false} />
                 <Line type="monotone" dataKey="Expenses" stroke="#94a3b8" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
@@ -298,7 +298,7 @@ export default function ReportsWorkspace() {
                 <tr key={`${row.date.toISOString()}-${index}`} className="hover:bg-slate-50">
                   <td className="px-5 py-3 font-mono text-slate-700">{row.date.toLocaleDateString()}</td>
                   <td>
-                    <span className="rounded-full bg-teal-50 px-2 py-1 text-[9px] font-bold text-[#0f766e]">{row.type}</span>
+                    <span className="rounded-full bg-sky-50 px-2 py-1 text-[9px] font-bold text-[#2998d6]">{row.type}</span>
                   </td>
                   <td className="max-w-xs truncate pr-4 text-slate-600">{row.description}</td>
                   <td className="font-mono font-semibold text-slate-800">{row.revenue ? formatRWF(row.revenue) : '—'}</td>

@@ -42,8 +42,8 @@ const COLORS = {
   slate: '#64748b',
   line: '#e2e8f0',
   soft: '#f8fafc',
-  primary: '#0f766e',
-  primarySoft: '#ccfbf1',
+  primary: '#2998d6',
+  primarySoft: '#e0f2fe',
   secondary: '#94a3b8',
   ok: '#059669',
   warn: '#d97706',
@@ -51,9 +51,9 @@ const COLORS = {
 };
 
 const COMPARISON_COLORS = {
-  series1: '#2563eb', // Blue
-  series2: '#8e8d7d', // Khaki / Warm Gray
-  series3: '#ba3c14'  // Rust / Terracotta
+  series1: '#2998d6', // Elevata Blue
+  series2: '#94a3b8', // Muted Slate
+  series3: '#10b981'  // Net Growth Green
 };
 
 const formatCompactRWF = (value: number): string => {
@@ -333,7 +333,7 @@ export default function SmeDashboard() {
       <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="min-w-0">
           <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            <CalendarDays className="h-3.5 w-3.5 text-[#0f766e]" />
+            <CalendarDays className="h-3.5 w-3.5 text-[#2998d6]" />
             <span>{today}</span>
           </div>
           <h1 className="truncate text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
@@ -350,7 +350,7 @@ export default function SmeDashboard() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search…"
               aria-label="Search dashboard"
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-[#0f766e] focus:outline-none focus:ring-4 focus:ring-[#0f766e]/10"
+              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-[#2998d6] focus:outline-none focus:ring-4 focus:ring-[#2998d6]/10"
             />
             {searchQuery && (
               <button
@@ -366,7 +366,7 @@ export default function SmeDashboard() {
           <div className="flex gap-2">
             <button
               onClick={() => navigate('/activities')}
-              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#0f172a] px-3 text-sm font-semibold text-white transition hover:bg-slate-800 sm:flex-none sm:px-4"
+              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#2998d6] px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-[#1f85be] sm:flex-none sm:px-4 cursor-pointer"
             >
               <Plus className="h-4 w-4" />
               <span className="whitespace-nowrap">Activity</span>
@@ -423,7 +423,7 @@ export default function SmeDashboard() {
             </div>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
               <div
-                className="h-full rounded-full bg-[#0f766e]"
+                className="h-full rounded-full bg-[#2998d6]"
                 style={{ width: `${Math.min(100, Math.max(0, healthScore))}%` }}
               />
             </div>
@@ -444,7 +444,7 @@ export default function SmeDashboard() {
             <p className="mt-2 truncate text-2xl font-bold tracking-tight text-slate-950">{formatRWF(currentBalance)}</p>
             <p className="mt-2 text-xs text-slate-500">Runway {cashRunwayDays} days</p>
             <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-[#0f766e]" style={{ width: `${runwayWidth}%` }} />
+              <div className="h-full rounded-full bg-[#2998d6]" style={{ width: `${runwayWidth}%` }} />
             </div>
           </CardContent>
         </Card>
@@ -475,7 +475,7 @@ export default function SmeDashboard() {
             <div className="mt-3 space-y-1.5 text-xs">
               <div className="flex justify-between gap-2">
                 <span className="inline-flex items-center gap-1.5 text-slate-500">
-                  <span className="h-2 w-2 rounded-full bg-[#0f766e]" /> Inflow
+                  <span className="h-2 w-2 rounded-full bg-[#2998d6]" /> Inflow
                 </span>
                 <span className="font-semibold text-slate-800">{formatRWF(monthlyInflow)}</span>
               </div>
@@ -666,7 +666,7 @@ export default function SmeDashboard() {
         <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm lg:col-span-2">
           <CardContent className="p-4 sm:p-5">
             <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-xl bg-[#ccfbf1] p-2 text-[#0f766e]">
+              <div className="rounded-xl bg-sky-50 p-2 text-[#2998d6]">
                 <BadgeAlert className="h-4 w-4" />
               </div>
               <h3 className="text-base font-bold text-slate-950">Risk alerts</h3>
@@ -693,7 +693,7 @@ export default function SmeDashboard() {
                 >
                   {alert.type === 'danger' && <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
                   {alert.type === 'warning' && <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />}
-                  {alert.type === 'info' && <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#0f766e]" />}
+                  {alert.type === 'info' && <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#2998d6]" />}
                   <p className="text-xs font-medium leading-relaxed">{alert.text}</p>
                 </div>
               ))}
@@ -727,7 +727,7 @@ export default function SmeDashboard() {
             </div>
             <button
               onClick={() => navigate('/opportunity-hub')}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0f172a] text-sm font-semibold text-white transition hover:bg-slate-800"
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#2998d6] hover:bg-[#1f85be] text-sm font-semibold text-white shadow-xs transition cursor-pointer"
             >
               <DollarSign className="h-4 w-4" />
               Financing

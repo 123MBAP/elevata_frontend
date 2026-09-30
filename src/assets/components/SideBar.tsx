@@ -203,6 +203,9 @@ export default function Sidebar({
     if (path === '/') {
       return location.pathname === '/';
     }
+    if (path === '/banker') {
+      return location.pathname === '/banker';
+    }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
 

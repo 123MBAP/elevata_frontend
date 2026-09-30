@@ -118,7 +118,7 @@ export default function BankerTrainingManager() {
               setEditingTraining(null);
               setIsScheduleModalOpen(true);
             }}
-            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#0f172a] px-4 text-xs font-semibold text-white transition hover:bg-slate-800"
+            className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-[#2998d6] hover:bg-[#1f85be] px-4 text-xs font-semibold text-white shadow-xs transition cursor-pointer"
           >
             <Plus className="h-4 w-4" />
             <span>Schedule</span>
@@ -129,15 +129,15 @@ export default function BankerTrainingManager() {
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
             <div className="flex items-center gap-2">
               <span className="relative flex h-2.5 w-2.5 shrink-0">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#0f766e] opacity-75" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#0f766e]" />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#2998d6] opacity-75" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#2998d6]" />
               </span>
-              <span className="rounded bg-[#0f766e] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Live</span>
+              <span className="rounded bg-[#2998d6] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">Live</span>
               <p className="text-xs font-semibold text-slate-800">{liveTrainings.length} session{liveTrainings.length > 1 ? 's' : ''}</p>
             </div>
             <button
               onClick={() => setDeliveringTraining(liveTrainings[0])}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-[#0f172a] px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-800"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-[#2998d6] hover:bg-[#1f85be] px-3 py-1.5 text-xs font-bold text-white transition shadow-xs cursor-pointer"
             >
               <Radio className="h-3.5 w-3.5" />
               Enter
@@ -149,7 +149,7 @@ export default function BankerTrainingManager() {
       {/* KPI Metrics Summary - Minimalist Registration Styling */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5">
         <div className="bg-white p-4 rounded-[8px] border border-[#e0e0e0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-[6px] bg-[#f0fdfa] text-[#0f766e] flex items-center justify-center font-bold shrink-0">
+          <div className="w-8 h-8 rounded-[6px] bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold shrink-0">
             <BookOpen className="w-4 h-4" />
           </div>
           <div className="min-w-0">
@@ -169,7 +169,7 @@ export default function BankerTrainingManager() {
         </div>
 
         <div className="bg-white p-4 rounded-[8px] border border-[#e0e0e0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center space-x-3">
-          <div className="w-8 h-8 rounded-[6px] bg-[#f0fdfa] text-[#0f766e] flex items-center justify-center font-bold shrink-0">
+          <div className="w-8 h-8 rounded-[6px] bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold shrink-0">
             <Users className="w-4 h-4" />
           </div>
           <div className="min-w-0">
@@ -189,12 +189,12 @@ export default function BankerTrainingManager() {
         </div>
 
         <div className="bg-white p-4 rounded-[8px] border border-[#e0e0e0] shadow-[0_2px_8px_rgba(0,0,0,0.04)] flex items-center space-x-3 col-span-2 sm:col-span-1">
-          <div className="w-8 h-8 rounded-[6px] bg-teal-50 text-[#0f766e] flex items-center justify-center font-bold shrink-0">
+          <div className="w-8 h-8 rounded-[6px] bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold shrink-0">
             <Award className="w-4 h-4" />
           </div>
           <div className="min-w-0">
             <p className="text-[11px] text-[#5e5e5e] font-semibold uppercase tracking-wider truncate">Certificates</p>
-            <p className="text-base font-bold text-[#0f766e]">{totalCertificates}</p>
+            <p className="text-base font-bold text-[#2998d6]">{totalCertificates}</p>
           </div>
         </div>
       </div>
@@ -206,17 +206,17 @@ export default function BankerTrainingManager() {
           <div className="flex items-center space-x-1 p-1 bg-[#f3f2f0] rounded-[6px] border border-[#e0e0e0] overflow-x-auto">
             <button
               onClick={() => setActiveTab('all')}
-              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === 'all' ? 'bg-white text-[#0f766e] shadow-sm font-bold' : 'text-[#5e5e5e] hover:text-[#181818]'
+              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'all' ? 'bg-white text-[#2998d6] shadow-xs font-bold' : 'text-[#5e5e5e] hover:text-[#181818]'
               }`}
             >
               All ({totalTrainings})
             </button>
             <button
               onClick={() => setActiveTab('live')}
-              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap flex items-center space-x-1.5 ${
+              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap flex items-center space-x-1.5 cursor-pointer ${
                 activeTab === 'live'
-                  ? 'bg-[#0f766e] text-white shadow-sm font-bold'
+                  ? 'bg-[#2998d6] text-white shadow-xs font-bold'
                   : 'text-[#5e5e5e] hover:text-[#181818]'
               }`}
             >
@@ -225,16 +225,16 @@ export default function BankerTrainingManager() {
             </button>
             <button
               onClick={() => setActiveTab('scheduled')}
-              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === 'scheduled' ? 'bg-white text-[#0f766e] shadow-sm font-bold' : 'text-[#5e5e5e] hover:text-[#181818]'
+              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'scheduled' ? 'bg-white text-[#2998d6] shadow-xs font-bold' : 'text-[#5e5e5e] hover:text-[#181818]'
               }`}
             >
               Scheduled ({scheduledTrainings.length})
             </button>
             <button
               onClick={() => setActiveTab('completed')}
-              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap ${
-                activeTab === 'completed' ? 'bg-white text-[#0f766e] shadow-sm font-bold' : 'text-[#5e5e5e] hover:text-[#181818]'
+              className={`px-3.5 py-1.5 rounded-[5px] text-xs font-semibold transition whitespace-nowrap cursor-pointer ${
+                activeTab === 'completed' ? 'bg-white text-[#2998d6] shadow-xs font-bold' : 'text-[#5e5e5e] hover:text-[#181818]'
               }`}
             >
               Completed ({completedTrainings.length})
@@ -250,14 +250,14 @@ export default function BankerTrainingManager() {
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 placeholder="Search masterclasses or instructor..."
-                className="w-full pl-8 pr-3 py-1.5 rounded-[6px] border border-[#cccccc] text-xs text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e]"
+                className="w-full pl-8 pr-3 py-1.5 rounded-[6px] border border-[#cccccc] text-xs text-[#181818] outline-none transition-colors placeholder:text-[#8c8c8c] focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
               />
             </div>
 
             <select
               value={sectorFilter}
               onChange={e => setSectorFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-[6px] border border-[#cccccc] text-xs text-[#181818] bg-white outline-none transition-colors focus:border-[#0f766e] focus:ring-1 focus:ring-[#0f766e]"
+              className="px-3 py-1.5 rounded-[6px] border border-[#cccccc] text-xs text-[#181818] bg-white outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
             >
               <option value="ALL">All Sectors (Cross-Sector Reach)</option>
               <option value="Retail">Retail & Wholesale</option>
@@ -273,7 +273,7 @@ export default function BankerTrainingManager() {
       {/* Trainings Grid / Cards */}
       {filteredTrainings.length === 0 ? (
         <div className="p-12 text-center bg-white rounded-[10px] border border-[#e0e0e0] space-y-3">
-          <div className="w-10 h-10 rounded-[8px] bg-[#f0fdfa] text-[#0f766e] flex items-center justify-center mx-auto">
+          <div className="w-10 h-10 rounded-[8px] bg-sky-50 text-[#2998d6] flex items-center justify-center mx-auto">
             <Video className="w-5 h-5" />
           </div>
           <h3 className="text-sm font-bold text-[#181818]">No Masterclasses Found</h3>
@@ -285,7 +285,7 @@ export default function BankerTrainingManager() {
               setEditingTraining(null);
               setIsScheduleModalOpen(true);
             }}
-            className="px-4 py-2 bg-[#0f766e] text-white rounded-[6px] text-xs font-semibold hover:bg-[#115e59] transition inline-flex items-center space-x-1.5 shadow-sm"
+            className="px-4 py-2 bg-[#2998d6] text-white rounded-[6px] text-xs font-semibold hover:bg-[#1f85be] transition inline-flex items-center space-x-1.5 shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Schedule Masterclass</span>
@@ -304,10 +304,10 @@ export default function BankerTrainingManager() {
                 key={training.id}
                 className={`bg-white rounded-[10px] border transition-all duration-200 flex flex-col justify-between overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.04)] hover:shadow-md ${
                   isLive
-                    ? 'border-[#0f766e] ring-1 ring-[#0f766e]'
+                    ? 'border-[#2998d6] ring-1 ring-[#2998d6]'
                     : isCompleted
                     ? 'border-[#e0e0e0]'
-                    : 'border-[#e0e0e0] hover:border-[#0f766e]'
+                    : 'border-[#e0e0e0] hover:border-[#2998d6]'
                 }`}
               >
                 {/* Card Header */}
@@ -315,17 +315,17 @@ export default function BankerTrainingManager() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="space-y-1">
                       {isLive ? (
-                        <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-[4px] bg-[#0f766e] text-white text-[10px] font-bold uppercase tracking-wider">
+                        <span className="inline-flex items-center space-x-1.5 px-2 py-0.5 rounded-[4px] bg-[#2998d6] text-white text-[10px] font-bold uppercase tracking-wider">
                           <Radio className="w-3 h-3" />
                           <span>LIVE STUDIO ACTIVE</span>
                         </span>
                       ) : isCompleted ? (
-                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-[4px] bg-teal-50 text-[#0f766e] text-[10px] font-semibold border border-teal-200">
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-[4px] bg-sky-50 text-[#2998d6] text-[10px] font-semibold border border-sky-200">
                           <CheckCircle2 className="w-3 h-3" />
                           <span>Completed & Accredited</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-[4px] bg-[#f0fdfa] text-[#0f766e] text-[10px] font-semibold border border-[#0f766e]/20">
+                        <span className="inline-flex items-center space-x-1 px-2 py-0.5 rounded-[4px] bg-sky-50 text-[#2998d6] text-[10px] font-semibold border border-[#2998d6]/20">
                           <Calendar className="w-3 h-3" />
                           <span>Scheduled Masterclass</span>
                         </span>
@@ -344,14 +344,14 @@ export default function BankerTrainingManager() {
                           setIsScheduleModalOpen(true);
                         }}
                         title="Edit Masterclass"
-                        className="p-1.5 text-[#5e5e5e] hover:text-[#0f766e] hover:bg-[#f0fdfa] rounded-[4px] transition"
+                        className="p-1.5 text-[#5e5e5e] hover:text-[#2998d6] hover:bg-sky-50 rounded-[4px] transition"
                       >
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => deleteTraining(training.id)}
                         title="Cancel / Delete"
-                        className="p-1.5 text-[#5e5e5e] hover:text-[#0f766e] hover:bg-teal-50 rounded-[4px] transition"
+                        className="p-1.5 text-[#5e5e5e] hover:text-[#2998d6] hover:bg-sky-50 rounded-[4px] transition"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -398,12 +398,12 @@ export default function BankerTrainingManager() {
                   {/* Universal Access & Target Audience Pills */}
                   <div className="p-2.5 rounded-[6px] bg-[#f8fafc] border border-[#e0e0e0] text-[11px] space-y-1">
                     <div className="flex items-center justify-between text-[#181818] font-semibold">
-                      <span className="flex items-center space-x-1 text-[#0f766e]">
+                      <span className="flex items-center space-x-1 text-[#2998d6]">
                         <Globe className="w-3.5 h-3.5" />
                         <span>Open to All Registered SMEs</span>
                       </span>
                       {training.hasCertificate && (
-                        <span className="text-[#0f766e] bg-teal-50 border border-teal-200 px-1.5 py-0.2 rounded-[4px] text-[10px] font-bold">
+                        <span className="text-[#2998d6] bg-sky-50 border border-sky-200 px-1.5 py-0.2 rounded-[4px] text-[10px] font-bold">
                           +12% Boost
                         </span>
                       )}
@@ -422,7 +422,7 @@ export default function BankerTrainingManager() {
                   <div className="flex items-center justify-between text-xs mb-1">
                     <button
                       onClick={() => setRosterTraining(training)}
-                      className="font-semibold text-[#0f766e] hover:underline flex items-center space-x-1"
+                      className="font-semibold text-[#2998d6] hover:underline flex items-center space-x-1 cursor-pointer"
                     >
                       <Users className="w-3.5 h-3.5" />
                       <span>{training.participantsCount || 0} Enrolled SMEs</span>
@@ -439,7 +439,7 @@ export default function BankerTrainingManager() {
                     {isLive ? (
                       <button
                         onClick={() => setDeliveringTraining(training)}
-                        className="col-span-2 w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-[6px] text-xs font-bold shadow-sm flex items-center justify-center space-x-1.5 transition"
+                        className="col-span-2 w-full py-2 bg-red-600 hover:bg-red-700 text-white rounded-[6px] text-xs font-bold shadow-sm flex items-center justify-center space-x-1.5 transition cursor-pointer"
                       >
                         <Radio className="w-3.5 h-3.5" />
                         <span>Enter</span>
@@ -448,14 +448,14 @@ export default function BankerTrainingManager() {
                       <>
                         <button
                           onClick={() => setRosterTraining(training)}
-                          className="w-full py-2 bg-white hover:bg-[#f3f2f0] text-[#181818] border border-[#cccccc] rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition"
+                          className="w-full py-2 bg-white hover:bg-[#f3f2f0] text-[#181818] border border-[#cccccc] rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition cursor-pointer"
                         >
                           <Users className="w-3.5 h-3.5" />
                           <span>View Roster</span>
                         </button>
                         <button
                           onClick={() => handleExportAttendance(training)}
-                          className="w-full py-2 bg-[#0f766e] hover:bg-[#115e59] text-white rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition shadow-sm"
+                          className="w-full py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition shadow-xs cursor-pointer"
                         >
                           <Download className="w-3.5 h-3.5" />
                           <span>Export CSV</span>
@@ -468,14 +468,14 @@ export default function BankerTrainingManager() {
                             startLiveTraining(training.id);
                             setDeliveringTraining({ ...training, status: 'live' });
                           }}
-                          className="w-full py-2 bg-[#0f766e] hover:bg-[#115e59] text-white rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition shadow-sm"
+                          className="w-full py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition shadow-xs cursor-pointer"
                         >
                           <Video className="w-3.5 h-3.5" />
                           <span>Launch Live</span>
                         </button>
                         <button
                           onClick={() => setRosterTraining(training)}
-                          className="w-full py-2 bg-white hover:bg-[#f3f2f0] text-[#181818] border border-[#cccccc] rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition"
+                          className="w-full py-2 bg-white hover:bg-[#f3f2f0] text-[#181818] border border-[#cccccc] rounded-[6px] text-xs font-semibold flex items-center justify-center space-x-1 transition cursor-pointer"
                         >
                           <UserCheck className="w-3.5 h-3.5" />
                           <span>Manage Queue</span>
@@ -541,7 +541,7 @@ export default function BankerTrainingManager() {
                     </h4>
                     <button
                       onClick={() => admitAllAttendees(rosterTraining.id)}
-                      className="px-3 py-1 bg-[#0f766e] hover:bg-teal-800 text-white rounded-[4px] text-xs font-semibold transition"
+                      className="px-3 py-1 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-[4px] text-xs font-semibold transition"
                     >
                       Admit All
                     </button>
@@ -560,7 +560,7 @@ export default function BankerTrainingManager() {
                           </div>
                           <button
                             onClick={() => admitAttendee(rosterTraining.id, att.id)}
-                            className="px-2.5 py-1 bg-[#0f766e] hover:bg-teal-800 text-white rounded-[4px] text-xs font-semibold transition"
+                            className="px-2.5 py-1 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-[4px] text-xs font-semibold transition"
                           >
                             Admit
                           </button>
@@ -582,7 +582,7 @@ export default function BankerTrainingManager() {
                     {rosterTraining.attendees.map(att => (
                       <div key={att.id} className="p-3 flex items-center justify-between hover:bg-[#f8fafc] text-xs">
                         <div className="flex items-center space-x-3">
-                          <div className="w-8 h-8 rounded-full bg-[#f0fdfa] text-[#0f766e] font-bold flex items-center justify-center text-xs">
+                          <div className="w-8 h-8 rounded-full bg-sky-50 text-[#2998d6] font-bold flex items-center justify-center text-xs">
                             {att.name.charAt(0)}
                           </div>
                           <div>
@@ -593,7 +593,7 @@ export default function BankerTrainingManager() {
 
                         <div className="flex items-center space-x-2">
                           {att.status === 'admitted' ? (
-                            <span className="px-2 py-0.5 rounded-[4px] bg-teal-50 text-[#0f766e] border border-teal-200 text-[10px] font-semibold">
+                            <span className="px-2 py-0.5 rounded-[4px] bg-sky-50 text-[#2998d6] border border-sky-200 text-[10px] font-semibold">
                               Admitted
                             </span>
                           ) : (
@@ -625,7 +625,7 @@ export default function BankerTrainingManager() {
               </button>
               <button
                 onClick={() => setRosterTraining(null)}
-                className="px-4 py-2 bg-[#0f766e] hover:bg-[#115e59] text-white rounded-[6px] text-xs font-semibold transition"
+                className="px-4 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-[6px] text-xs font-semibold transition"
               >
                 Close
               </button>

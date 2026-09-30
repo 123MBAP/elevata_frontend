@@ -83,12 +83,12 @@ const createVirtualCameraStream = (speakerName: string, orgName?: string): Media
     ctx.beginPath();
     ctx.arc(320, 130, 52, 0, Math.PI * 2);
     const circleGrad = ctx.createLinearGradient(270, 80, 370, 180);
-    circleGrad.addColorStop(0, '#0f766e');
-    circleGrad.addColorStop(1, '#0f766e');
+    circleGrad.addColorStop(0, '#2998d6');
+    circleGrad.addColorStop(1, '#1f85be');
     ctx.fillStyle = circleGrad;
     ctx.fill();
     ctx.lineWidth = 3;
-    ctx.strokeStyle = '#5eead4';
+    ctx.strokeStyle = '#38bdf8';
     ctx.stroke();
 
     // Speaker Initials
@@ -929,11 +929,11 @@ export default function VirtualTrainingDeliveryModal({
             <span>{formatTime(sessionSeconds)}</span>
           </div>
 
-          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-[#0f766e]/10 border border-teal-500/20 rounded-full text-teal-300 font-medium text-xs">
+          <div className="hidden md:flex items-center gap-1.5 px-3 py-1 bg-[#2998d6]/10 border border-[#2998d6]/20 rounded-full text-[#38bdf8] font-medium text-xs">
             <Users className="w-3.5 h-3.5" />
             <span>{admittedAttendees.length}</span>
             {waitingAttendees.length > 0 && (
-              <span className="ml-1 px-1.5 py-0.2 bg-[#0f766e] text-white font-bold text-[10px] rounded-full">
+              <span className="ml-1 px-1.5 py-0.2 bg-[#2998d6] text-white font-bold text-[10px] rounded-full">
                 {waitingAttendees.length} waiting
               </span>
             )}
@@ -1011,7 +1011,7 @@ export default function VirtualTrainingDeliveryModal({
                     Presenter Live Video
                   </div>
                   {isMicOn && (
-                    <span className="absolute bottom-2.5 right-2.5 w-6 h-6 rounded-full bg-[#0f766e] flex items-center justify-center shadow">
+                    <span className="absolute bottom-2.5 right-2.5 w-6 h-6 rounded-full bg-[#2998d6] flex items-center justify-center shadow">
                       <Mic className="w-3.5 h-3.5 text-white" />
                     </span>
                   )}
@@ -1026,7 +1026,7 @@ export default function VirtualTrainingDeliveryModal({
                   <button
                     type="button"
                     onClick={handleToggleScreenShare}
-                    className="px-4 py-2 bg-[#0f766e] hover:bg-[#115e59] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition cursor-pointer"
+                    className="px-4 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg transition cursor-pointer"
                   >
                     <Monitor className="w-4 h-4" />
                     <span>Share</span>
@@ -1105,8 +1105,8 @@ export default function VirtualTrainingDeliveryModal({
                 onClick={handleToggleScreenShare}
                 className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 transition shadow cursor-pointer ${
                   isScreenSharing
-                    ? 'bg-[#0f766e] hover:bg-teal-800 text-white'
-                    : 'bg-[#0f766e] hover:bg-[#115e59] text-white'
+                    ? 'bg-[#2998d6] hover:bg-[#1f85be] text-white'
+                    : 'bg-[#2998d6] hover:bg-[#1f85be] text-white'
                 }`}
               >
                 <Monitor className="w-4 h-4" />
@@ -1121,13 +1121,13 @@ export default function VirtualTrainingDeliveryModal({
                 type="button"
                 onClick={() => setActiveSideTab('attendees')}
                 className={`p-2 rounded-lg relative transition cursor-pointer ${
-                  activeSideTab === 'attendees' ? 'bg-[#0f766e] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  activeSideTab === 'attendees' ? 'bg-[#2998d6] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
                 title="Attendees"
               >
                 <Users className="w-4 h-4" />
                 {waitingAttendees.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0f766e] text-slate-950 font-bold text-[9px] flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#2998d6] text-white font-bold text-[9px] flex items-center justify-center">
                     {waitingAttendees.length}
                   </span>
                 )}
@@ -1137,13 +1137,13 @@ export default function VirtualTrainingDeliveryModal({
                 type="button"
                 onClick={() => setActiveSideTab('chat')}
                 className={`p-2 rounded-lg relative transition cursor-pointer ${
-                  activeSideTab === 'chat' ? 'bg-[#0f766e] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
+                  activeSideTab === 'chat' ? 'bg-[#2998d6] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-400'
                 }`}
                 title="Live Chat & Q&A"
               >
                 <MessageSquare className="w-4 h-4" />
                 {chatMessages.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#5eead4] text-slate-950 font-bold text-[9px] flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#38bdf8] text-slate-950 font-bold text-[9px] flex items-center justify-center">
                     {chatMessages.length}
                   </span>
                 )}
@@ -1162,14 +1162,14 @@ export default function VirtualTrainingDeliveryModal({
               onClick={() => setActiveSideTab('attendees')}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeSideTab === 'attendees'
-                  ? 'bg-[#0f766e] text-white shadow-xs'
+                  ? 'bg-[#2998d6] text-white shadow-xs'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
               <Users className="w-3.5 h-3.5" />
               <span>Attendees ({admittedAttendees.length})</span>
               {waitingAttendees.length > 0 && (
-                <span className="px-1.5 py-0.2 bg-[#0f766e] text-slate-950 rounded-full text-[9px] font-extrabold">
+                <span className="px-1.5 py-0.2 bg-[#2998d6] text-white rounded-full text-[9px] font-extrabold">
                   {waitingAttendees.length}
                 </span>
               )}
@@ -1180,7 +1180,7 @@ export default function VirtualTrainingDeliveryModal({
               onClick={() => setActiveSideTab('chat')}
               className={`flex-1 py-2 rounded-lg text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer ${
                 activeSideTab === 'chat'
-                  ? 'bg-[#0f766e] text-white shadow-xs'
+                  ? 'bg-[#2998d6] text-white shadow-xs'
                   : 'text-slate-400 hover:text-white hover:bg-slate-800'
               }`}
             >
@@ -1244,7 +1244,7 @@ export default function VirtualTrainingDeliveryModal({
                           <button
                             type="button"
                             onClick={() => handleAdmitAttendee(att.id)}
-                            className="px-2.5 py-1 bg-[#0f766e] hover:bg-teal-800 text-white rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded text-xs font-bold transition flex items-center gap-1 cursor-pointer"
                           >
                             <UserCheck className="w-3 h-3" /> Admit
                           </button>
@@ -1278,8 +1278,8 @@ export default function VirtualTrainingDeliveryModal({
                         <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center shrink-0 relative">
                           {att.avatar || att.name.charAt(0)}
                           {att.handRaised && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#0f766e] text-slate-950 flex items-center justify-center text-[9px] font-extrabold animate-bounce">
-                              <Hand className="w-2.5 h-2.5 text-slate-950" />
+                            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-[#2998d6] text-white flex items-center justify-center text-[9px] font-extrabold animate-bounce">
+                              <Hand className="w-2.5 h-2.5 text-white" />
                             </span>
                           )}
                         </div>
@@ -1337,12 +1337,12 @@ export default function VirtualTrainingDeliveryModal({
                       key={msg.id}
                       className={`p-3 rounded-lg text-xs space-y-1 ${
                         msg.senderRole === 'host'
-                          ? 'bg-[#0f766e]/20 border border-[#0f766e]/40 text-slate-100 ml-4'
+                          ? 'bg-[#2998d6]/20 border border-[#2998d6]/40 text-slate-100 ml-4'
                           : 'bg-[#131b2e] border border-[#1e293b] text-slate-200 mr-4'
                       }`}
                     >
                       <div className="flex justify-between items-center text-[10px]">
-                        <strong className={msg.senderRole === 'host' ? 'text-[#5eead4] font-bold' : 'text-slate-300 font-bold'}>
+                        <strong className={msg.senderRole === 'host' ? 'text-[#38bdf8] font-bold' : 'text-slate-300 font-bold'}>
                           {msg.senderName}
                         </strong>
                         <span className="text-slate-500 font-mono">{msg.timestamp}</span>
@@ -1365,7 +1365,7 @@ export default function VirtualTrainingDeliveryModal({
                 <button
                   type="submit"
                   disabled={!chatInput.trim()}
-                  className="px-3 py-2 bg-[#0f766e] hover:bg-[#115e59] disabled:opacity-40 text-white rounded-lg transition cursor-pointer shrink-0"
+                  className="px-3 py-2 bg-[#2998d6] hover:bg-[#1f85be] disabled:opacity-40 text-white rounded-lg transition cursor-pointer shrink-0"
                 >
                   <Send className="w-4 h-4" />
                 </button>
@@ -1389,7 +1389,7 @@ export default function VirtualTrainingDeliveryModal({
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-slate-700 rounded-2xl max-w-md w-full p-6 space-y-5 shadow-2xl animate-in zoom-in-95 duration-150">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-[#0f766e]/20 text-teal-300 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-full bg-[#2998d6]/20 text-[#38bdf8] flex items-center justify-center shrink-0">
                 <Award className="w-6 h-6" />
               </div>
               <div>
@@ -1411,7 +1411,7 @@ export default function VirtualTrainingDeliveryModal({
               </div>
               <div className="flex justify-between">
                 <span>Digital Credentials Issued:</span>
-                <strong className="text-[#5eead4] font-mono">Accredited Certificate</strong>
+                <strong className="text-[#38bdf8] font-mono">Accredited Certificate</strong>
               </div>
             </div>
 
@@ -1426,7 +1426,7 @@ export default function VirtualTrainingDeliveryModal({
               <button
                 type="button"
                 onClick={handleEndSession}
-                className="px-5 py-2 bg-[#0f766e] hover:bg-teal-800 text-white rounded-lg text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
+                className="px-5 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg text-xs font-bold transition shadow-md cursor-pointer flex items-center gap-1.5"
               >
                 <Award className="w-4 h-4" />
                 <span>Confirm &amp; Issue Certificates</span>
@@ -1440,14 +1440,14 @@ export default function VirtualTrainingDeliveryModal({
       {isEnded && (
         <div className="fixed inset-0 z-50 bg-[#060911]/95 backdrop-blur-lg flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-teal-500/40 rounded-2xl max-w-md w-full p-8 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-full bg-[#0f766e]/20 text-teal-300 mx-auto flex items-center justify-center shadow-lg">
+            <div className="w-16 h-16 rounded-full bg-[#2998d6]/20 text-[#38bdf8] mx-auto flex items-center justify-center shadow-lg">
               <Award className="w-8 h-8" />
             </div>
 
             <div className="space-y-1.5">
               <h2 className="text-xl font-extrabold text-white">Training Successfully Delivered!</h2>
               <p className="text-xs text-slate-300 leading-relaxed max-w-xs mx-auto">
-                All <strong className="text-teal-300 font-bold">{admittedAttendees.length} admitted SMEs</strong> have been issued accredited certificates of completion with readiness points added.
+                All <strong className="text-[#38bdf8] font-bold">{admittedAttendees.length} admitted SMEs</strong> have been issued accredited certificates of completion with readiness points added.
               </p>
             </div>
 
@@ -1458,14 +1458,14 @@ export default function VirtualTrainingDeliveryModal({
               </div>
               <div className="flex justify-between text-slate-300">
                 <span>Certified Alumni:</span>
-                <span className="text-teal-300 font-bold">{admittedAttendees.map(a=>a.name).join(', ') || 'Attended SMEs'}</span>
+                <span className="text-[#38bdf8] font-bold">{admittedAttendees.map(a=>a.name).join(', ') || 'Attended SMEs'}</span>
               </div>
             </div>
 
             <button
               type="button"
               onClick={onClose}
-              className="w-full py-3 bg-[#0f766e] hover:bg-[#115e59] text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer"
+              className="w-full py-3 bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold text-xs rounded-xl shadow-lg transition cursor-pointer"
             >
               Return to Opportunities Dashboard
             </button>

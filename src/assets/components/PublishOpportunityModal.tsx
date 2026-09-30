@@ -242,8 +242,8 @@ export default function PublishOpportunityModal({
                   category: 'Loan',
                   title: 'Loan & Credit Facility',
                   badge: 'Debt Financing',
-                  badgeColor: 'bg-[#0a66c2]/10 text-[#0a66c2] border-[#0a66c2]/20',
-                  icon: <Landmark className="w-5 h-5 text-[#0a66c2]" />,
+                  badgeColor: 'bg-[#2998d6]/10 text-[#2998d6] border-[#2998d6]/20',
+                  icon: <Landmark className="w-5 h-5 text-[#2998d6]" />,
                   desc: 'Working capital, inventory financing, term loans, and credit lines with custom interest & grace periods.'
                 },
                 {
@@ -299,7 +299,7 @@ export default function PublishOpportunityModal({
                     setOppCategory(item.category);
                     setModalView('full_form');
                   }}
-                  className="group p-4 rounded-[10px] border border-[#e0e0e0] hover:border-[#0a66c2] bg-white hover:bg-[#f3f2f0]/50 transition-all cursor-pointer shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(10,102,194,0.12)] flex flex-col justify-between"
+                  className="group p-4 rounded-[10px] border border-[#e0e0e0] hover:border-[#2998d6] bg-white hover:bg-[#f3f2f0]/50 transition-all cursor-pointer shadow-[0_1px_4px_rgba(0,0,0,0.03)] hover:shadow-[0_4px_16px_rgba(10,102,194,0.12)] flex flex-col justify-between"
                 >
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between">
@@ -311,7 +311,7 @@ export default function PublishOpportunityModal({
                       </span>
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-[#181818] group-hover:text-[#0a66c2] transition-colors font-heading">
+                      <h4 className="text-sm font-bold text-[#181818] group-hover:text-[#2998d6] transition-colors font-heading">
                         {item.title}
                       </h4>
                       <p className="text-[12px] text-[#5e5e5e] mt-1 leading-relaxed font-sans line-clamp-2">
@@ -320,7 +320,7 @@ export default function PublishOpportunityModal({
                     </div>
                   </div>
 
-                  <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center justify-between text-xs font-semibold text-[#0a66c2]">
+                  <div className="mt-3 pt-3 border-t border-[#f0f0f0] flex items-center justify-between text-xs font-semibold text-[#2998d6]">
                     <span>Configure this form</span>
                     <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
                   </div>
@@ -353,14 +353,14 @@ export default function PublishOpportunityModal({
               <img src={logo} alt="Elevata" className="h-8 w-8 object-contain" />
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[1.25rem] font-black tracking-tight text-[#0a66c2]">
+                  <span className="text-[1.25rem] font-black tracking-tight text-[#2998d6]">
                     Elevata
                   </span>
                   <span className="text-slate-300 text-sm">|</span>
                   <h3 className="text-sm font-bold text-[#181818]">
                     Publish {oppCategory} Opportunity
                   </h3>
-                  <span className="bg-[#0a66c2]/10 text-[#0a66c2] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#0a66c2]/20">
+                  <span className="bg-[#2998d6]/10 text-[#2998d6] text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-[#2998d6]/20">
                     {oppType.toUpperCase()}
                   </span>
                 </div>
@@ -374,7 +374,7 @@ export default function PublishOpportunityModal({
               <button
                 type="button"
                 onClick={() => setModalView('choose_type')}
-                className="text-xs font-semibold text-[#0a66c2] hover:underline px-3 py-1 rounded-full bg-[#0a66c2]/5 border border-[#0a66c2]/20 transition-colors"
+                className="text-xs font-semibold text-[#2998d6] hover:underline px-3 py-1 rounded-full bg-[#2998d6]/5 border border-[#2998d6]/20 transition-colors"
               >
                 Change Type
               </button>
@@ -405,7 +405,7 @@ export default function PublishOpportunityModal({
                 onClick={() => {
                   document.getElementById(sec.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white hover:bg-slate-100 text-[#181818] border border-[#e0e0e0] transition-colors shadow-2xs hover:text-[#0a66c2]"
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white hover:bg-slate-100 text-[#181818] border border-[#e0e0e0] transition-colors shadow-2xs hover:text-[#2998d6]"
               >
                 {sec.icon}
                 <span>{sec.label}</span>
@@ -422,7 +422,7 @@ export default function PublishOpportunityModal({
             <div id="sec-basic" className="space-y-4 pt-1">
               <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-[#0a66c2] text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#2998d6] text-white flex items-center justify-center font-bold text-xs">
                     1
                   </div>
                   <h4 className="text-sm font-bold text-[#181818] font-heading">
@@ -442,7 +442,7 @@ export default function PublishOpportunityModal({
                     placeholder="e.g. Rwanda Agribusiness Working Capital Facility"
                     value={oppName}
                     onChange={e => setOppName(e.target.value)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                   />
                 </div>
 
@@ -455,7 +455,7 @@ export default function PublishOpportunityModal({
                     placeholder="e.g. Bank of Kigali / Elevata Capital"
                     value={oppProvider}
                     onChange={e => setOppProvider(e.target.value)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                   />
                 </div>
               </div>
@@ -466,7 +466,7 @@ export default function PublishOpportunityModal({
                   <select
                     value={oppCategory}
                     onChange={e => setOppCategory(e.target.value)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                   >
                     <option value="Loan">Loan &amp; Debt</option>
                     <option value="Grant">Grant &amp; Subsidy</option>
@@ -482,7 +482,7 @@ export default function PublishOpportunityModal({
                   <select
                     value={oppStage}
                     onChange={e => setOppStage(e.target.value)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                   >
                     <option value="Early Stage">Early Stage (0-2 yrs)</option>
                     <option value="Growth">Growth (2-5 yrs)</option>
@@ -497,7 +497,7 @@ export default function PublishOpportunityModal({
                     type="date"
                     value={oppDeadline}
                     onChange={e => setOppDeadline(e.target.value)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                   />
                 </div>
               </div>
@@ -523,7 +523,7 @@ export default function PublishOpportunityModal({
                         }}
                         className={`px-3 py-1 rounded-full text-xs font-semibold transition-all border ${
                           isSelected
-                            ? 'bg-[#0a66c2] text-white border-[#0a66c2] shadow-xs'
+                            ? 'bg-[#2998d6] text-white border-[#2998d6] shadow-xs'
                             : 'bg-white text-[#5e5e5e] border-[#cccccc] hover:border-[#666666] hover:text-[#181818]'
                         }`}
                       >
@@ -545,7 +545,7 @@ export default function PublishOpportunityModal({
                     <button
                       type="button"
                       onClick={insertTemplate}
-                      className="flex items-center gap-1 text-[11px] font-bold text-[#0a66c2] hover:underline"
+                      className="flex items-center gap-1 text-[11px] font-bold text-[#2998d6] hover:underline"
                     >
                       <Wand2 className="w-3 h-3" />
                       Insert Template
@@ -555,7 +555,7 @@ export default function PublishOpportunityModal({
                         type="button"
                         onClick={() => setDescViewMode('write')}
                         className={`px-2.5 py-0.5 text-[11px] font-semibold ${
-                          descViewMode === 'write' ? 'bg-[#0a66c2] text-white' : 'bg-white text-[#5e5e5e]'
+                          descViewMode === 'write' ? 'bg-[#2998d6] text-white' : 'bg-white text-[#5e5e5e]'
                         }`}
                       >
                         Write
@@ -564,7 +564,7 @@ export default function PublishOpportunityModal({
                         type="button"
                         onClick={() => setDescViewMode('preview')}
                         className={`px-2.5 py-0.5 text-[11px] font-semibold ${
-                          descViewMode === 'preview' ? 'bg-[#0a66c2] text-white' : 'bg-white text-[#5e5e5e]'
+                          descViewMode === 'preview' ? 'bg-[#2998d6] text-white' : 'bg-white text-[#5e5e5e]'
                         }`}
                       >
                         Preview
@@ -624,7 +624,7 @@ export default function PublishOpportunityModal({
                       rows={5}
                       value={oppDesc}
                       onChange={e => setOppDesc(e.target.value)}
-                      className="w-full rounded-b-[4px] border border-t-0 border-[#666666] bg-white p-3 text-[13px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2] leading-relaxed font-sans"
+                      className="w-full rounded-b-[4px] border border-t-0 border-[#666666] bg-white p-3 text-[13px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6] leading-relaxed font-sans"
                     />
                   </div>
                 ) : (
@@ -641,7 +641,7 @@ export default function PublishOpportunityModal({
             <div id="sec-product" className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-[#0a66c2] text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#2998d6] text-white flex items-center justify-center font-bold text-xs">
                     2
                   </div>
                   <h4 className="text-sm font-bold text-[#181818] font-heading">
@@ -660,7 +660,7 @@ export default function PublishOpportunityModal({
                       <select
                         value={loanType}
                         onChange={e => setLoanType(e.target.value)}
-                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                       >
                         <option value="Working Capital">Working Capital Credit Line</option>
                         <option value="Asset & Equipment Financing">Asset &amp; Equipment Financing</option>
@@ -677,7 +677,7 @@ export default function PublishOpportunityModal({
                         placeholder="e.g. Inventory replenishment & scaling"
                         value={loanPurpose}
                         onChange={e => setLoanPurpose(e.target.value)}
-                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                       />
                     </div>
                   </div>
@@ -689,7 +689,7 @@ export default function PublishOpportunityModal({
                         type="number"
                         value={loanMinAmt}
                         onChange={e => setLoanMinAmt(e.target.value)}
-                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                       />
                       <span className="text-[11px] text-[#5e5e5e] mt-0.5 block font-mono">{formatRWF(parseInt(loanMinAmt) || 0)}</span>
                     </div>
@@ -700,7 +700,7 @@ export default function PublishOpportunityModal({
                         type="number"
                         value={loanMaxAmt}
                         onChange={e => setLoanMaxAmt(e.target.value)}
-                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                       />
                       <span className="text-[11px] text-[#5e5e5e] mt-0.5 block font-mono">{formatRWF(parseInt(loanMaxAmt) || 0)}</span>
                     </div>
@@ -714,7 +714,7 @@ export default function PublishOpportunityModal({
                         placeholder="e.g. 8.5"
                         value={loanRate}
                         onChange={e => setLoanRate(e.target.value)}
-                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                       />
                     </div>
 
@@ -725,7 +725,7 @@ export default function PublishOpportunityModal({
                         placeholder="e.g. 24"
                         value={loanTerm}
                         onChange={e => setLoanTerm(e.target.value)}
-                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                       />
                     </div>
 
@@ -736,7 +736,7 @@ export default function PublishOpportunityModal({
                         placeholder="e.g. 3"
                         value={loanGrace}
                         onChange={e => setLoanGrace(e.target.value)}
-                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                        className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                       />
                     </div>
                   </div>
@@ -748,7 +748,7 @@ export default function PublishOpportunityModal({
                         id="loanCollateralReq"
                         checked={loanCollateralReq}
                         onChange={e => setLoanCollateralReq(e.target.checked)}
-                        className="w-4 h-4 rounded text-[#0a66c2] focus:ring-[#0a66c2]"
+                        className="w-4 h-4 rounded text-[#2998d6] focus:ring-[#2998d6]"
                       />
                       <label htmlFor="loanCollateralReq" className="text-xs font-semibold text-[#181818] cursor-pointer">
                         Collateral Security Required for this Facility
@@ -817,7 +817,7 @@ export default function PublishOpportunityModal({
                       id="grantCoFundingReq"
                       checked={grantCoFundingReq}
                       onChange={e => setGrantCoFundingReq(e.target.checked)}
-                      className="w-4 h-4 rounded text-[#0a66c2]"
+                      className="w-4 h-4 rounded text-[#2998d6]"
                     />
                     <label htmlFor="grantCoFundingReq" className="text-xs font-semibold text-[#181818] cursor-pointer">
                       Applicant Matching Co-Funding Required ({grantCoFundingPct}%)
@@ -899,7 +899,7 @@ export default function PublishOpportunityModal({
             <div id="sec-financial" className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-[#0a66c2] text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#2998d6] text-white flex items-center justify-center font-bold text-xs">
                     3
                   </div>
                   <h4 className="text-sm font-bold text-[#181818] font-heading">
@@ -918,7 +918,7 @@ export default function PublishOpportunityModal({
                     type="number"
                     value={finMinMonthlyRev}
                     onChange={e => setFinMinMonthlyRev(parseInt(e.target.value) || 0)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                   />
                   <span className="text-[11px] text-[#5e5e5e] mt-0.5 block font-mono">{formatRWF(finMinMonthlyRev)} / month</span>
                 </div>
@@ -931,7 +931,7 @@ export default function PublishOpportunityModal({
                     type="number"
                     value={finMinAnnualRev}
                     onChange={e => setFinMinAnnualRev(parseInt(e.target.value) || 0)}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#0a66c2] focus:ring-1 focus:ring-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] font-mono text-[#181818] outline-none transition-colors focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
                   />
                   <span className="text-[11px] text-[#5e5e5e] mt-0.5 block font-mono">{formatRWF(finMinAnnualRev)} / year</span>
                 </div>
@@ -943,7 +943,7 @@ export default function PublishOpportunityModal({
                   <select
                     value={eligMinAge}
                     onChange={e => setEligMinAge(parseInt(e.target.value))}
-                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#0a66c2]"
+                    className="h-10 w-full rounded-[4px] border border-[#666666] bg-white px-3 text-[14px] text-[#181818] outline-none transition-colors focus:border-[#2998d6]"
                   >
                     <option value={0}>No minimum age</option>
                     <option value={1}>At least 1 year in operation</option>
@@ -955,7 +955,7 @@ export default function PublishOpportunityModal({
                 <div>
                   <div className="flex justify-between items-center mb-1">
                     <label className="text-[13px] font-medium text-[#181818]">Min SME Readiness</label>
-                    <span className="text-xs font-bold text-[#0a66c2] font-mono">{finMinReadiness}%</span>
+                    <span className="text-xs font-bold text-[#2998d6] font-mono">{finMinReadiness}%</span>
                   </div>
                   <input
                     type="range"
@@ -963,7 +963,7 @@ export default function PublishOpportunityModal({
                     max={90}
                     value={finMinReadiness}
                     onChange={e => setFinMinReadiness(parseInt(e.target.value))}
-                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#0a66c2]"
+                    className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-[#2998d6]"
                   />
                 </div>
 
@@ -1000,7 +1000,7 @@ export default function PublishOpportunityModal({
                         type="checkbox"
                         checked={item.checked}
                         onChange={e => item.set(e.target.checked)}
-                        className="w-4 h-4 rounded text-[#0a66c2] focus:ring-[#0a66c2]"
+                        className="w-4 h-4 rounded text-[#2998d6] focus:ring-[#2998d6]"
                       />
                       <span>{item.label}</span>
                     </label>
@@ -1015,7 +1015,7 @@ export default function PublishOpportunityModal({
             <div id="sec-docs" className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-[#0a66c2] text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#2998d6] text-white flex items-center justify-center font-bold text-xs">
                     4
                   </div>
                   <h4 className="text-sm font-bold text-[#181818] font-heading">
@@ -1054,7 +1054,7 @@ export default function PublishOpportunityModal({
                                     ? status === 'Required'
                                       ? 'bg-[#057642] text-white shadow-2xs'
                                       : status === 'Optional'
-                                      ? 'bg-[#0a66c2] text-white shadow-2xs'
+                                      ? 'bg-[#2998d6] text-white shadow-2xs'
                                       : 'bg-[#666666] text-white shadow-2xs'
                                     : 'text-[#5e5e5e] hover:text-[#181818]'
                                 }`}
@@ -1077,7 +1077,7 @@ export default function PublishOpportunityModal({
             <div id="sec-matching" className="space-y-4 pt-2">
               <div className="flex items-center justify-between border-b border-[#e0e0e0] pb-2">
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-full bg-[#0a66c2] text-white flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 rounded-full bg-[#2998d6] text-white flex items-center justify-center font-bold text-xs">
                     5
                   </div>
                   <h4 className="text-sm font-bold text-[#181818] font-heading">
@@ -1116,10 +1116,10 @@ export default function PublishOpportunityModal({
               </div>
 
               {/* Live Simulated Candidate Preview */}
-              <div className="p-4 rounded-[8px] border border-[#0a66c2]/30 bg-[#0a66c2]/5 space-y-3">
+              <div className="p-4 rounded-[8px] border border-[#2998d6]/30 bg-[#2998d6]/5 space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-[#0a66c2]" />
+                    <Sparkles className="w-4 h-4 text-[#2998d6]" />
                     <h5 className="text-xs font-bold text-[#181818] uppercase tracking-wider font-heading">
                       Live AI Candidate Match Simulation
                     </h5>
@@ -1174,7 +1174,7 @@ export default function PublishOpportunityModal({
               <button
                 type="button"
                 onClick={() => handleSubmit()}
-                className="flex h-10 items-center justify-center rounded-full bg-[#0a66c2] px-7 text-[14px] font-bold text-white transition-colors hover:bg-[#004182] shadow-xs border-none"
+                className="flex h-10 items-center justify-center rounded-full bg-[#2998d6] px-7 text-[14px] font-bold text-white transition-colors hover:bg-[#1f85be] shadow-xs border-none"
               >
                 Publish Opportunity
               </button>

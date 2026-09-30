@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useApp, Training } from '../context/AppContext';
+import { useApp, Training, Opportunity } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { formatRWF } from '../lib/mockData';
 import {
@@ -44,7 +44,9 @@ import {
   HelpCircle,
   Briefcase,
   Layers,
-  ArrowRight
+  ArrowRight,
+  List,
+  LayoutGrid
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 import FormattedText from '../assets/components/ui/FormattedText';
@@ -63,6 +65,13 @@ const getDocIcon = (docName: string, className = "w-4 h-4") => {
   }
   return <FileText className={className} />;
 };
+
+export interface ScoredOpportunity extends Opportunity {
+  matchPercent: number;
+  chance: 'High' | 'Medium' | 'Low';
+  reasons: string[];
+  missing: string[];
+}
 
 export default function OpportunityHub() {
   const { user } = useAuth();
@@ -100,9 +109,11 @@ export default function OpportunityHub() {
   // Tab control inside SME Hub
   const [activeTab, setActiveTab] = useState<'marketplace' | 'readiness' | 'trainings' | 'applications'>('marketplace');
   
-  // Search state
+  // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
+  const [sectorFilter, setSectorFilter] = useState('All');
+  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
 
   // Selected opportunity for details panel
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
@@ -218,7 +229,7 @@ export default function OpportunityHub() {
   }, [scoredOpportunities, selectedOppId]);
 
   // Quick Apply Modal Form State
-  const [applyingOpp, setApplyingOpp] = useState<typeof scoredOpportunities[0] | null>(null);
+  const [applyingOpp, setApplyingOpp] = useState<ScoredOpportunity | null>(null);
   const [applyAmount, setApplyAmount] = useState<string>('5000000');
   const [applyPurpose, setApplyPurpose] = useState<string>('Working Capital & Inventory Purchase');
   const [applyTerm, setApplyTerm] = useState<string>('24');
@@ -230,7 +241,7 @@ export default function OpportunityHub() {
   const [isSubmittingApp, setIsSubmittingApp] = useState<boolean>(false);
   const [applyErrors, setApplyErrors] = useState<Record<string, string>>({});
 
-  const handleOpenApplyModal = (opp: typeof scoredOpportunities[0]) => {
+  const handleOpenApplyModal = (opp: ScoredOpportunity) => {
     setApplyingOpp(opp);
     setApplyErrors({});
     if (opp.category === 'Grant') {
@@ -393,118 +404,157 @@ export default function OpportunityHub() {
 
   const filteredMarketplace = useMemo(() => {
     return scoredOpportunities.filter(opp => {
-      const matchSearch = opp.title.toLowerCase().includes(searchTerm.toLowerCase()) || opp.institution.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchSearch =
+        opp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        opp.institution.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        opp.description.toLowerCase().includes(searchTerm.toLowerCase());
       const matchCat = categoryFilter === 'All' || opp.category === categoryFilter;
-      return matchSearch && matchCat;
+      const matchSector =
+        sectorFilter === 'All' ||
+        opp.sectors.some(s => s.toLowerCase().includes(sectorFilter.toLowerCase()));
+      return matchSearch && matchCat && matchSector;
     });
-  }, [scoredOpportunities, searchTerm, categoryFilter]);
+  }, [scoredOpportunities, searchTerm, categoryFilter, sectorFilter]);
 
   return (
-    <div className="space-y-6 bg-white min-h-screen pb-12">
+    <div className="space-y-6 font-sans pb-12">
       {/* Toast popup */}
       {toastMessage && (
-        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-slate-950 text-white px-5 py-3 rounded-lg shadow-2xl text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200">
-          <Sparkles className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
+        <div className="fixed top-5 right-5 z-50 flex items-center gap-3 bg-[#1a2332] text-white px-5 py-3 rounded-xl shadow-2xl text-xs font-semibold animate-in fade-in slide-in-from-top-4 duration-200 border border-[#2d3b4e]">
+          <Sparkles className="w-4.5 h-4.5 text-[#38bdf8] shrink-0" />
           <span>{toastMessage}</span>
         </div>
       )}
 
-      {/* 90-Day Policy Red Flag Alert Banner for Under-90 Days SMEs */}
-      {isUnder90Days && (
-        <div className="rounded-xl border-2 border-red-500/90 bg-red-50 p-5 shadow-sm space-y-3.5">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="p-2.5 bg-red-600 text-white rounded-xl shrink-0 shadow-sm mt-0.5">
-                <AlertTriangle className="w-5 h-5" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[10px] font-bold bg-red-600 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider animate-pulse">
-                    Account Baseline Active
-                  </span>
-                  <span className="text-xs font-bold text-red-950">
-                    90-Day Historical Data Required
-                  </span>
-                </div>
-                <h3 className="text-sm sm:text-base font-bold text-red-950">
-                  AI Funding Recommendations Locked ({remainingEvaluationDays} Days Remaining)
-                </h3>
-                <p className="text-xs text-red-900/90 leading-relaxed max-w-3xl">
-                  Your business account has been active for <strong>{smeSystemDays} days</strong>. Elevata AI requires at least <strong>90 days of consistent trade transactions</strong> (sales, purchases, cash flows, and inventory records) to generate authenticated credit match scores and automated product recommendations.
-                </p>
-              </div>
-            </div>
-
-            <div className="shrink-0 sm:text-right bg-white border border-red-200 rounded-xl p-3 min-w-[170px] shadow-sm">
-              <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider block">Evaluation Window</span>
-              <span className="text-base font-extrabold text-red-600 font-mono block mt-0.5">
-                {remainingEvaluationDays} Days Left
-              </span>
-              <span className="text-[10px] text-slate-500 block">
-                Day {smeSystemDays} of 90 Completed
-              </span>
-            </div>
+      {/* ========================================================================= */}
+      {/* 1. TOP ATTENTION / 90-DAY POLICY ADVISORY BANNER (Matching BusinessActivities style) */}
+      {/* ========================================================================= */}
+      {isUnder90Days ? (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-[4px] bg-[#ffa834] px-4 py-2.5 text-white shadow-xs transition-all">
+          <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-semibold min-w-0">
+            <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-white animate-pulse" />
+            <span className="font-bold">Evaluation Window Active:</span>
+            <span className="truncate">
+              {remainingEvaluationDays} Days remaining until automated AI matching unlocks (Day {smeSystemDays} of 90 completed).
+            </span>
           </div>
-
-          {/* Progress Bar & Subtitle */}
-          <div className="pt-2.5 border-t border-red-200/90 space-y-1.5">
-            <div className="flex justify-between text-[11px] font-bold text-red-950">
-              <span>System Maturity Progress: {evaluationProgressPercent}%</span>
-              <span>Automated Matching Unlocks on Day 90</span>
-            </div>
-            <div className="h-2.5 w-full bg-red-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-red-600 to-amber-500 rounded-full transition-all duration-500"
-                style={{ width: `${Math.max(6, evaluationProgressPercent)}%` }}
-              />
-            </div>
-            <p className="text-[11px] text-red-800 font-medium pt-0.5 flex items-center gap-1.5">
-              <Info className="w-3.5 h-3.5 shrink-0 text-red-600" />
-              <span>All <strong>{opportunities.length} marketplace opportunities</strong> are listed below for standard manual review and direct application.</span>
-            </p>
+          <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+            <span className="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-white/20 border border-white/30 text-white">
+              {evaluationProgressPercent}% Progress
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveTab('marketplace');
+                const listElement = document.getElementById('marketplace-list');
+                if (listElement) listElement.scrollIntoView({ behavior: 'smooth' });
+              }}
+              className="px-2.5 py-1 rounded-[4px] bg-white text-slate-900 text-xs font-bold hover:bg-slate-100 transition shadow-xs cursor-pointer"
+            >
+              Browse Open Catalog
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between rounded-[4px] bg-[#1a2332] border border-[#2d3b4e] px-4 py-2.5 text-white shadow-xs transition-all">
+          <div className="flex items-center gap-2.5 text-xs sm:text-[13px] font-medium text-slate-200 min-w-0">
+            <Sparkles className="w-4.5 h-4.5 shrink-0 text-[#38bdf8] animate-pulse" />
+            <span className="font-bold text-white">AI Credit Marketplace Active:</span>
+            <span className="truncate">
+              {scoredOpportunities.filter(o => o.matchPercent >= 60).length} financial facility programs match your trade ledger profile.
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-[#2998d6] text-white">
+              Readiness: {calculatedReadiness}%
+            </span>
           </div>
         </div>
       )}
 
-      {/* Hero Header */}
-      <div className="p-6 bg-slate-50 border border-slate-200 rounded-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4 relative overflow-hidden">
-        <div className="space-y-1 z-10">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded border border-emerald-100 uppercase tracking-widest flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-600 animate-pulse" />
-              Elevata AI Marketplace
-            </span>
+      {/* ========================================================================= */}
+      {/* 2. STATS RIBBON CARDS (Matching Accounting Metrics) */}
+      {/* ========================================================================= */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+        {/* Total Available Programs */}
+        <div
+          onClick={() => setActiveTab('marketplace')}
+          className={`accounting-card p-4 transition-all cursor-pointer hover:border-[#2998d6] flex items-center justify-between ${
+            activeTab === 'marketplace' ? 'border-[#2998d6] ring-1 ring-[#2998d6] shadow-sm' : ''
+          }`}
+        >
+          <div>
+            <span className="accounting-label !text-[11px] uppercase tracking-wider font-semibold">Available Facilities</span>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="text-xl sm:text-2xl font-bold font-mono text-slate-900">{opportunities.length}</span>
+              <span className="text-xs text-slate-500 font-medium">Programs</span>
+            </div>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Bank credit &amp; grants</span>
           </div>
-          <h1 className="text-xl font-bold text-slate-900 tracking-tight font-heading">
-            {activeSme.ownerName ? `Welcome back, ${activeSme.ownerName.split(' ')[0]}!` : 'Welcome to Opportunity Hub'}
-          </h1>
-          <p className="text-xs text-slate-500 max-w-xl font-sans">
-            {isUnder90Days ? (
-              <>Displaying all <strong className="text-slate-900 font-bold">{opportunities.length} available opportunities</strong>. Automated AI recommendations will activate in <strong className="text-amber-700 font-bold">{remainingEvaluationDays} days</strong>.</>
-            ) : (
-              <>AI matched <strong className="text-slate-900 font-bold">{scoredOpportunities.filter(o => o.matchPercent >= 60).length} financial opportunities</strong> against your current business profile.</>
-            )}
-          </p>
+          <div className="w-9 h-9 rounded-[4px] bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold shrink-0 border border-sky-100">
+            <Coins className="w-4.5 h-4.5" />
+          </div>
         </div>
 
-        <div className="flex gap-2.5 shrink-0 z-10">
-          <button
-            onClick={() => {
-              setActiveTab('marketplace');
-              const listElement = document.getElementById('marketplace-list');
-              if (listElement) listElement.scrollIntoView({ behavior: 'smooth' });
-            }}
-            className="px-4 py-2 bg-slate-950 hover:bg-slate-900 text-white text-xs font-semibold rounded-lg shadow-sm transition"
-          >
-            Explore Opportunities
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('readiness')}
-            className="px-3.5 py-2 border border-slate-200 hover:bg-slate-50 bg-white text-xs font-semibold text-slate-700 rounded-lg transition"
-          >
-            Check Loan Readiness
-          </button>
+        {/* AI Matched Programs */}
+        <div
+          onClick={() => setActiveTab('marketplace')}
+          className="accounting-card p-4 transition-all cursor-pointer hover:border-[#2998d6] flex items-center justify-between"
+        >
+          <div>
+            <span className="accounting-label !text-[11px] uppercase tracking-wider font-semibold">AI Pre-Qualified</span>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="text-xl sm:text-2xl font-bold font-mono text-emerald-600">
+                {isUnder90Days ? 'Baseline' : `${scoredOpportunities.filter(o => o.matchPercent >= 60).length} Matches`}
+              </span>
+            </div>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">
+              {isUnder90Days ? 'Day 90 unlock' : 'Criteria >=60% met'}
+            </span>
+          </div>
+          <div className="w-9 h-9 rounded-[4px] bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold shrink-0 border border-emerald-100">
+            <Sparkles className="w-4.5 h-4.5" />
+          </div>
+        </div>
+
+        {/* Readiness Index */}
+        <div
+          onClick={() => setActiveTab('readiness')}
+          className={`accounting-card p-4 transition-all cursor-pointer hover:border-[#2998d6] flex items-center justify-between ${
+            activeTab === 'readiness' ? 'border-[#2998d6] ring-1 ring-[#2998d6] shadow-sm' : ''
+          }`}
+        >
+          <div>
+            <span className="accounting-label !text-[11px] uppercase tracking-wider font-semibold">Underwriting Readiness</span>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="text-xl sm:text-2xl font-bold font-mono text-[#2998d6]">{calculatedReadiness}%</span>
+              <span className="text-xs text-slate-500 font-medium">Index</span>
+            </div>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Based on live trade files</span>
+          </div>
+          <div className="w-9 h-9 rounded-[4px] bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold shrink-0 border border-sky-100">
+            <TrendingUp className="w-4.5 h-4.5" />
+          </div>
+        </div>
+
+        {/* Submitted Applications */}
+        <div
+          onClick={() => setActiveTab('applications')}
+          className={`accounting-card p-4 transition-all cursor-pointer hover:border-[#2998d6] flex items-center justify-between ${
+            activeTab === 'applications' ? 'border-[#2998d6] ring-1 ring-[#2998d6] shadow-sm' : ''
+          }`}
+        >
+          <div>
+            <span className="accounting-label !text-[11px] uppercase tracking-wider font-semibold">Active Applications</span>
+            <div className="flex items-baseline gap-1.5 mt-1">
+              <span className="text-xl sm:text-2xl font-bold font-mono text-slate-900">{applications.length}</span>
+              <span className="text-xs text-slate-500 font-medium">Files</span>
+            </div>
+            <span className="text-[10px] text-slate-400 mt-0.5 block">Under credit desk review</span>
+          </div>
+          <div className="w-9 h-9 rounded-[4px] bg-slate-100 text-slate-700 flex items-center justify-center font-bold shrink-0 border border-slate-200">
+            <FileText className="w-4.5 h-4.5" />
+          </div>
         </div>
       </div>
 
@@ -611,13 +661,13 @@ export default function OpportunityHub() {
                 <div className="flex gap-2">
                   <button
                     onClick={() => setSelectedOppId(recommendedOpp.id)}
-                    className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 rounded-md transition"
+                    className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-[10px] font-bold text-slate-700 rounded-md transition cursor-pointer"
                   >
                     View Details
                   </button>
                   <button
                     onClick={() => handleOpenApplyModal(recommendedOpp)}
-                    className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-md shadow-sm transition"
+                    className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-[10px] font-bold rounded-md shadow-xs transition cursor-pointer"
                   >
                     Quick Apply
                   </button>
@@ -656,163 +706,349 @@ export default function OpportunityHub() {
         </div>
       </div>
 
-      {/* Tab Navigation Menu */}
-      <div className="flex border-b border-slate-200 pt-3">
-        {[
-          { id: 'marketplace', label: 'Opportunity Marketplace' },
-          { id: 'readiness', label: 'My Loan Readiness' },
-          { id: 'trainings', label: 'Virtual Academy' },
-          { id: 'applications', label: 'My Applications' }
-        ].map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
-            className={`px-4 py-2 text-xs font-semibold border-b-2 -mb-px transition ${
-              activeTab === tab.id
-                ? 'border-slate-950 text-slate-950 font-bold'
-                : 'border-transparent text-slate-500 hover:text-slate-900 hover:border-slate-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
+      {/* ========================================================================= */}
+      {/* 3. MAIN OPPORTUNITY BOOKS & MARKETPLACE CARD (Folder Tab Design) */}
+      {/* ========================================================================= */}
+      <div className="relative">
+        {/* EYE-CATCHING FOLDER TABS BAR (Connected to Card Body) */}
+        <div className="flex items-end overflow-x-auto scrollbar-none z-10 relative space-x-1 sm:space-x-1.5 -mb-[1px]">
+          {[
+            { id: 'marketplace', label: 'Opportunity Marketplace', count: opportunities.length, icon: <Coins className="w-4 h-4" />, color: 'text-[#2998d6]' },
+            { id: 'readiness', label: 'My Loan Readiness', count: `${calculatedReadiness}%`, icon: <TrendingUp className="w-4 h-4" />, color: 'text-emerald-600' },
+            { id: 'trainings', label: 'Virtual Academy', count: trainings.length, icon: <Award className="w-4 h-4" />, color: 'text-amber-600' },
+            { id: 'applications', label: 'My Applications', count: applications.length, icon: <FileCheck className="w-4 h-4" />, color: 'text-purple-600' }
+          ].map(tab => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`group relative flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-[6px] text-xs sm:text-sm transition-all duration-150 cursor-pointer whitespace-nowrap select-none border-t border-x ${
+                  isActive
+                    ? 'bg-white text-slate-900 font-bold border-[#cbd5e1] border-b-white border-b-2 shadow-xs z-20 -mb-[1px] pt-3 sm:pt-3.5 pb-2.5 sm:pb-3 ring-0'
+                    : 'bg-[#f1f5f9] hover:bg-[#e4eaf2] text-[#475569] font-medium border-[#cbd5e1] border-b-[#cbd5e1] hover:text-[#0f172a]'
+                }`}
+              >
+                {/* Active Indicator Accent Top Strip */}
+                {isActive && (
+                  <span className="absolute top-0 left-0 right-0 h-[3px] bg-[#2998d6] rounded-t-[6px]" />
+                )}
 
-      {/* TAB CONTENT PANEL */}
-      <div id="marketplace-list" className="py-2">
-        
-        {/* TAB 1: Marketplace */}
-        {activeTab === 'marketplace' && (
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-              <div>
-                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">Browse Financial Marketplace</h3>
-                <p className="text-[10px] text-slate-400 mt-0.5 font-sans">
-                  {isUnder90Days
-                    ? `Explore all published programs (${remainingEvaluationDays} days remaining in baseline period).`
-                    : 'Filter and apply to verified grants and loans.'}
-                </p>
-              </div>
+                <span className={`shrink-0 transition-transform group-hover:scale-110 ${isActive ? tab.color : 'text-slate-400 group-hover:text-slate-600'}`}>
+                  {tab.icon}
+                </span>
 
-              {/* Filters */}
-              <div className="flex items-center gap-2">
-                <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    placeholder="Search catalog..."
-                    value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
-                    className="pl-8 pr-2 py-1.5 border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-slate-400"
-                  />
+                <span className="tracking-tight">{tab.label}</span>
+
+                {/* Count Badge */}
+                <span
+                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold transition-colors ${
+                    isActive
+                      ? 'bg-[#2998d6] text-white shadow-xs'
+                      : 'bg-[#cbd5e1] text-[#334155] group-hover:bg-[#94a3b8] group-hover:text-white'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* MAIN WHITE CARD CONTAINER */}
+        <div id="marketplace-list" className="accounting-card p-5 sm:p-7 relative z-0 border-[#cbd5e1] rounded-t-none space-y-5">
+          
+          {/* TAB 1: Marketplace */}
+          {activeTab === 'marketplace' && (
+            <div className="space-y-5">
+              {/* Card Header Title & Action Buttons */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-3 border-b border-[#e2e8f0]">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-normal text-[#1e293b] font-heading">
+                    Browse Financial Opportunities &amp; Facilities
+                  </h2>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {isUnder90Days
+                      ? `Catalog open for standard manual inspection (${remainingEvaluationDays} days remaining in baseline evaluation window).`
+                      : 'Verified pre-qualified grants, commercial credit lines, and working capital facilities.'}
+                  </p>
                 </div>
-                <select
-                  value={categoryFilter}
-                  onChange={e => setCategoryFilter(e.target.value)}
-                  className="bg-white border border-slate-200 text-xs px-2 py-1.5 rounded-lg focus:outline-none"
-                >
-                  <option value="All">All Categories</option>
-                  <option value="Loan">Loans</option>
-                  <option value="Grant">Grants</option>
-                  <option value="Savings Product">Savings</option>
-                  <option value="Investment">Investment</option>
-                </select>
+
+                <div className="flex items-center gap-2 self-start sm:self-auto">
+                  <button
+                    type="button"
+                    onClick={() => setViewMode(viewMode === 'grid' ? 'table' : 'grid')}
+                    className="accounting-btn-secondary"
+                    title="Toggle View Mode"
+                  >
+                    {viewMode === 'grid' ? (
+                      <>
+                        <List className="w-3.5 h-3.5" />
+                        <span>Table View</span>
+                      </>
+                    ) : (
+                      <>
+                        <LayoutGrid className="w-3.5 h-3.5" />
+                        <span>Card Grid</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('readiness')}
+                    className="accounting-btn-primary"
+                  >
+                    <TrendingUp className="w-3.5 h-3.5" />
+                    <span>Check Readiness</span>
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {/* Marketplace Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredMarketplace.map(opp => (
-                <div
-                  key={opp.id}
-                  className="p-4 border border-slate-200 rounded-lg bg-white shadow-sm flex flex-col justify-between hover:shadow-md hover:border-slate-300 transition duration-150"
-                >
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-start">
-                      <span className="text-[9px] font-bold bg-slate-100 text-slate-700 px-2 py-0.5 rounded uppercase">
-                        {opp.category}
-                      </span>
-                      
+              {/* Top 3 Solid Cyan Select Dropdowns / Filters Strip (matching BusinessActivities 3 selects) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                <div>
+                  <label className="accounting-label">Facility Category</label>
+                  <select
+                    value={categoryFilter}
+                    onChange={e => setCategoryFilter(e.target.value)}
+                    className="accounting-select w-full"
+                  >
+                    <option value="All">All Categories ({opportunities.length} Available)</option>
+                    <option value="Loan">Credit Loans &amp; Term Facilities</option>
+                    <option value="Grant">Direct Grants &amp; Subsidies</option>
+                    <option value="Savings Product">Savings &amp; Treasury Products</option>
+                    <option value="Investment">Equity &amp; Growth Investment</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="accounting-label">Target Industry Sector</label>
+                  <select
+                    value={sectorFilter}
+                    onChange={e => setSectorFilter(e.target.value)}
+                    className="accounting-select w-full"
+                  >
+                    <option value="All">All Industry Sectors</option>
+                    <option value="Agriculture">Agriculture &amp; Agri-Processing</option>
+                    <option value="Retail">Retail &amp; Wholesale Trade</option>
+                    <option value="Manufacturing">Manufacturing &amp; Industry</option>
+                    <option value="Technology">Technology &amp; Digital Services</option>
+                    <option value="Logistics">Logistics &amp; Transport</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="accounting-label">Search Opportunity Catalog</label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      placeholder="Search program, bank, criteria..."
+                      value={searchTerm}
+                      onChange={e => setSearchTerm(e.target.value)}
+                      className="accounting-input w-full pl-8"
+                    />
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    {searchTerm && (
                       <button
-                        onClick={() => {
-                          bookmarkOpportunity(opp.id);
-                          triggerToast(bookmarkedOpportunities.includes(opp.id) ? 'Removed bookmark.' : 'Opportunity bookmarked!');
-                        }}
-                        className={`text-slate-400 hover:text-slate-600 transition ${
-                          bookmarkedOpportunities.includes(opp.id) ? 'text-indigo-600 fill-indigo-600' : ''
-                        }`}
+                        type="button"
+                        onClick={() => setSearchTerm('')}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                       >
-                        <Bookmark className="w-3.5 h-3.5" />
+                        <X className="w-3.5 h-3.5" />
                       </button>
-                    </div>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900 line-clamp-1">{opp.title}</h4>
-                      <p className="text-[9px] text-slate-400">{opp.institution}</p>
-                    </div>
-
-                    <p className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
-                      {opp.description}
-                    </p>
-
-                    <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
-                      <div className="p-1.5 bg-slate-50 border border-slate-100 rounded">
-                        <span className="text-slate-400 block text-[8px] uppercase">
-                          {isUnder90Days ? 'Status' : 'AI Match'}
-                        </span>
-                        {isUnder90Days ? (
-                          <span className="font-bold text-emerald-700 font-mono text-[9px] flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> Open Catalog
+              {/* View Mode 1: Card Grid */}
+              {viewMode === 'grid' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredMarketplace.map(opp => (
+                    <div
+                      key={opp.id}
+                      className="accounting-card p-4 transition-all duration-150 flex flex-col justify-between hover:shadow-md hover:border-[#2998d6] border-[#cbd5e1]"
+                    >
+                      <div className="space-y-2.5">
+                        <div className="flex justify-between items-start">
+                          <span className="text-[9.5px] font-bold bg-slate-100 text-slate-700 px-2.5 py-0.5 rounded-[4px] uppercase tracking-wider font-mono border border-slate-200">
+                            {opp.category}
                           </span>
-                        ) : (
-                          <span className="font-bold text-emerald-600 font-mono">{opp.matchPercent}%</span>
-                        )}
-                      </div>
-                      <div className="p-1.5 bg-slate-50 border border-slate-100 rounded">
-                        <span className="text-slate-400 block text-[8px] uppercase">
-                          {isUnder90Days ? 'Application' : 'App Chance'}
-                        </span>
-                        {isUnder90Days ? (
-                          <span className="font-bold text-slate-700 font-mono text-[9px]">Direct Apply</span>
-                        ) : (
-                          <span className={`font-bold font-mono ${
-                            opp.chance === 'High' ? 'text-emerald-600' : opp.chance === 'Medium' ? 'text-amber-600' : 'text-rose-600'
-                          }`}>{opp.chance}</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              bookmarkOpportunity(opp.id);
+                              triggerToast(bookmarkedOpportunities.includes(opp.id) ? 'Removed bookmark.' : 'Opportunity bookmarked!');
+                            }}
+                            className={`p-1 rounded text-slate-400 hover:text-[#2998d6] transition cursor-pointer ${
+                              bookmarkedOpportunities.includes(opp.id) ? 'text-[#2998d6] fill-[#2998d6]' : ''
+                            }`}
+                            title="Bookmark opportunity"
+                          >
+                            <Bookmark className="w-4 h-4" />
+                          </button>
+                        </div>
 
-                  <div className="mt-4 pt-3 border-t border-slate-100 flex justify-between items-center text-[10px]">
-                    <span className="text-slate-400 font-mono">Max: {opp.maxFunding}</span>
-                    
-                    <div className="flex gap-1.5">
-                      <button
-                        onClick={() => setSelectedOppId(opp.id)}
-                        className="px-2.5 py-1 border border-slate-200 rounded hover:bg-slate-50 font-bold transition text-[9px]"
-                      >
-                        Details
-                      </button>
-                      <button
-                        onClick={() => handleOpenApplyModal(opp)}
-                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded font-bold transition text-[9px]"
-                      >
-                        Quick Apply
-                      </button>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 leading-snug line-clamp-1 hover:text-[#2998d6] transition-colors">
+                            {opp.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                            <Building2 className="w-3 h-3 text-[#2998d6]" />
+                            <span className="truncate">{opp.institution}</span>
+                          </p>
+                        </div>
+
+                        <p className="text-xs text-[#5e5e5e] line-clamp-2 leading-relaxed">
+                          {opp.description}
+                        </p>
+
+                        <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
+                          <div className="p-2 bg-[#f8fafc] border border-[#e2e8f0] rounded-[4px]">
+                            <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">
+                              {isUnder90Days ? 'Status' : 'AI Match'}
+                            </span>
+                            {isUnder90Days ? (
+                              <span className="font-bold text-emerald-700 font-mono text-[9.5px] flex items-center gap-1 mt-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" /> Open Catalog
+                              </span>
+                            ) : (
+                              <span className="font-bold text-emerald-600 font-mono text-[11px] block mt-0.5">
+                                {opp.matchPercent}% Match
+                              </span>
+                            )}
+                          </div>
+                          <div className="p-2 bg-[#f8fafc] border border-[#e2e8f0] rounded-[4px]">
+                            <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">
+                              {isUnder90Days ? 'Channel' : 'Approval Chance'}
+                            </span>
+                            {isUnder90Days ? (
+                              <span className="font-bold text-slate-700 font-mono text-[9.5px] block mt-0.5">Direct Review</span>
+                            ) : (
+                              <span className={`font-bold font-mono text-[10.5px] block mt-0.5 ${
+                                opp.chance === 'High' ? 'text-emerald-600' : opp.chance === 'Medium' ? 'text-amber-600' : 'text-rose-600'
+                              }`}>{opp.chance} Chance</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 pt-3 border-t border-[#e2e8f0] flex justify-between items-center text-xs">
+                        <div>
+                          <span className="text-[9px] text-slate-400 block uppercase font-mono">Max Facility</span>
+                          <span className="font-bold text-slate-900 font-mono text-xs">{opp.maxFunding}</span>
+                        </div>
+                        
+                        <div className="flex gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedOppId(opp.id)}
+                            className="accounting-btn-secondary !h-7 !text-[11px] !px-2.5"
+                          >
+                            Details
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenApplyModal(opp)}
+                            className="accounting-btn-primary !h-7 !text-[11px] !px-3"
+                          >
+                            Quick Apply
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  ))}
+                  {filteredMarketplace.length === 0 && (
+                    <div className="md:col-span-2 lg:col-span-3 rounded-[4px] border border-dashed border-[#cbd5e1] p-10 text-center text-xs text-slate-500">
+                      {opportunities.length === 0
+                        ? 'No opportunities have been published yet.'
+                        : 'No opportunities match the current filter criteria.'}
+                    </div>
+                  )}
                 </div>
-              ))}
-              {filteredMarketplace.length === 0 && (
-                <div className="md:col-span-2 lg:col-span-3 rounded-xl border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
-                  {opportunities.length === 0
-                    ? 'No opportunities have been published yet.'
-                    : 'No opportunities match the current filters.'}
+              ) : (
+                /* View Mode 2: Audit Ledger Table (Matching BusinessActivities) */
+                <div className="overflow-x-auto border border-[#cbd5e1] rounded-[4px] bg-white">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="bg-[#f1f5f9] text-[#475569] font-bold border-b border-[#cbd5e1] text-[11px] uppercase tracking-wider">
+                        <th className="py-2.5 px-3 w-10 text-center">#</th>
+                        <th className="py-2.5 px-3 min-w-[220px]">Program Title &amp; Facility</th>
+                        <th className="py-2.5 px-3 w-36">Financial Institution</th>
+                        <th className="py-2.5 px-3 w-28">Category</th>
+                        <th className="py-2.5 px-3 w-32 font-mono text-right">Max Funding</th>
+                        <th className="py-2.5 px-3 w-24 text-center">AI Match</th>
+                        <th className="py-2.5 px-3 w-28 font-mono">Deadline</th>
+                        <th className="py-2.5 px-3 w-36 text-center">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#e2e8f0] bg-white">
+                      {filteredMarketplace.map((opp, idx) => (
+                        <tr key={opp.id} className="hover:bg-slate-50/70 transition-colors">
+                          <td className="py-2.5 px-3 text-center font-mono text-slate-400 font-bold">{idx + 1}</td>
+                          <td className="py-2.5 px-3">
+                            <div className="space-y-0.5">
+                              <p className="font-bold text-slate-900 leading-tight">{opp.title}</p>
+                              <p className="text-[11px] text-slate-500 line-clamp-1">{opp.description}</p>
+                            </div>
+                          </td>
+                          <td className="py-2.5 px-3 font-semibold text-slate-700">
+                            <span className="flex items-center gap-1">
+                              <Building2 className="w-3 h-3 text-[#2998d6]" />
+                              <span>{opp.institution}</span>
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3">
+                            <span className="inline-block px-2 py-0.5 bg-slate-100 text-slate-700 border border-slate-200 rounded text-[10px] font-bold uppercase font-mono">
+                              {opp.category}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 text-[11px]">
+                            {opp.maxFunding}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            {isUnder90Days ? (
+                              <span className="inline-block px-1.5 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-mono font-bold text-[9.5px]">
+                                Open
+                              </span>
+                            ) : (
+                              <span className="inline-block px-1.5 py-0.5 bg-sky-50 text-[#2998d6] border border-sky-200 rounded font-mono font-bold text-[10px]">
+                                {opp.matchPercent}%
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2.5 px-3 font-mono text-[11px] text-slate-600">
+                            {opp.deadline}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedOppId(opp.id)}
+                                className="accounting-btn-secondary !h-7 !text-[11px] !px-2"
+                              >
+                                Details
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenApplyModal(opp)}
+                                className="accounting-btn-primary !h-7 !text-[11px] !px-2.5"
+                              >
+                                Apply
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
-          </div>
-        )}
+          )}
 
         {/* TAB 2: My Readiness */}
         {activeTab === 'readiness' && (
@@ -866,7 +1102,7 @@ export default function OpportunityHub() {
             {/* AI Suggestions Checklist */}
             <div className="bg-slate-50 border border-slate-200 rounded-lg p-5 space-y-4">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles className="w-4.5 h-4.5 text-emerald-600" />
+                <Sparkles className="w-4.5 h-4.5 text-[#2998d6]" />
                 AI-Suggested Actions to Increase Score
               </h3>
               
@@ -903,7 +1139,7 @@ export default function OpportunityHub() {
                     }
                   }
                 ].map((item) => (
-                  <div key={item.id} className="p-3 bg-white border border-slate-200 rounded-lg flex justify-between items-center gap-4 hover:shadow-sm transition">
+                  <div key={item.id} className="p-3 bg-white border border-slate-200 rounded-lg flex justify-between items-center gap-4 hover:shadow-xs transition">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         {item.uploaded ? (
@@ -921,7 +1157,7 @@ export default function OpportunityHub() {
                     {!item.uploaded && (
                       <button
                         onClick={item.action}
-                        className="px-3 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-[10px] font-bold border border-emerald-100 rounded-md transition flex items-center gap-1 shrink-0"
+                        className="accounting-btn-primary !h-7 !text-[11px] !px-3 !bg-[#2998d6] hover:!bg-[#1f85be] flex items-center gap-1.5 shrink-0 shadow-xs cursor-pointer"
                       >
                         <UploadCloud className="w-3.5 h-3.5" />
                         <span>Action</span>
@@ -947,7 +1183,7 @@ export default function OpportunityHub() {
               <div className="flex items-center gap-2 self-start sm:self-center">
                 <Link
                   to="/trainings"
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full text-xs font-bold transition shadow-sm flex items-center gap-1.5"
+                  className="accounting-btn-primary !h-8 !text-xs !px-4 !bg-[#2998d6] hover:!bg-[#1f85be] flex items-center gap-1.5 shadow-xs"
                 >
                   <Award className="w-3.5 h-3.5" />
                   <span>Full Academy Hub</span>
@@ -964,7 +1200,7 @@ export default function OpportunityHub() {
                 const isCompleted = tr.completed || tr.attended;
 
                 return (
-                  <div key={tr.id} className="p-4 border border-slate-200 bg-white rounded-xl flex flex-col justify-between hover:shadow-lg transition-all duration-150 space-y-3">
+                  <div key={tr.id} className="accounting-card p-4 flex flex-col justify-between hover:shadow-md transition-all duration-150 space-y-3">
                     <div className="space-y-2.5">
                       <div className="flex justify-between items-start">
                         {isLive ? (
@@ -976,7 +1212,7 @@ export default function OpportunityHub() {
                             <Check className="w-3 h-3" /> Certified
                           </span>
                         ) : (
-                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-blue-50 text-blue-700 border-blue-100 uppercase tracking-wider">
+                          <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border bg-sky-50 text-[#2998d6] border-sky-100 uppercase tracking-wider">
                             Scheduled
                           </span>
                         )}
@@ -1001,8 +1237,8 @@ export default function OpportunityHub() {
                           <span className="truncate">{tr.speaker}</span>
                         </div>
                         {tr.opportunityTitle && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-[#0a66c2] font-semibold">
-                            <ShieldCheck className="w-3 h-3 text-[#0a66c2] shrink-0" />
+                          <div className="flex items-center gap-1.5 text-[10px] text-[#2998d6] font-semibold">
+                            <ShieldCheck className="w-3 h-3 text-[#2998d6] shrink-0" />
                             <span className="truncate">Qualifies for: {tr.opportunityTitle}</span>
                           </div>
                         )}
@@ -1016,12 +1252,12 @@ export default function OpportunityHub() {
                       <button
                         type="button"
                         onClick={() => startWebinar(tr)}
-                        className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                        className={`px-3.5 py-1.5 text-xs font-bold rounded transition flex items-center gap-1.5 cursor-pointer shadow-xs ${
                           isLive
                             ? 'bg-red-600 hover:bg-red-700 text-white animate-pulse'
                             : isCompleted
-                            ? 'bg-slate-800 hover:bg-slate-700 text-slate-200'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                            ? 'bg-[#1a2332] hover:bg-slate-800 text-slate-200'
+                            : 'accounting-btn-primary !h-7 !text-[11px] !px-3 !bg-[#2998d6] hover:!bg-[#1f85be]'
                         }`}
                       >
                         <Video className="w-3.5 h-3.5" />
@@ -1050,38 +1286,38 @@ export default function OpportunityHub() {
 
             <div className="space-y-3">
               {applications.map(app => (
-                <div key={app.id} className="p-4 border border-slate-200 bg-white rounded-lg space-y-3">
+                <div key={app.id} className="accounting-card p-4 space-y-3">
                   <div className="flex justify-between items-start gap-4">
                     <div>
                       <h4 className="text-xs font-bold text-slate-900">{app.opportunityTitle}</h4>
                       <span className="text-[9px] text-slate-400 font-mono">App Ref: {app.id} · Applied: {app.appliedAt}</span>
                     </div>
 
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
                       app.status === 'Approved'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : app.status === 'Rejected'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-100'
+                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
                         : app.status === 'Under Review'
-                        ? 'bg-blue-50 text-blue-700 border border-blue-100'
-                        : 'bg-slate-50 text-slate-500'
+                        ? 'bg-sky-50 text-[#2998d6] border border-sky-200'
+                        : 'bg-slate-100 text-slate-600'
                     }`}>
                       {app.status}
                     </span>
                   </div>
 
-                  <div className="p-3 bg-slate-50 rounded-lg text-xs space-y-2 border border-slate-100">
+                  <div className="p-3 bg-slate-50/80 rounded text-xs space-y-2 border border-slate-200">
                     <div>
-                      <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Institution Feedback</span>
-                      <p className="text-slate-600 font-sans mt-0.5">{app.feedback}</p>
+                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block font-sans">Institution Feedback</span>
+                      <p className="text-slate-600 font-sans mt-0.5 text-[11px] leading-relaxed">{app.feedback}</p>
                     </div>
 
                     {app.aiSuggestions.length > 0 && (
-                      <div className="pt-2 border-t border-slate-200/60 space-y-1 text-slate-500">
-                        <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-widest flex items-center gap-1">
-                          <Sparkles className="w-3.5 h-3.5 text-emerald-500" /> AI suggestion for approval speedup
+                      <div className="pt-2 border-t border-slate-200 space-y-1 text-slate-500">
+                        <span className="text-[9px] font-bold text-[#2998d6] uppercase tracking-widest flex items-center gap-1 font-sans">
+                          <Sparkles className="w-3.5 h-3.5 text-[#2998d6]" /> AI Underwriting Fast-Track Recommendation
                         </span>
-                        <ul className="list-disc pl-4 space-y-0.5 text-slate-600 text-[10px]">
+                        <ul className="list-disc pl-4 space-y-0.5 text-slate-600 text-[10.5px]">
                           {app.aiSuggestions.map((s, i) => (
                             <li key={i}>{s}</li>
                           ))}
@@ -1092,13 +1328,14 @@ export default function OpportunityHub() {
                 </div>
               ))}
               {applications.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
+                <div className="rounded border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
                   No applications submitted yet.
                 </div>
               )}
             </div>
           </div>
         )}
+        </div>
       </div>
 
       {selectedOpp && (() => {
@@ -1118,12 +1355,12 @@ export default function OpportunityHub() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="space-y-1.5 flex-1">
                     <div className="flex flex-wrap gap-1.5 items-center">
-                      <span className="text-[10px] font-bold bg-slate-900 text-white px-2.5 py-0.5 rounded uppercase tracking-wider">
+                      <span className="text-[10px] font-bold bg-[#1a2332] text-white px-2.5 py-0.5 rounded uppercase tracking-wider">
                         {selectedOpp.category}
                       </span>
                       {selectedOpp.category === 'Loan' && (
-                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-100 px-2.5 py-0.5 rounded uppercase flex items-center gap-1">
-                          <Coins className="w-3 h-3 text-indigo-600" />
+                        <span className="text-[10px] font-bold bg-sky-50 text-[#2998d6] border border-sky-200 px-2.5 py-0.5 rounded uppercase flex items-center gap-1 font-mono">
+                          <Coins className="w-3 h-3 text-[#2998d6]" />
                           Credit Facility
                         </span>
                       )}
@@ -1157,8 +1394,8 @@ export default function OpportunityHub() {
                 <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
                   <div className="flex items-start justify-between gap-3">
                     <div className="space-y-0.5">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#0a66c2] flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#0a66c2]" />
+                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#2998d6] flex items-center gap-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#2998d6]" />
                         Verified Financial Institution
                       </span>
                       <p className="text-xs font-bold text-slate-900">{selectedOpp.publisher?.institutionName || selectedOpp.institution}</p>
@@ -1174,19 +1411,19 @@ export default function OpportunityHub() {
                   <div className="mt-2.5 flex flex-wrap gap-2 pt-2 border-t border-slate-200/60">
                     {selectedOpp.publisher?.phone && (
                       <a href={`tel:${selectedOpp.publisher.phone}`} className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
-                        <Phone className="h-3 w-3 text-[#0a66c2]" />
+                        <Phone className="h-3 w-3 text-[#2998d6]" />
                         {selectedOpp.publisher.phone}
                       </a>
                     )}
                     {selectedOpp.publisher?.email && (
                       <a href={`mailto:${selectedOpp.publisher.email}`} className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
-                        <Mail className="h-3 w-3 text-[#0a66c2]" />
+                        <Mail className="h-3 w-3 text-[#2998d6]" />
                         Email Desk
                       </a>
                     )}
                     {selectedOpp.publisher?.website && (
                       <a href={selectedOpp.publisher.website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
-                        <Globe className="h-3 w-3 text-[#0a66c2]" />
+                        <Globe className="h-3 w-3 text-[#2998d6]" />
                         Web Portal
                       </a>
                     )}
@@ -1198,7 +1435,7 @@ export default function OpportunityHub() {
                   <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5 text-indigo-600" />
+                        <Coins className="w-3.5 h-3.5 text-[#2998d6]" />
                         Financing Terms &amp; Cost Structure
                       </span>
                       <span className="text-[9px] font-mono text-slate-500">Ledger-backed</span>
@@ -1458,8 +1695,8 @@ export default function OpportunityHub() {
                 <div className="flex-1 flex flex-col justify-between h-[88%] overflow-hidden">
                   <div className="pb-3 border-b border-slate-200 flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
-                        <Sparkles className="w-4 h-4 text-emerald-600" />
+                      <div className="p-1.5 bg-sky-50 border border-sky-200 rounded-lg">
+                        <Sparkles className="w-4 h-4 text-[#2998d6]" />
                       </div>
                       <div>
                         <h4 className="text-xs font-bold text-slate-900">Elevata AI Advisor</h4>
@@ -1479,9 +1716,9 @@ export default function OpportunityHub() {
                   <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 text-xs">
                     {chatHistory.map((msg, i) => (
                       <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-xl max-w-[88%] leading-relaxed ${
+                        <div className={`p-3 rounded-lg max-w-[88%] leading-relaxed ${
                           msg.sender === 'user'
-                            ? 'bg-slate-900 text-white font-medium shadow-2xs'
+                            ? 'bg-[#1a2332] text-white font-medium shadow-xs'
                             : 'bg-white border border-slate-200 text-slate-700 shadow-2xs'
                         }`}>
                           {msg.text}
@@ -1490,8 +1727,8 @@ export default function OpportunityHub() {
                     ))}
                     {isTyping && (
                       <div className="flex justify-start">
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-xl text-slate-400 font-sans flex items-center gap-2">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />
+                        <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 font-sans flex items-center gap-2">
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2998d6]" />
                           <span>AI Assistant is typing...</span>
                         </div>
                       </div>
@@ -1505,11 +1742,11 @@ export default function OpportunityHub() {
                       placeholder="Ask about collateral, interest rates..."
                       value={chatInput}
                       onChange={e => setChatInput(e.target.value)}
-                      className="flex-1 border border-slate-250 rounded-lg px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-slate-400 bg-white"
+                      className="accounting-input flex-1 !text-xs"
                     />
                     <button
                       type="submit"
-                      className="p-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg shadow-2xs transition"
+                      className="accounting-btn-primary !h-8 !px-3 !bg-[#2998d6] hover:!bg-[#1f85be] flex items-center justify-center shrink-0 cursor-pointer"
                     >
                       <Send className="w-3.5 h-3.5" />
                     </button>
@@ -1523,7 +1760,7 @@ export default function OpportunityHub() {
                       setSelectedOppId(null);
                       if (oppToApply) handleOpenApplyModal(oppToApply);
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition"
+                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded shadow-xs transition cursor-pointer"
                   >
                     <span>Proceed to Quick Apply</span>
                     <ArrowRight className="w-4 h-4" />
@@ -1538,31 +1775,31 @@ export default function OpportunityHub() {
       {/* QUICK APPLY & DYNAMIC DOCUMENT UPLOAD MODAL */}
       {applyingOpp && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
+          <div className="bg-white border border-[#cbd5e1] rounded-lg shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-150 flex flex-col max-h-[92vh]">
             
             {/* Header */}
-            <div className="px-5 py-4 border-b border-slate-200 bg-slate-50/80 flex justify-between items-start shrink-0">
+            <div className="px-5 py-4 border-b border-slate-800 bg-[#1a2332] text-white flex justify-between items-start shrink-0">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="text-[9px] font-bold bg-slate-900 text-white px-2.5 py-0.5 rounded uppercase tracking-wider">
-                    {applyingOpp.category} Application
+                  <span className="text-[9px] font-bold bg-[#2998d6] text-white px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                    {applyingOpp.category} Facility Dossier
                   </span>
-                  <span className="text-[10px] text-slate-500 font-mono">
+                  <span className="text-[10px] text-slate-300 font-mono">
                     Max: {applyingOpp.maxFunding}
                   </span>
                 </div>
-                <h3 className="text-sm font-extrabold text-slate-900">
+                <h3 className="text-sm font-extrabold text-white">
                   Apply for {applyingOpp.title}
                 </h3>
-                <p className="text-[10.5px] text-slate-500">
-                  Offered by <strong className="text-slate-800 font-semibold">{applyingOpp.institution}</strong> · Deadline: <span className="font-mono text-slate-700">{applyingOpp.deadline}</span>
+                <p className="text-[10.5px] text-slate-300">
+                  Offered by <strong className="text-white font-semibold">{applyingOpp.institution}</strong> · Deadline: <span className="font-mono text-cyan-300">{applyingOpp.deadline}</span>
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setApplyingOpp(null)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition"
+                className="p-1.5 text-slate-400 hover:text-white hover:bg-white/10 rounded transition cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -1572,7 +1809,7 @@ export default function OpportunityHub() {
             <form onSubmit={handleSubmitApplication} className="p-5 overflow-y-auto flex-1 space-y-4 text-xs">
               
               {/* Top Section: Pre-filled Business Profile Dossier */}
-              <div className="p-3.5 bg-slate-50/90 border border-slate-200 rounded-xl space-y-2.5">
+              <div className="p-3.5 bg-slate-50/90 border border-slate-200 rounded-lg space-y-2.5">
                 <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
                   <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
                     <Building2 className="w-3.5 h-3.5 text-slate-400" />
@@ -1599,21 +1836,21 @@ export default function OpportunityHub() {
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[8px] uppercase">Loan Readiness</span>
-                    <strong className="text-indigo-600 font-bold block font-mono">{calculatedReadiness}%</strong>
+                    <strong className="text-[#2998d6] font-bold block font-mono">{calculatedReadiness}%</strong>
                   </div>
                 </div>
               </div>
 
               {/* Funding Request Details */}
               <div className="space-y-3 pt-1">
-                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block border-b pb-1">
+                <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block border-b pb-1 font-sans">
                   1. Funding &amp; Facility Request
                 </span>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <div className="flex justify-between items-center">
-                      <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider">
+                      <label className="accounting-label">
                         Requested Amount (FRW) <span className="text-rose-500">*</span>
                       </label>
                       <span className="text-[9px] text-slate-400 font-mono">Max: {applyingOpp.maxFunding}</span>
@@ -1633,9 +1870,9 @@ export default function OpportunityHub() {
                           }
                         }}
                         placeholder="e.g. 5000000"
-                        className={`w-full p-2.5 rounded-lg border text-xs font-mono transition ${
-                          applyErrors.applyAmount ? 'border-rose-500 ring-1 ring-rose-500/20 bg-rose-50/20' : 'border-slate-250 bg-slate-50/40 focus:ring-1 focus:ring-slate-400'
-                        } focus:outline-none`}
+                        className={`accounting-input w-full font-mono ${
+                          applyErrors.applyAmount ? 'border-rose-500 ring-1 ring-rose-500/20 bg-rose-50/20' : ''
+                        }`}
                         required
                       />
                     </div>
@@ -1651,13 +1888,13 @@ export default function OpportunityHub() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                    <label className="accounting-label">
                       Intended Use of Funds <span className="text-rose-500">*</span>
                     </label>
                     <select
                       value={applyPurpose}
                       onChange={e => setApplyPurpose(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-white text-xs focus:ring-1 focus:ring-slate-400 focus:outline-none"
+                      className="accounting-select w-full"
                     >
                       <option value="Working Capital & Inventory Purchase">Working Capital &amp; Inventory Purchase</option>
                       <option value="Machinery & Equipment Acquisition">Machinery &amp; Equipment Acquisition</option>
@@ -1670,13 +1907,13 @@ export default function OpportunityHub() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                    <label className="accounting-label">
                       Repayment / Term
                     </label>
                     <select
                       value={applyTerm}
                       onChange={e => setApplyTerm(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-white text-xs focus:outline-none"
+                      className="accounting-select w-full"
                     >
                       <option value="6">6 Months</option>
                       <option value="12">12 Months (1 Year)</option>
@@ -1686,27 +1923,27 @@ export default function OpportunityHub() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                    <label className="accounting-label">
                       Contact Phone <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       value={applyPhone}
                       onChange={e => setApplyPhone(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/40 text-xs focus:outline-none font-mono"
+                      className="accounting-input w-full font-mono"
                       required
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                    <label className="accounting-label">
                       Official Email <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="email"
                       value={applyEmail}
                       onChange={e => setApplyEmail(e.target.value)}
-                      className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/40 text-xs focus:outline-none"
+                      className="accounting-input w-full"
                       required
                     />
                   </div>
@@ -1717,7 +1954,7 @@ export default function OpportunityHub() {
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between border-b pb-1">
                   <div>
-                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block">
+                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider block font-sans">
                       2. Required Compliance &amp; Verification Documents
                     </span>
                     <p className="text-[9.5px] text-slate-400 mt-0.5">
@@ -1745,13 +1982,13 @@ export default function OpportunityHub() {
                       return (
                         <div
                           key={idx}
-                          className={`p-3 rounded-xl border transition flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 ${
+                          className={`p-3 rounded-lg border transition flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 ${
                             isUploaded ? 'bg-emerald-50/40 border-emerald-200' : 'bg-slate-50/70 border-slate-200 hover:border-slate-300'
                           }`}
                         >
                           <div className="space-y-1 max-w-sm">
                             <div className="flex items-center gap-2">
-                              <span className="p-1 bg-white border border-slate-200 rounded-md text-slate-600 shrink-0">
+                              <span className="p-1 bg-white border border-slate-200 rounded text-slate-600 shrink-0">
                                 {getDocIcon(doc, `w-3.5 h-3.5 ${isUploaded ? 'text-emerald-600' : 'text-slate-500'}`)}
                               </span>
                               <strong className="text-xs font-bold text-slate-900">{doc}</strong>
@@ -1781,21 +2018,21 @@ export default function OpportunityHub() {
                           <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
                             {isUploaded ? (
                               <div className="flex items-center gap-1.5">
-                                <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-lg flex items-center gap-1">
+                                <span className="px-2 py-1 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded flex items-center gap-1">
                                   <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
                                   Attached
                                 </span>
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveUploadedDoc(doc)}
-                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg transition"
+                                  className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-white rounded transition cursor-pointer"
                                   title="Remove file"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
                                 </button>
                               </div>
                             ) : (
-                              <label className="px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-[10px] font-bold rounded-lg cursor-pointer transition flex items-center gap-1.5 shadow-2xs">
+                              <label className="accounting-btn-secondary !h-7 !text-[11px] !px-3 cursor-pointer flex items-center gap-1.5">
                                 <FileUp className="w-3.5 h-3.5 text-slate-600" />
                                 <span>Attach File</span>
                                 <input
@@ -1811,7 +2048,7 @@ export default function OpportunityHub() {
                       );
                     })
                   ) : (
-                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl text-center text-slate-400 text-[10px]">
+                    <div className="p-3 bg-slate-50 border border-slate-200 rounded-lg text-center text-slate-400 text-[10px]">
                       No additional documents required for this program.
                     </div>
                   )}
@@ -1820,7 +2057,7 @@ export default function OpportunityHub() {
 
               {/* Cover Note */}
               <div className="space-y-1 pt-1">
-                <label className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block">
+                <label className="accounting-label">
                   3. Remarks / Note to Underwriting Officer (Optional)
                 </label>
                 <textarea
@@ -1828,7 +2065,7 @@ export default function OpportunityHub() {
                   placeholder="Provide additional context regarding your operational cashflows, upcoming supplier contracts, or specific financing timelines..."
                   value={applyNotes}
                   onChange={e => setApplyNotes(e.target.value)}
-                  className="w-full p-2.5 rounded-lg border border-slate-250 bg-slate-50/40 text-xs focus:ring-1 focus:ring-slate-400 focus:outline-none leading-relaxed"
+                  className="accounting-input w-full leading-relaxed"
                 />
               </div>
 
@@ -1839,7 +2076,7 @@ export default function OpportunityHub() {
                     type="checkbox"
                     checked={applyAgreed}
                     onChange={e => setApplyAgreed(e.target.checked)}
-                    className="mt-0.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    className="mt-0.5 rounded border-slate-300 text-[#2998d6] focus:ring-[#2998d6]"
                   />
                   <span className="text-[10.5px] text-slate-600 leading-snug">
                     I declare that the information and documents uploaded are authentic and accurately represent the current trading records of <strong className="text-slate-900 font-bold">{activeSme.name}</strong> on Elevata.
@@ -1862,7 +2099,7 @@ export default function OpportunityHub() {
                 <button
                   type="button"
                   onClick={() => setApplyingOpp(null)}
-                  className="px-4 py-2 border border-slate-200 hover:bg-slate-50 rounded-lg text-xs font-semibold text-slate-700 transition"
+                  className="accounting-btn-secondary !h-9 !px-4"
                 >
                   Cancel
                 </button>
@@ -1870,7 +2107,7 @@ export default function OpportunityHub() {
                 <button
                   type="submit"
                   disabled={isSubmittingApp}
-                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg text-xs font-semibold shadow-sm transition flex items-center gap-1.5"
+                  className="accounting-btn-primary !h-9 !px-6 !bg-[#2998d6] hover:!bg-[#1f85be] flex items-center gap-1.5 shadow-xs"
                 >
                   {isSubmittingApp ? (
                     <>

@@ -72,10 +72,10 @@ textarea:not(.ai-chat-textarea):hover {
 input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):focus,
 select:focus,
 textarea:not(.ai-chat-textarea):focus {
-    border-color: #0f8f8c !important;
+    border-color: #2998d6 !important;
     background-color: #fff !important;
     outline: none !important;
-    box-shadow: 0 0 0 4px rgb(14 165 164 / 0.14) !important;
+    box-shadow: 0 0 0 3px rgba(41, 152, 214, 0.2) !important;
 }
 
 input::placeholder,
