@@ -287,7 +287,7 @@ export default function ElevataBotPage() {
           prompt: 'What specific financial and inventory practices will increase my business health score on Elevata?'
         },
         {
-          badge: 'Job Application',
+          badge: 'Opportunities',
           badgeStyle: 'text-emerald-400 bg-emerald-950/70 border-emerald-800/80',
           subtitle: 'Apply for grants & loan capital',
           prompt: 'If my monthly sales are 4,200,000 RWF with 28% profit margin, what loan amount can I comfortably repay?'
