@@ -252,72 +252,74 @@ export default function ElevataBotPage() {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  // Quick Action Cards matching mockup style
+  // Quick Action Cards strictly aligned with Elevata's 3 Pillars:
+  // 1. Intelligent Opportunity Matching, 2. Continuous Monitoring & Readiness, 3. Targeted Engagement & Literacy
   const quickCards = isAdmin
     ? [
         {
-          badge: 'KYC & Compliance',
+          badge: 'Opportunity Intelligence',
           badgeStyle: 'text-cyan-400 bg-cyan-950/70 border-cyan-800/80',
-          subtitle: 'Review & verify user onboarding',
-          prompt: 'What verification criteria should I check before approving a new financial institution or SME on Elevata?'
+          subtitle: 'Structure sectors & product categories',
+          prompt: 'How should business sectors and opportunity categories (loans, grants, insurance, DFS) be structured to maximize SME matching on Elevata?'
         },
         {
-          badge: 'Platform Metrics',
-          badgeStyle: 'text-rose-400 bg-rose-950/70 border-rose-800/80',
-          subtitle: 'Analyze ecosystem performance',
-          prompt: 'Summarize the key platform health metrics, SME adoption trends, and credit disbursements.'
+          badge: 'KYC & Verification',
+          badgeStyle: 'text-amber-400 bg-amber-950/70 border-amber-800/80',
+          subtitle: 'Verify FI & SME onboarding standards',
+          prompt: 'What verification criteria and regulatory licenses should I check before approving a new financial institution or SME on Elevata?'
         },
         {
-          badge: 'Category Master',
+          badge: 'Ecosystem Analytics',
           badgeStyle: 'text-emerald-400 bg-emerald-950/70 border-emerald-800/80',
-          subtitle: 'Categorization & risk mapping',
-          prompt: 'How should business sectors and opportunity categories be structured to maximize SME matching?'
+          subtitle: 'Track platform adoption & health metrics',
+          prompt: 'Summarize key platform metrics, SME financing readiness trends, and financial product adoption across Rwandan districts.'
         }
       ]
     : isFI
     ? [
         {
-          badge: 'Credit Assessment',
+          badge: 'Publish Opportunities',
           badgeStyle: 'text-cyan-400 bg-cyan-950/70 border-cyan-800/80',
-          subtitle: 'Evaluate SME risk & debt capacity',
-          prompt: 'What key credit risk metrics should I evaluate for a growing retail SME in Kigali?'
+          subtitle: 'Design tailored loan or grant programs',
+          prompt: 'Help me draft qualification criteria, eligibility rules, and terms for an inventory-backed working capital loan on Elevata.'
         },
         {
-          badge: 'Suggestions',
+          badge: 'SME Credit Screening',
           badgeStyle: 'text-rose-400 bg-rose-950/70 border-rose-800/80',
-          subtitle: 'Help with loan structuring ideas',
-          prompt: 'Help me draft qualification criteria and repayment terms for an inventory-backed credit line.'
+          subtitle: 'Evaluate cash flows & debt capacity',
+          prompt: 'What continuous cash flow indicators, inventory turnover, and health score benchmarks should I check when evaluating an SME loan application?'
         },
         {
-          badge: 'Portfolio Health',
+          badge: 'Targeted Webinars',
           badgeStyle: 'text-emerald-400 bg-emerald-950/70 border-emerald-800/80',
-          subtitle: 'Maintain low NPL loan ratios',
-          prompt: 'What monitoring practices best assist credit officers in maintaining an NPL ratio below 3%?'
+          subtitle: 'De-risk pipeline via financial literacy',
+          prompt: 'Suggest a high-impact virtual training session curriculum for SMEs to improve their digital bookkeeping and loan readiness on Elevata.'
         }
       ]
     : [
         {
-          badge: 'Content Help',
+          badge: 'Opportunity Matching',
           badgeStyle: 'text-cyan-400 bg-cyan-950/70 border-cyan-800/80',
-          subtitle: 'Help with reports & tax ledger',
-          prompt: 'How do I organize my monthly cash inflows and operating expenses for tax compliance?'
+          subtitle: 'Discover matched loans, grants & DFS',
+          prompt: 'What loans, grants, digital financial services, or equipment financing opportunities match my business profile and sector on Elevata?'
         },
         {
-          badge: 'Suggestions',
+          badge: 'Readiness & Health Score',
           badgeStyle: 'text-rose-400 bg-rose-950/70 border-rose-800/80',
-          subtitle: 'Improve SME health score',
-          prompt: 'What specific financial and inventory practices will increase my business health score on Elevata?'
+          subtitle: 'Improve score & close missing criteria',
+          prompt: 'What specific financial records, bookkeeping habits, and compliance steps will increase my business health score on Elevata?'
         },
         {
-          badge: 'Opportunities',
+          badge: 'Loan Affordability',
           badgeStyle: 'text-emerald-400 bg-emerald-950/70 border-emerald-800/80',
-          subtitle: 'Apply for grants & loan capital',
-          prompt: 'If my monthly sales are 4,200,000 RWF with 28% profit margin, what loan amount can I comfortably repay?'
+          subtitle: 'Calculate safe borrowing limits',
+          prompt: 'If my monthly sales are 4,500,000 RWF with a 25% profit margin, what loan repayment amount can I comfortably afford over 12 months?'
         }
       ];
 
   return (
     <div className="flex h-[calc(100vh-80px)] bg-[#0c121e] text-slate-100 font-sans -m-3 md:-m-6 overflow-hidden">
+
       {/* =========================================================================
           LEFT SIDEBAR: Conversation History
       ========================================================================== */}
@@ -433,14 +435,23 @@ export default function ElevataBotPage() {
             ===================================================================== */
             <div className="my-auto flex flex-col items-center justify-center max-w-3xl mx-auto w-full space-y-8 py-6">
               {/* Heading */}
-              <div className="text-left w-full space-y-1">
+              <div className="text-left w-full space-y-2">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#2998d6]/10 border border-[#2998d6]/30 text-[#38bdf8] text-xs font-semibold">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Elevata Financial Opportunity Intelligence Copilot</span>
+                </div>
                 <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-white">
-                  Hey! {firstName}
+                  Hey, {firstName}!
                 </h1>
-                <h2 className="text-2xl sm:text-3xl font-medium tracking-tight text-slate-300">
-                  What can I help with?
+                <h2 className="text-xl sm:text-2xl font-medium tracking-tight text-slate-300">
+                  {isAdmin
+                    ? 'How can I assist with ecosystem opportunity intelligence today?'
+                    : isFI
+                    ? 'How can I assist with SME risk assessment, opportunity publishing, or webinars today?'
+                    : 'How can I assist with opportunity matching, financing readiness, or business cash flow today?'}
                 </h2>
               </div>
+
 
               {/* 3 Quick Action Cards matching screenshot */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full">

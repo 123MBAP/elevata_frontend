@@ -15,7 +15,8 @@ import {
   Tooltip,
   PieChart,
   Pie,
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
 import {
   TrendingUp,
@@ -32,59 +33,31 @@ import {
   CalendarDays,
   Search,
   Package,
-  X
+  X,
+  ShoppingBag,
+  Truck,
+  ArrowDownLeft,
+  ArrowUpRight,
+  ShieldCheck,
+  CheckCircle,
+  FileText,
+  Briefcase
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 
-/** Elevata standard palette & McKinsey-style comparison palette */
-const COLORS = {
-  ink: '#0f172a',
-  slate: '#64748b',
-  line: '#e2e8f0',
-  soft: '#f8fafc',
-  primary: '#2998d6',
-  primarySoft: '#e0f2fe',
-  secondary: '#94a3b8',
-  ok: '#059669',
-  warn: '#d97706',
-  bad: '#dc2626'
-};
-
-const COMPARISON_COLORS = {
-  series1: '#2998d6', // Elevata Blue
-  series2: '#94a3b8', // Muted Slate
-  series3: '#10b981'  // Net Growth Green
-};
+export type SmeDashboardTab = 'executive' | 'cashflow' | 'inventory' | 'financing' | 'radar';
 
 const formatCompactRWF = (value: number): string => {
-  if (value === 0) return '0';
+  if (value === 0) return '0 FRW';
   const abs = Math.abs(value);
   if (abs >= 1000000) {
     const val = value / 1000000;
-    return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}M`;
+    return `${val % 1 === 0 ? val.toFixed(0) : val.toFixed(1)}M FRW`;
   }
   if (abs >= 1000) {
-    return `${Math.round(value / 1000)}k`;
+    return `${Math.round(value / 1000)}k FRW`;
   }
-  return String(Math.round(value));
-};
-
-const renderBarTopLabel = (fillColor: string) => (props: any) => {
-  const { x, y, width, value } = props;
-  if (value === undefined || value === null) return null;
-  return (
-    <text
-      x={x + width / 2}
-      y={y - 5}
-      fill={fillColor}
-      textAnchor="middle"
-      fontSize={10}
-      fontWeight={700}
-      className="select-none"
-    >
-      {formatCompactRWF(value)}
-    </text>
-  );
+  return `${Math.round(value)} FRW`;
 };
 
 const DEFAULT_MONTHLY_DATA: MonthlyFinancial[] = [
@@ -95,91 +68,6 @@ const DEFAULT_MONTHLY_DATA: MonthlyFinancial[] = [
   { month: 'Feb', revenue: 4650000, expenses: 2900000, inflow: 4800000, outflow: 2750000 },
   { month: 'Mar', revenue: 5200000, expenses: 3100000, inflow: 5350000, outflow: 3050000 }
 ];
-
-const DEFAULT_INVENTORY_ITEMS: InventoryItem[] = [
-  {
-    id: 'def-inv-1',
-    name: 'Basmati Rice Premium (25kg)',
-    stockLevel: 45,
-    unit: 'bag',
-    status: 'In Stock',
-    daysRemaining: 24,
-    reorderPoint: 15,
-    unitPrice: 38000,
-    category: 'Grains & Staples'
-  },
-  {
-    id: 'def-inv-2',
-    name: 'Fortified Maize Flour (25kg)',
-    stockLevel: 12,
-    unit: 'bag',
-    status: 'Low Stock',
-    daysRemaining: 5,
-    reorderPoint: 20,
-    unitPrice: 22000,
-    category: 'Grains & Staples'
-  },
-  {
-    id: 'def-inv-3',
-    name: 'Sunflower Cooking Oil (5L)',
-    stockLevel: 68,
-    unit: 'pcs',
-    status: 'In Stock',
-    daysRemaining: 32,
-    reorderPoint: 20,
-    unitPrice: 14500,
-    category: 'Oils & Condiments'
-  },
-  {
-    id: 'def-inv-4',
-    name: 'Refined Sugar (50kg)',
-    stockLevel: 8,
-    unit: 'bag',
-    status: 'Low Stock',
-    daysRemaining: 3,
-    reorderPoint: 15,
-    unitPrice: 65000,
-    category: 'Staples'
-  },
-  {
-    id: 'def-inv-5',
-    name: 'Mineral Water Packs (24x500ml)',
-    stockLevel: 95,
-    unit: 'box',
-    status: 'In Stock',
-    daysRemaining: 45,
-    reorderPoint: 25,
-    unitPrice: 7000,
-    category: 'Beverages'
-  }
-];
-
-const DEFAULT_RISK_ALERTS: { id: string; type: 'warning' | 'info' | 'danger'; text: string }[] = [
-  {
-    id: 'def-alt-1',
-    type: 'warning',
-    text: 'Maize flour and refined sugar stock below safety threshold (less than 5 days supply remaining).'
-  },
-  {
-    id: 'def-alt-2',
-    type: 'info',
-    text: 'Working capital runway is healthy at 48 days. Eligible for seasonal pre-financing up to 15,000,000 FRW.'
-  },
-  {
-    id: 'def-alt-3',
-    type: 'warning',
-    text: 'Upcoming quarterly tax filing declaration due in 12 days to maintain 100% compliance status.'
-  }
-];
-
-const DEFAULT_LOAN_DETAILS: LoanDetails = {
-  status: 'Active',
-  outstandingAmount: 2450000,
-  monthlyInstallment: 320000,
-  interestRate: 14.5,
-  repaymentPeriodMonths: 12,
-  purpose: 'Working Capital & Inventory Expansion'
-};
 
 export default function SmeDashboard() {
   const { user } = useAuth();
@@ -193,549 +81,440 @@ export default function SmeDashboard() {
     }
   }, [user, navigate]);
 
-  const { activeSme, scenarios, resetAll } = useApp();
-  const [chartView, setChartView] = useState<'performance' | 'cashflow'>('performance');
-  const [searchQuery, setSearchQuery] = useState('');
+  const { activeSme, scenarios, products, opportunities } = useApp();
+  const [activeTab, setActiveTab] = useState<SmeDashboardTab>('executive');
+  const [inventorySearch, setInventorySearch] = useState('');
 
-  // Fallback calculations when database has no records or zeroes
-  const effectiveMonthlyData = useMemo(() => {
-    return activeSme.monthlyData && activeSme.monthlyData.length > 0
-      ? activeSme.monthlyData
-      : DEFAULT_MONTHLY_DATA;
+  // Fallback calculations for monthly data
+  const monthlyData = useMemo(() => {
+    if (activeSme.monthlyData && activeSme.monthlyData.length > 0) {
+      return activeSme.monthlyData;
+    }
+    return DEFAULT_MONTHLY_DATA;
   }, [activeSme.monthlyData]);
 
-  const effectiveInventory = useMemo(() => {
-    return activeSme.inventoryItems && activeSme.inventoryItems.length > 0
-      ? activeSme.inventoryItems
-      : DEFAULT_INVENTORY_ITEMS;
-  }, [activeSme.inventoryItems]);
-
-  const effectiveAlerts = useMemo(() => {
-    return activeSme.riskAlerts && activeSme.riskAlerts.length > 0
-      ? activeSme.riskAlerts
-      : DEFAULT_RISK_ALERTS;
-  }, [activeSme.riskAlerts]);
-
-  const effectiveLoanDetails = useMemo(() => {
-    return (activeSme.loanDetails && activeSme.loanDetails.status && activeSme.loanDetails.status !== 'None' && activeSme.loanDetails.outstandingAmount > 0)
-      ? activeSme.loanDetails
-      : DEFAULT_LOAN_DETAILS;
-  }, [activeSme.loanDetails]);
-
-  const businessDisplayName =
-    (activeSme.name && activeSme.name !== 'Complete your business profile' && activeSme.name.trim() !== '')
-      ? activeSme.name
-      : (user?.business?.businessName || user?.business?.ownerName || 'Akagera Trading Enterprises');
-
-  const baseHealthScore = activeSme.healthScore > 0 ? activeSme.healthScore : 78;
-  const baseBalance = activeSme.currentBalance > 0 ? activeSme.currentBalance : 4850000;
-  const baseCapacity = activeSme.borrowingCapacity > 0 ? activeSme.borrowingCapacity : 15000000;
-  const baseTrend = activeSme.healthTrend || 'up';
-  const baseTrendPercent = activeSme.healthTrendPercent > 0 ? activeSme.healthTrendPercent : 8;
-
-  let healthScore        = baseHealthScore;
-  let currentBalance     = baseBalance;
-  let healthTrend        = baseTrend;
-  let healthTrendPercent = baseTrendPercent;
-
-  if (scenarios.salesDrop) {
-    healthScore        = Math.max(10, healthScore - 15);
-    currentBalance     = Math.round(currentBalance * 0.8);
-    healthTrend        = 'down';
-    healthTrendPercent = healthTrendPercent + 12;
-  }
-  if (scenarios.expenseIncrease) {
-    healthScore    = Math.max(10, healthScore - 8);
-    currentBalance = Math.round(currentBalance * 0.9);
-    if (!scenarios.salesDrop) {
-      healthTrend        = 'down';
-      healthTrendPercent = healthTrendPercent + 5;
+  // Inventory items
+  const inventoryList = useMemo(() => {
+    if (products && products.length > 0) {
+      return products.map(p => ({
+        id: p.id,
+        name: p.name,
+        stockLevel: p.stockQuantity,
+        unit: p.unit || 'pcs',
+        status: p.status || 'In Stock',
+        daysRemaining: Math.round(p.stockQuantity * 2),
+        reorderPoint: p.reorderLevel || 5,
+        unitPrice: p.unitPrice,
+        costPrice: p.costPrice || p.unitPrice,
+        category: p.category || 'General'
+      }));
     }
-  }
+    return activeSme.inventoryItems || [];
+  }, [products, activeSme.inventoryItems]);
 
-  const chartData = effectiveMonthlyData.map((item, idx) => {
-    let revenue  = item.revenue;
-    let expenses = item.expenses;
-    let inflow   = item.inflow;
-    let outflow  = item.outflow;
-    if (idx >= 4) {
-      if (scenarios.salesDrop)      { revenue  = Math.round(revenue  * 0.80); inflow  = Math.round(inflow  * 0.80); }
-      if (scenarios.expenseIncrease){ expenses = Math.round(expenses * 1.15); outflow = Math.round(outflow * 1.15); }
-    }
-    return {
-      month: item.month,
-      Revenue: revenue,
-      Expenses: expenses,
-      Profit: revenue - expenses,
-      Inflow: inflow,
-      Outflow: outflow,
-      NetCash: inflow - outflow
-    };
-  });
-
-  const currentMonthData = chartData[chartData.length - 1] ?? {
-    Revenue: 0,
-    Expenses: 0,
-    Profit: 0,
-    Inflow: 0,
-    Outflow: 0,
-    NetCash: 0
-  };
-  const monthlyInflow    = currentMonthData.Inflow;
-  const monthlyOutflow   = currentMonthData.Outflow;
-  const netCashFlow      = monthlyInflow - monthlyOutflow;
-  const periodRevenue = chartData.reduce((sum, item) => sum + item.Revenue, 0);
-  const periodProfit = periodRevenue - chartData.reduce((sum, item) => sum + item.Expenses, 0);
-  const profitMargin = periodRevenue > 0 ? Math.round((periodProfit / periodRevenue) * 100) : 0;
-
-  const scoreColor = (s: number) =>
-    s >= 80 ? COLORS.ok : s >= 60 ? COLORS.warn : COLORS.bad;
-
-  const scoreBadgeClass = (s: number) =>
-    s >= 80
-      ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
-      : s >= 60
-      ? 'bg-amber-50 text-amber-700 border border-amber-100'
-      : 'bg-red-50 text-red-700 border border-red-100';
-
-  const today = new Intl.DateTimeFormat('en-RW', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long'
-  }).format(new Date());
-
-  const cashMix = [
-    { name: 'Inflow', value: Math.max(monthlyInflow, 0), color: COLORS.primary },
-    { name: 'Outflow', value: Math.max(monthlyOutflow, 0), color: COLORS.secondary }
-  ];
-  const cashTotal = cashMix.reduce((sum, item) => sum + item.value, 0);
-  const cashRunwayDays = monthlyOutflow > 0
-    ? Math.max(0, Math.round((currentBalance / monthlyOutflow) * 30))
-    : currentBalance > 0 ? 90 : 0;
-  const runwayWidth = Math.max(8, Math.min(100, cashRunwayDays));
-
-  const q = searchQuery.trim().toLowerCase();
   const filteredInventory = useMemo(() => {
-    if (!q) return effectiveInventory;
-    return effectiveInventory.filter((item) =>
-      [item.name, item.status, item.category, String(item.stockLevel)].join(' ').toLowerCase().includes(q)
+    if (!inventorySearch.trim()) return inventoryList;
+    const q = inventorySearch.toLowerCase();
+    return inventoryList.filter(i =>
+      i.name.toLowerCase().includes(q) ||
+      (i.category && i.category.toLowerCase().includes(q))
     );
-  }, [effectiveInventory, q]);
+  }, [inventoryList, inventorySearch]);
 
-  const filteredAlerts = useMemo(() => {
-    if (!q) return effectiveAlerts;
-    return effectiveAlerts.filter((alert) =>
-      [alert.text, alert.type].join(' ').toLowerCase().includes(q)
-    );
-  }, [effectiveAlerts, q]);
+  const totalInventoryValue = useMemo(() => {
+    return inventoryList.reduce((sum, item) => sum + (Number(item.unitPrice || 0) * Number(item.stockLevel || 0)), 0);
+  }, [inventoryList]);
+
+  const lowStockCount = useMemo(() => {
+    return inventoryList.filter(i => i.status === 'Low Stock' || i.status === 'Out of Stock').length;
+  }, [inventoryList]);
+
+  // Calculate totals
+  const currentMonth = monthlyData[monthlyData.length - 1] || { revenue: 0, expenses: 0, inflow: 0, outflow: 0 };
+  const previousMonth = monthlyData[monthlyData.length - 2] || { revenue: 0, expenses: 0, inflow: 0, outflow: 0 };
+  const revenueGrowth = previousMonth.revenue > 0 ? Math.round(((currentMonth.revenue - previousMonth.revenue) / previousMonth.revenue) * 100) : 0;
+  const netMonthlyProfit = currentMonth.revenue - currentMonth.expenses;
+  const netMargin = currentMonth.revenue > 0 ? Math.round((netMonthlyProfit / currentMonth.revenue) * 100) : 0;
+
+  const tabsConfig = [
+    { id: 'executive' as SmeDashboardTab, label: 'Executive Cockpit', icon: <Activity className="w-4 h-4" />, count: activeSme.healthScore, color: 'text-emerald-600' },
+    { id: 'cashflow' as SmeDashboardTab, label: 'Cashflow & Runway', icon: <TrendingUp className="w-4 h-4" />, count: monthlyData.length, color: 'text-blue-600' },
+    { id: 'inventory' as SmeDashboardTab, label: 'Stock & Catalog Health', icon: <Warehouse className="w-4 h-4" />, count: inventoryList.length, color: 'text-teal-600' },
+    { id: 'financing' as SmeDashboardTab, label: 'Financing Capacity', icon: <Briefcase className="w-4 h-4" />, count: opportunities.length, color: 'text-purple-600' },
+    { id: 'radar' as SmeDashboardTab, label: 'Risk Surveillance', icon: <AlertTriangle className="w-4 h-4" />, count: activeSme.riskAlerts?.length || 0, color: 'text-amber-600' }
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
-      {/* Header */}
-      <section className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="min-w-0">
-          <div className="mb-1 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-            <CalendarDays className="h-3.5 w-3.5 text-[#2998d6]" />
-            <span>{today}</span>
+    <div className="space-y-6 pb-12">
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER & QUICK RECORD ACTIONS */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-[#e2e8f0]">
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-xl sm:text-2xl font-normal text-[#1e293b] font-heading">
+              SME Financial Operations &amp; Intelligence
+            </h1>
+            <span className="px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Live Verified
+            </span>
           </div>
-          <h1 className="truncate text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">
-            {businessDisplayName}
-          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Operational cockpit for <span className="font-semibold text-slate-700">{activeSme.name}</span> ({activeSme.sector || 'Commercial Enterprise'}).
+          </p>
         </div>
 
-        <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center lg:w-auto">
-          <div className="relative w-full sm:min-w-[240px] sm:flex-1 lg:w-72 lg:flex-none">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input
-              type="search"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search…"
-              aria-label="Search dashboard"
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-[#2998d6] focus:outline-none focus:ring-4 focus:ring-[#2998d6]/10"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
-                aria-label="Clear search"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => navigate('/activities')}
-              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl bg-[#2998d6] px-3 text-sm font-semibold text-white shadow-xs transition hover:bg-[#1f85be] sm:flex-none sm:px-4 cursor-pointer"
-            >
-              <Plus className="h-4 w-4" />
-              <span className="whitespace-nowrap">Activity</span>
-            </button>
-            <button
-              onClick={() => navigate('/reports')}
-              className="inline-flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex-none sm:px-4"
-            >
-              <span className="whitespace-nowrap">Reports</span>
-              <ArrowRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {(scenarios.salesDrop || scenarios.expenseIncrease || scenarios.loanDelay) && (
-        <div className="flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3.5 sm:flex-row sm:items-center sm:justify-between sm:p-4">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-amber-900">
-              {scenarios.salesDrop && 'Sales -20% '}
-              {scenarios.expenseIncrease && 'Expenses +15% '}
-              {scenarios.loanDelay && 'Loan delay'}
-            </p>
-          </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
           <button
-            onClick={resetAll}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-white px-3 text-xs font-semibold text-amber-800 transition hover:bg-amber-50"
+            type="button"
+            onClick={() => navigate('/activities?tab=sales')}
+            className="accounting-btn-primary"
           >
-            <RefreshCw className="h-3.5 w-3.5" />
-            Reset
+            <ShoppingBag className="w-3.5 h-3.5" />
+            <span>New Sale</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/activities?tab=purchases')}
+            className="accounting-btn-secondary"
+          >
+            <Truck className="w-3.5 h-3.5" />
+            <span>Restock Intake</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/reports')}
+            className="accounting-btn-secondary hover:bg-slate-50"
+          >
+            <FileText className="w-3.5 h-3.5 text-[#2998d6]" />
+            <span>Reports</span>
           </button>
         </div>
-      )}
-
-      {/* KPI row */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm sm:col-span-2 xl:col-span-1">
-          <CardContent className="p-4 sm:p-5">
-            <div className="mb-3 flex items-start justify-between gap-2">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Business health</p>
-                <p className="mt-1 text-3xl font-bold tracking-tight text-slate-950">{healthScore}</p>
-              </div>
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${scoreBadgeClass(healthScore)}`}>
-                {healthScore >= 80 ? 'Stable' : healthScore >= 60 ? 'Caution' : 'High risk'}
-              </span>
-            </div>
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span>Trend</span>
-              <span className={`inline-flex items-center gap-1 font-bold ${healthTrend === 'up' ? 'text-emerald-600' : 'text-red-600'}`}>
-                {healthTrend === 'up' ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-                {healthTrendPercent}%
-              </span>
-            </div>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div
-                className="h-full rounded-full bg-[#2998d6]"
-                style={{ width: `${Math.min(100, Math.max(0, healthScore))}%` }}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <CardContent className="p-4 sm:p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Net cash (month)</p>
-            <p className="mt-2 truncate text-2xl font-bold tracking-tight text-slate-950">{formatRWF(netCashFlow)}</p>
-            <p className="mt-2 text-xs text-slate-500">Margin {profitMargin}%</p>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <CardContent className="p-4 sm:p-5">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Available cash</p>
-            <p className="mt-2 truncate text-2xl font-bold tracking-tight text-slate-950">{formatRWF(currentBalance)}</p>
-            <p className="mt-2 text-xs text-slate-500">Runway {cashRunwayDays} days</p>
-            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-slate-100">
-              <div className="h-full rounded-full bg-[#2998d6]" style={{ width: `${runwayWidth}%` }} />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <CardContent className="flex h-full flex-col justify-between p-4 sm:p-5">
-            <div className="flex items-start justify-between">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">Cash mix</p>
-              <div className="h-16 w-16 shrink-0">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={cashTotal > 0 ? cashMix : [{ name: 'Empty', value: 1, color: COLORS.line }]}
-                      dataKey="value"
-                      innerRadius={18}
-                      outerRadius={28}
-                      paddingAngle={3}
-                      stroke="none"
-                    >
-                      {(cashTotal > 0 ? cashMix : [{ name: 'Empty', value: 1, color: COLORS.line }]).map((entry) => (
-                        <Cell key={entry.name} fill={entry.color} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-            <div className="mt-3 space-y-1.5 text-xs">
-              <div className="flex justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 text-slate-500">
-                  <span className="h-2 w-2 rounded-full bg-[#2998d6]" /> Inflow
-                </span>
-                <span className="font-semibold text-slate-800">{formatRWF(monthlyInflow)}</span>
-              </div>
-              <div className="flex justify-between gap-2">
-                <span className="inline-flex items-center gap-1.5 text-slate-500">
-                  <span className="h-2 w-2 rounded-full bg-slate-400" /> Outflow
-                </span>
-                <span className="font-semibold text-slate-800">{formatRWF(monthlyOutflow)}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Chart + inventory */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm lg:col-span-2">
-          <CardContent className="p-4 sm:p-5">
-            <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 className="text-base font-bold text-slate-950">Financial pulse</h3>
-                {/* 3-Series Legend */}
-                <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs">
-                  <div className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
-                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COMPARISON_COLORS.series1 }} />
-                    <span>{chartView === 'performance' ? 'Revenue' : 'Cash Inflow'}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
-                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COMPARISON_COLORS.series2 }} />
-                    <span>{chartView === 'performance' ? 'Expenses' : 'Cash Outflow'}</span>
-                  </div>
-                  <div className="inline-flex items-center gap-1.5 font-semibold text-slate-700">
-                    <span className="h-2.5 w-2.5 rounded-sm" style={{ backgroundColor: COMPARISON_COLORS.series3 }} />
-                    <span>{chartView === 'performance' ? 'Net Profit' : 'Net Cash Flow'}</span>
-                  </div>
+      {/* ========================================================================= */}
+      {/* 2. MAIN FOLDER TABS BAR (Connected to Card Body) */}
+      {/* ========================================================================= */}
+      <div className="relative">
+        <div className="flex items-end overflow-x-auto scrollbar-none z-10 relative space-x-1 sm:space-x-1.5 -mb-[1px]">
+          {tabsConfig.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`group relative flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-[6px] text-xs sm:text-sm transition-all duration-150 cursor-pointer whitespace-nowrap select-none border-t border-x ${
+                  isActive
+                    ? 'bg-white text-slate-900 font-bold border-[#cbd5e1] border-b-white border-b-2 shadow-xs z-20 -mb-[1px] pt-3 sm:pt-3.5 pb-2.5 sm:pb-3 ring-0'
+                    : 'bg-[#f1f5f9] hover:bg-[#e4eaf2] text-[#475569] font-medium border-[#cbd5e1] border-b-[#cbd5e1] hover:text-[#0f172a]'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 left-0 right-0 h-[3px] bg-[#2998d6] rounded-t-[6px]" />
+                )}
+
+                <span className={`shrink-0 transition-transform group-hover:scale-110 ${isActive ? tab.color : 'text-slate-400 group-hover:text-slate-600'}`}>
+                  {tab.icon}
+                </span>
+
+                <span className="tracking-tight">{tab.label}</span>
+
+                <span
+                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold transition-colors ${
+                    isActive
+                      ? 'bg-[#2998d6] text-white shadow-xs'
+                      : 'bg-[#cbd5e1] text-[#334155] group-hover:bg-[#94a3b8] group-hover:text-white'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* MAIN WHITE CARD CONTAINER */}
+        <div className="accounting-card p-5 sm:p-7 relative z-0 border-[#cbd5e1] rounded-t-none space-y-6">
+          {/* Top 3 Solid Cyan Select Quick Navigation Dropdowns */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            <div>
+              <label className="accounting-label">Quick Journal Switcher</label>
+              <select
+                onChange={(e) => navigate(`/activities?tab=${e.target.value}`)}
+                className="accounting-select w-full"
+                defaultValue=""
+              >
+                <option value="" disabled>-- Jump to Business Activities Journal --</option>
+                <option value="sales">Sales Journal &amp; Invoices</option>
+                <option value="purchases">Purchases &amp; Supplier Intake</option>
+                <option value="cash_in">Cash In Journal (Capital/Loans)</option>
+                <option value="cash_out">Cash Out &amp; Operational Expenses</option>
+                <option value="other">Milestones &amp; General Activities</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="accounting-label">Financing Opportunities Engine</label>
+              <select
+                onChange={(e) => navigate(`/opportunities?category=${e.target.value}`)}
+                className="accounting-select w-full"
+                defaultValue=""
+              >
+                <option value="" disabled>-- Explore Matched Funding --</option>
+                <option value="Loan">Working Capital Commercial Loans</option>
+                <option value="Grant">Government &amp; NGO SME Grants</option>
+                <option value="Training">Financial Literacy &amp; Virtual Training</option>
+                <option value="Insurance">Business Asset &amp; Inventory Insurance</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="accounting-label">Underwriting Health Status</label>
+              <select
+                value="Active"
+                className="accounting-select w-full opacity-85 cursor-not-allowed"
+                disabled
+              >
+                <option value="Active">Continuous Bank Surveillance Active</option>
+              </select>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 3. EXECUTIVE FINANCIAL KPI METRIC CARDS */}
+          {/* ========================================================================= */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Monthly Turnover / Revenue</span>
+              <div className="mt-1 text-xl sm:text-2xl font-bold font-mono text-emerald-700">
+                {formatRWF(currentMonth.revenue)}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500 flex items-center gap-1">
+                <span className={`font-semibold ${revenueGrowth >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {revenueGrowth >= 0 ? `+${revenueGrowth}%` : `${revenueGrowth}%`}
+                </span>
+                <span>vs previous period</span>
+              </div>
+            </div>
+
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Operating Cash Reserves</span>
+              <div className="mt-1 text-xl sm:text-2xl font-bold font-mono text-[#2998d6]">
+                {formatRWF(activeSme.currentBalance)}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                Liquid cash across bank &amp; mobile drawers
+              </div>
+            </div>
+
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Financing Health Score</span>
+              <div className="mt-1 flex items-center gap-2">
+                <span className="text-xl sm:text-2xl font-bold font-mono text-slate-900">
+                  {activeSme.healthScore}/100
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  {activeSme.healthScore >= 80 ? 'Pre-Approved' : activeSme.healthScore >= 60 ? 'Standard' : 'Needs Review'}
+                </span>
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                Borrowing room: <strong className="text-emerald-700">{formatRWF(activeSme.borrowingCapacity)}</strong>
+              </div>
+            </div>
+
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Master Inventory Valuation</span>
+              <div className="mt-1 text-xl sm:text-2xl font-bold font-mono text-purple-700">
+                {formatRWF(totalInventoryValue)}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500 flex items-center gap-1">
+                <span>{inventoryList.length} catalog items</span>
+                {lowStockCount > 0 && (
+                  <span className="text-amber-600 font-semibold">· {lowStockCount} low stock</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 4. PERFORMANCE & CASHFLOW TRAJECTORY CHART */}
+          {/* ========================================================================= */}
+          <div className="accounting-card p-4 sm:p-5 border-[#cbd5e1]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-2 border-b border-[#e2e8f0]">
+              <div className="flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-[#2998d6]" />
+                <h3 className="text-sm font-bold text-slate-800">
+                  Monthly Financial Performance &amp; Cashflow Trajectory (FRW)
+                </h3>
+              </div>
+              <div className="flex items-center gap-3 text-xs">
+                <span className="flex items-center gap-1 text-emerald-700 font-semibold">
+                  <span className="w-2.5 h-2.5 bg-[#2998d6] rounded-xs" /> Revenue
+                </span>
+                <span className="flex items-center gap-1 text-slate-500 font-semibold">
+                  <span className="w-2.5 h-2.5 bg-slate-400 rounded-xs" /> Expenses
+                </span>
+                <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+                  <span className="w-2.5 h-2.5 bg-emerald-500 rounded-xs" /> Net Cashflow
+                </span>
+              </div>
+            </div>
+
+            <div className="h-64 sm:h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={monthlyData} barGap={4}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#64748b' }}
+                    axisLine={{ stroke: '#cbd5e1' }}
+                    tickLine={false}
+                    tickFormatter={(val) => `${(val / 1000000).toFixed(1)}M`}
+                  />
+                  <Tooltip
+                    formatter={(val: any) => formatRWF(Number(val))}
+                    contentStyle={{ borderRadius: 4, border: '1px solid #cbd5e1', fontSize: 12 }}
+                  />
+                  <Legend />
+                  <Bar dataKey="revenue" name="Operating Revenue" fill="#2998d6" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="expenses" name="Operating Expenses" fill="#94a3b8" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="inflow" name="Total Inflow" fill="#10b981" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 5. INVENTORY & RISK SURVEILLANCE SPLIT SECTION */}
+          {/* ========================================================================= */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Left 2 Cols: Master Inventory Catalog & Stock Status */}
+            <div className="lg:col-span-2 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="accounting-label font-bold text-slate-800 text-sm">
+                  Inventory Stock Level &amp; Reorder Tracker
+                </label>
+                <div className="relative w-full sm:w-56">
+                  <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="Search inventory items..."
+                    value={inventorySearch}
+                    onChange={(e) => setInventorySearch(e.target.value)}
+                    className="accounting-input w-full pl-8 text-xs"
+                  />
                 </div>
               </div>
 
-              <div className="flex w-full rounded-xl bg-slate-100 p-1 sm:w-auto">
-                <button
-                  onClick={() => setChartView('performance')}
-                  className={`h-8 flex-1 rounded-lg px-3 text-xs font-bold transition sm:flex-none ${
-                    chartView === 'performance' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  Performance
-                </button>
-                <button
-                  onClick={() => setChartView('cashflow')}
-                  className={`h-8 flex-1 rounded-lg px-3 text-xs font-bold transition sm:flex-none ${
-                    chartView === 'cashflow' ? 'bg-white text-slate-950 shadow-sm' : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  Cash flow
-                </button>
+              <div className="overflow-x-auto border border-[#cbd5e1] rounded-[4px] bg-white">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-[#f1f5f9] text-[#475569] font-bold border-b border-[#cbd5e1] text-[11px] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">Product Name</th>
+                      <th className="py-2.5 px-3">Category</th>
+                      <th className="py-2.5 px-3 text-center">Available Stock</th>
+                      <th className="py-2.5 px-3 text-right">Unit Price (FRW)</th>
+                      <th className="py-2.5 px-3 text-center">Stock Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#e2e8f0] bg-white">
+                    {filteredInventory.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                          No inventory items registered. Use the master catalog to create items.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredInventory.slice(0, 6).map((item) => (
+                        <tr key={item.id} className="hover:bg-slate-50/70">
+                          <td className="py-2.5 px-3 font-semibold text-slate-900">
+                            {item.name}
+                          </td>
+                          <td className="py-2.5 px-3 text-slate-500">
+                            {item.category || 'General'}
+                          </td>
+                          <td className="py-2.5 px-3 text-center font-mono font-bold text-slate-800">
+                            {item.stockLevel} {item.unit}
+                          </td>
+                          <td className="py-2.5 px-3 text-right font-mono text-slate-700">
+                            {formatRWF(item.unitPrice || 0)}
+                          </td>
+                          <td className="py-2.5 px-3 text-center">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                                item.status === 'In Stock'
+                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                  : item.status === 'Low Stock'
+                                  ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                  : 'bg-rose-50 text-rose-700 border-rose-200'
+                              }`}
+                            >
+                              {item.status || 'In Stock'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            <div className="h-[250px] w-full sm:h-[300px]">
-              {chartData.length === 0 ? (
-                <div className="flex h-full items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-sm text-slate-500">
-                  No data
-                </div>
-              ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 20, right: 6, left: 0, bottom: 0 }}
-                    barGap={1.5}
-                    barCategoryGap="18%"
-                  >
-                    <CartesianGrid strokeDasharray="0" vertical={false} stroke="#f1f5f9" />
-                    <XAxis
-                      dataKey="month"
-                      tick={{ fill: '#334155', fontSize: 12, fontWeight: 600 }}
-                      axisLine={{ stroke: '#e2e8f0' }}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      tick={{ fill: '#64748b', fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                      tickFormatter={(val: number) => formatCompactRWF(val)}
-                      width={52}
-                    />
-                    <Tooltip
-                      formatter={(value: number) => formatRWF(value)}
-                      contentStyle={{
-                        borderRadius: 12,
-                        border: `1px solid ${COLORS.line}`,
-                        boxShadow: '0 8px 24px rgba(15,23,42,0.08)'
-                      }}
-                    />
-                    <ReferenceLine y={0} stroke="#cbd5e1" />
-                    
-                    {/* Bar 1: Blue */}
-                    <Bar
-                      dataKey={chartView === 'performance' ? 'Revenue' : 'Inflow'}
-                      name={chartView === 'performance' ? 'Revenue' : 'Cash inflow'}
-                      fill={COMPARISON_COLORS.series1}
-                      radius={[2, 2, 0, 0]}
-                    >
-                      <LabelList
-                        dataKey={chartView === 'performance' ? 'Revenue' : 'Inflow'}
-                        content={renderBarTopLabel(COMPARISON_COLORS.series1)}
-                      />
-                    </Bar>
-
-                    {/* Bar 2: Khaki / Warm Gray */}
-                    <Bar
-                      dataKey={chartView === 'performance' ? 'Expenses' : 'Outflow'}
-                      name={chartView === 'performance' ? 'Expenses' : 'Cash outflow'}
-                      fill={COMPARISON_COLORS.series2}
-                      radius={[2, 2, 0, 0]}
-                    >
-                      <LabelList
-                        dataKey={chartView === 'performance' ? 'Expenses' : 'Outflow'}
-                        content={renderBarTopLabel(COMPARISON_COLORS.series2)}
-                      />
-                    </Bar>
-
-                    {/* Bar 3: Rust / Terracotta */}
-                    <Bar
-                      dataKey={chartView === 'performance' ? 'Profit' : 'NetCash'}
-                      name={chartView === 'performance' ? 'Net profit' : 'Net cash flow'}
-                      fill={COMPARISON_COLORS.series3}
-                      radius={[2, 2, 0, 0]}
-                    >
-                      <LabelList
-                        dataKey={chartView === 'performance' ? 'Profit' : 'NetCash'}
-                        content={renderBarTopLabel(COMPARISON_COLORS.series3)}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              )}
-            </div>
-
-            {/* Footnote matching the screenshot style */}
-            <div className="mt-2 text-[10px] text-slate-400">
-              * Values in FRW · Filter: 6-Month Trailing Operations
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <CardContent className="p-4 sm:p-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-950">Inventory</h3>
-              <Warehouse className="h-4 w-4 text-slate-400" />
-            </div>
-            <div className="max-h-[280px] space-y-2 overflow-y-auto pr-0.5 sm:max-h-[320px]">
-              {filteredInventory.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
-                  <Warehouse className="mx-auto h-7 w-7 text-slate-300" />
-                  <p className="mt-2 text-xs font-semibold text-slate-700">
-                    {q ? 'No results' : 'No inventory'}
-                  </p>
-                </div>
-              )}
-              {filteredInventory.map((item) => (
-                <div key={item.id} className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-slate-600 shadow-sm">
-                    <Package className="h-4 w-4" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-semibold text-slate-900">{item.name}</p>
-                    <p className="text-[11px] text-slate-500">{item.stockLevel} units · {item.daysRemaining}d</p>
-                  </div>
-                  <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                    item.status === 'Low Stock' || item.status === 'Out of Stock'
-                      ? 'bg-red-50 text-red-700'
-                      : item.status === 'Overstock'
-                      ? 'bg-amber-50 text-amber-700'
-                      : 'bg-emerald-50 text-emerald-700'
-                  }`}>
-                    {item.status}
+            {/* Right 1 Col: AI Advisory & Financial Risk Radar */}
+            <div className="lg:col-span-1 space-y-4">
+              <div className="accounting-card p-5 border-[#cbd5e1] space-y-4">
+                <div className="pb-3 border-b border-[#e2e8f0]">
+                  <span className="accounting-label uppercase tracking-wider text-slate-400 font-bold text-[10px]">
+                    AI Risk Surveillance Radar
                   </span>
+                  <h3 className="text-base font-bold text-slate-900 mt-0.5">
+                    Readiness &amp; Early Warnings
+                  </h3>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      {/* Alerts + credit */}
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm lg:col-span-2">
-          <CardContent className="p-4 sm:p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-xl bg-sky-50 p-2 text-[#2998d6]">
-                <BadgeAlert className="h-4 w-4" />
-              </div>
-              <h3 className="text-base font-bold text-slate-950">Risk alerts</h3>
-            </div>
-            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-              {filteredAlerts.length === 0 && (
-                <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-5 py-8 text-center md:col-span-2">
-                  <BadgeAlert className="mx-auto h-7 w-7 text-slate-300" />
-                  <p className="mt-2 text-sm font-semibold text-slate-700">
-                    {q ? 'No results' : 'No alerts'}
-                  </p>
+                <div className="space-y-2.5">
+                  {(activeSme.riskAlerts || []).length > 0 ? (
+                    activeSme.riskAlerts.slice(0, 3).map((alert, idx) => (
+                      <div
+                        key={alert.id || idx}
+                        className={`p-3 rounded-[4px] border text-xs leading-relaxed ${
+                          alert.type === 'danger'
+                            ? 'bg-rose-50/80 border-rose-200 text-rose-800'
+                            : alert.type === 'warning'
+                            ? 'bg-amber-50/80 border-amber-200 text-amber-800'
+                            : 'bg-sky-50/80 border-sky-200 text-sky-800'
+                        }`}
+                      >
+                        <div className="font-bold flex items-center gap-1.5 mb-1">
+                          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{alert.type === 'danger' ? 'High Risk Alert' : alert.type === 'warning' ? 'Attention Warning' : 'Operational Insight'}</span>
+                        </div>
+                        <p>{alert.text}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-[4px] text-xs text-emerald-800 font-medium flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>All business indicators and tax compliance metrics are healthy.</span>
+                    </div>
+                  )}
                 </div>
-              )}
-              {filteredAlerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  className={`flex gap-3 rounded-xl border p-3.5 ${
-                    alert.type === 'danger'
-                      ? 'border-red-100 bg-red-50 text-red-800'
-                      : alert.type === 'warning'
-                      ? 'border-amber-100 bg-amber-50 text-amber-800'
-                      : 'border-slate-100 bg-slate-50 text-slate-700'
-                  }`}
-                >
-                  {alert.type === 'danger' && <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-600" />}
-                  {alert.type === 'warning' && <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />}
-                  {alert.type === 'info' && <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#2998d6]" />}
-                  <p className="text-xs font-medium leading-relaxed">{alert.text}</p>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
 
-        <Card className="rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <CardContent className="space-y-4 p-4 sm:p-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-950">Credit snapshot</h3>
-              <Activity className="h-4 w-4 text-slate-400" />
-            </div>
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-              <p className="text-xs font-semibold text-slate-500">Borrowing capacity</p>
-              <p className="mt-1 text-xl font-bold text-slate-950">{formatRWF(baseCapacity)}</p>
-            </div>
-            <div className="space-y-2.5 text-sm">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Health score</span>
-                <span className="font-bold" style={{ color: scoreColor(healthScore) }}>{healthScore}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Loan status</span>
-                <span className="font-bold text-slate-900">{effectiveLoanDetails.status}</span>
-              </div>
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-slate-500">Outstanding</span>
-                <span className="truncate font-bold text-slate-900">{formatRWF(effectiveLoanDetails.outstandingAmount)}</span>
+                <div className="pt-2 border-t border-[#e2e8f0]">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/bot')}
+                    className="accounting-btn-primary w-full"
+                  >
+                    <Activity className="w-3.5 h-3.5" />
+                    <span>Ask Elevata Copilot Advisor</span>
+                  </button>
+                </div>
               </div>
             </div>
-            <button
-              onClick={() => navigate('/opportunity-hub')}
-              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#2998d6] hover:bg-[#1f85be] text-sm font-semibold text-white shadow-xs transition cursor-pointer"
-            >
-              <DollarSign className="h-4 w-4" />
-              Financing
-            </button>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

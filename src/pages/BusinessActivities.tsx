@@ -168,9 +168,14 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   // TAB 1: SALES STATE
   // ==========================================
   const [saleCustomer, setSaleCustomer] = useState('');
+  const [saleCustomerSegment, setSaleCustomerSegment] = useState('retail');
+  const [saleDeliveryLocation, setSaleDeliveryLocation] = useState('');
   const [saleContact, setSaleContact] = useState('');
   const [salePaymentMethod, setSalePaymentMethod] = useState('Cash');
   const [saleDate, setSaleDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [saleInvoiceRef, setSaleInvoiceRef] = useState('');
+  const [saleTin, setSaleTin] = useState('');
+  const [saleNotes, setSaleNotes] = useState('');
   const [saleItems, setSaleItems] = useState([
     { id: '1', productId: '', product: '', unit: 'pcs', price: 0, quantity: 1, availableStock: 0 }
   ]);
@@ -227,11 +232,21 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
 
     try {
       setIsSubmittingSale(true);
+      const metaParts = [
+        saleCustomerSegment ? `Segment: ${saleCustomerSegment}` : null,
+        saleDeliveryLocation ? `Location: ${saleDeliveryLocation}` : null,
+        saleTin ? `TIN: ${saleTin}` : null,
+        saleNotes.trim() || null
+      ].filter(Boolean).join(' | ');
+
       await recordSaleTransaction({
         customer: saleCustomer.trim(),
         customerContact: saleContact.trim() || undefined,
+        invoiceNumber: saleInvoiceRef.trim() || undefined,
         paymentStatus: 'Completed',
         paymentMethod: salePaymentMethod,
+        date: saleDate,
+        notes: metaParts || undefined,
         items: validItems.map(item => ({
           productId: item.productId || undefined,
           productName: item.product,
@@ -244,10 +259,15 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       showToast(`Sale of ${formatRWF(saleTotal)} to "${saleCustomer}" recorded successfully!`);
       sendDesktopNotification('Sale Recorded', `Sale of ${formatRWF(saleTotal)} to "${saleCustomer}" logged successfully.`);
 
-      // Reset
+      // Reset all sales form fields
       setSaleCustomer('');
+      setSaleCustomerSegment('retail');
+      setSaleDeliveryLocation('');
       setSaleContact('');
       setSalePaymentMethod('Cash');
+      setSaleInvoiceRef('');
+      setSaleTin('');
+      setSaleNotes('');
       setSaleItems([
         { id: '1', productId: '', product: '', unit: 'pcs', price: 0, quantity: 1, availableStock: 0 }
       ]);
@@ -262,9 +282,14 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   // TAB 2: PURCHASES / INTAKE STATE
   // ==========================================
   const [purchaseSupplier, setPurchaseSupplier] = useState('');
-  const [purchaseInvoiceRef, setPurchaseInvoiceRef] = useState('');
+  const [purchaseWarehouse, setPurchaseWarehouse] = useState('main');
   const [purchasePaymentMethod, setPurchasePaymentMethod] = useState('Cash');
+  const [purchaseInvoiceRef, setPurchaseInvoiceRef] = useState('');
   const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [purchaseSupplierTin, setPurchaseSupplierTin] = useState('');
+  const [purchaseSupplierContact, setPurchaseSupplierContact] = useState('');
+  const [purchaseReceivedBy, setPurchaseReceivedBy] = useState('');
+  const [purchaseNotes, setPurchaseNotes] = useState('');
   const [purchaseItems, setPurchaseItems] = useState([
     { id: '1', productId: '', name: '', unit: 'pcs', unitPrice: 0, quantity: 1 }
   ]);
@@ -320,21 +345,37 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
 
     try {
       setIsSubmittingPurchase(true);
+      const purchaseMeta = [
+        purchaseWarehouse ? `Warehouse: ${purchaseWarehouse}` : null,
+        purchaseSupplierTin ? `TIN: ${purchaseSupplierTin}` : null,
+        purchaseSupplierContact ? `Contact: ${purchaseSupplierContact}` : null,
+        purchaseReceivedBy ? `Received By: ${purchaseReceivedBy}` : null,
+        purchasePaymentMethod ? `Payment: ${purchasePaymentMethod}` : null,
+        purchaseNotes.trim() || null
+      ].filter(Boolean).join(' | ');
+
       await addPurchase(
         activeSme.id,
         purchaseSupplier.trim(),
         validItems,
         purchaseInvoiceRef.trim() || undefined,
-        purchasePaymentMethod
+        purchasePaymentMethod,
+        purchaseMeta,
+        purchaseDate
       );
 
       showToast(`Purchase of ${formatRWF(purchaseTotal)} from "${purchaseSupplier}" recorded & stock updated!`);
       sendDesktopNotification('Purchase Recorded', `Purchase of ${formatRWF(purchaseTotal)} from "${purchaseSupplier}" logged.`);
 
-      // Reset
+      // Reset all purchase form fields
       setPurchaseSupplier('');
+      setPurchaseWarehouse('main');
       setPurchaseInvoiceRef('');
       setPurchasePaymentMethod('Cash');
+      setPurchaseSupplierTin('');
+      setPurchaseSupplierContact('');
+      setPurchaseReceivedBy('');
+      setPurchaseNotes('');
       setPurchaseItems([
         { id: '1', productId: '', name: '', unit: 'pcs', unitPrice: 0, quantity: 1 }
       ]);
@@ -353,6 +394,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const [cashInReason, setCashInReason] = useState('Loan received');
   const [cashInPaymentMethod, setCashInPaymentMethod] = useState('Bank Transfer');
   const [cashInDate, setCashInDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [cashInBankRef, setCashInBankRef] = useState('');
+  const [cashInAccount, setCashInAccount] = useState('');
   const [cashInNotes, setCashInNotes] = useState('');
 
   const handleRecordCashIn = (e: React.FormEvent) => {
@@ -367,22 +410,30 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       return;
     }
 
+    const cashInMeta = [
+      cashInBankRef ? `Ref: ${cashInBankRef}` : null,
+      cashInAccount ? `Account: ${cashInAccount}` : null,
+      cashInNotes.trim() || null
+    ].filter(Boolean).join(' | ');
+
     addCashIn(activeSme.id, {
       amount: amt,
       source: cashInSource.trim(),
       reason: cashInReason,
       paymentMethod: cashInPaymentMethod,
       date: cashInDate,
-      notes: cashInNotes.trim() || undefined
+      notes: cashInMeta || undefined
     });
 
     showToast(`Cash Inflow of ${formatRWF(amt)} from ${cashInSource} logged successfully!`);
     sendDesktopNotification('Cash Inflow Logged', `Cash Inflow of ${formatRWF(amt)} from ${cashInSource} recorded.`);
 
-    // Reset
+    // Reset all cash in form fields
     setCashInAmount('');
     setCashInSource('');
     setCashInReason('Loan received');
+    setCashInBankRef('');
+    setCashInAccount('');
     setCashInNotes('');
   };
 
@@ -397,6 +448,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const [cashOutDescription, setCashOutDescription] = useState('');
   const [cashOutPaymentMethod, setCashOutPaymentMethod] = useState('Cash');
   const [cashOutDate, setCashOutDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [cashOutVoucherRef, setCashOutVoucherRef] = useState('');
+  const [cashOutApproval, setCashOutApproval] = useState('');
   const [cashOutNotes, setCashOutNotes] = useState('');
 
   // Batch Lines Form (Multi-Expense / Multi-Cashout)
@@ -440,21 +493,29 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       return;
     }
 
+    const cashOutMeta = [
+      cashOutVoucherRef ? `Voucher: ${cashOutVoucherRef}` : null,
+      cashOutApproval ? `Approved by: ${cashOutApproval}` : null,
+      cashOutNotes.trim() || null
+    ].filter(Boolean).join(' | ');
+
     addCashOut(activeSme.id, {
       amount: amt,
       category: cashOutCategory,
       description: cashOutDescription.trim(),
       paymentMethod: cashOutPaymentMethod,
       date: cashOutDate,
-      notes: cashOutNotes.trim() || undefined
+      notes: cashOutMeta || undefined
     });
 
     showToast(`Cash Outflow / Expense of ${formatRWF(amt)} for "${cashOutDescription}" recorded!`);
     sendDesktopNotification('Expense Voucher Recorded', `Expense of ${formatRWF(amt)} for "${cashOutDescription}" logged.`);
 
-    // Reset
+    // Reset all single cash out form fields
     setCashOutAmount('');
     setCashOutDescription('');
+    setCashOutVoucherRef('');
+    setCashOutApproval('');
     setCashOutNotes('');
   };
 
@@ -489,13 +550,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   // TAB 5: OTHER ACTIVITIES STATE
   // ==========================================
   const [otherTitle, setOtherTitle] = useState('');
-  const [otherDescription, setOtherDescription] = useState('');
-  const [otherDate, setOtherDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [otherCategory, setOtherCategory] = useState('Milestone');
   const [otherStatus, setOtherStatus] = useState<'Planned' | 'In Progress' | 'Completed' | 'On Hold'>('Completed');
+  const [otherDate, setOtherDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [otherMoneyInvolved, setOtherMoneyInvolved] = useState(false);
   const [otherAmount, setOtherAmount] = useState('');
   const [otherPaymentStatus, setOtherPaymentStatus] = useState<'Completed' | 'Pending' | 'Partial' | 'N/A'>('Completed');
-  const [otherCategory, setOtherCategory] = useState('Milestone');
+  const [otherDescription, setOtherDescription] = useState('');
 
   const handleRecordOtherActivity = (e: React.FormEvent) => {
     e.preventDefault();
@@ -504,29 +565,32 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       return;
     }
 
-    const amt = otherMoneyInvolved && Number(otherAmount) ? Number(otherAmount) : undefined;
+    const amt = Number(otherAmount) || 0;
 
     addOtherActivity(activeSme.id, {
       title: otherTitle.trim(),
       description: otherDescription.trim() || undefined,
       date: otherDate,
       status: otherStatus,
-      moneyInvolved: otherMoneyInvolved,
-      amount: amt,
-      paymentStatus: otherMoneyInvolved ? otherPaymentStatus : 'N/A',
-      category: otherCategory
+      moneyInvolved: amt > 0,
+      amount: amt > 0 ? amt : undefined,
+      paymentStatus: amt > 0 ? otherPaymentStatus : 'N/A',
+      category: otherCategory.trim() || 'Milestone'
     });
 
     showToast(`Business Activity "${otherTitle}" recorded successfully!`);
     sendDesktopNotification('Activity Logged', `Milestone / Activity "${otherTitle}" logged.`);
 
-    // Reset
+    // Reset all other activities fields
     setOtherTitle('');
+    setOtherCategory('Milestone');
     setOtherDescription('');
     setOtherMoneyInvolved(false);
     setOtherAmount('');
     setOtherStatus('Completed');
+    setOtherPaymentStatus('Completed');
   };
+
 
   // ==========================================
   // UNIFIED ACTIVITIES LEDGER & FILTERING
@@ -542,6 +606,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     typeLabel: 'Sale',
     title: s.product || 'Sale Transaction',
     party: s.customer,
+    contact: s.customerContact,
+    reference: s.invoiceNumber,
+    memo: s.notes,
+    paymentMethod: s.paymentMethod,
     category: s.status || 'Completed',
     date: s.date,
     amount: s.total,
@@ -557,6 +625,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     typeLabel: 'Purchase / Restock',
     title: p.items && p.items.length > 0 ? `${p.items[0].productName}${p.items.length > 1 ? ` (+${p.items.length - 1} more)` : ''}` : 'Stock Purchase',
     party: p.supplier,
+    contact: undefined as string | undefined,
+    reference: p.invoiceRef,
+    memo: p.notes,
+    paymentMethod: p.paymentMethod,
     category: p.invoiceRef ? `Invoice: ${p.invoiceRef}` : 'Supplier Restock',
     date: p.date,
     amount: p.totalAmount,
@@ -573,6 +645,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     typeLabel: 'Cash Out / Expense',
     title: e.description,
     party: e.category,
+    contact: undefined as string | undefined,
+    reference: undefined as string | undefined,
+    memo: undefined as string | undefined,
+    paymentMethod: undefined as string | undefined,
     category: e.category,
     date: e.date,
     amount: e.amount,
@@ -588,6 +664,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     typeLabel: 'Cash Outflow',
     title: c.description,
     party: c.category,
+    contact: undefined as string | undefined,
+    reference: undefined as string | undefined,
+    memo: c.notes,
+    paymentMethod: c.paymentMethod,
     category: c.paymentMethod,
     date: c.date,
     amount: c.amount,
@@ -605,6 +685,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     typeLabel: 'Cash Inflow',
     title: c.reason,
     party: c.source,
+    contact: undefined as string | undefined,
+    reference: undefined as string | undefined,
+    memo: c.notes,
+    paymentMethod: c.paymentMethod,
     category: c.category || c.paymentMethod,
     date: c.date,
     amount: c.amount,
@@ -620,6 +704,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     typeLabel: 'Milestone / Event',
     title: a.title,
     party: a.category || 'Milestone',
+    contact: undefined as string | undefined,
+    reference: undefined as string | undefined,
+    memo: a.description,
+    paymentMethod: undefined as string | undefined,
     category: a.description || a.status || 'General Activity',
     date: a.date,
     amount: a.amount || 0,
@@ -835,7 +923,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
             </div>
 
             <div>
-              <label className="accounting-label">Settlement Channel</label>
+              <label className="accounting-label">Payment Method</label>
               <select
                 value={
                   activeTab === 'sales'
@@ -855,10 +943,10 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 }}
                 className="accounting-select w-full"
               >
-                <option value="Cash">Cash (Immediate Settlement)</option>
+                <option value="Cash">Cash (Immediate Payment)</option>
                 <option value="Mobile Money">Mobile Money (MTN / Airtel MoMo)</option>
                 <option value="Bank Transfer">Bank Wire Transfer</option>
-                <option value="Credit / Receivable">Trade Credit (Accounts Receivable)</option>
+                <option value="Credit / Receivable">Trade Credit (Receivable / Payable)</option>
                 <option value="Cheque">Bank Cheque</option>
               </select>
             </div>
@@ -901,7 +989,11 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 </div>
                 <div>
                   <label className="accounting-label">Customer Segment / Type</label>
-                  <select className="accounting-select w-full">
+                  <select
+                    value={saleCustomerSegment}
+                    onChange={(e) => setSaleCustomerSegment(e.target.value)}
+                    className="accounting-select w-full"
+                  >
                     <option value="retail">Direct Retail Buyer</option>
                     <option value="wholesale">Wholesale Distributor</option>
                     <option value="institution">Institutional / Corporate</option>
@@ -911,6 +1003,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Delivery Location / City (Optional)</label>
                   <input
                     type="text"
+                    value={saleDeliveryLocation}
+                    onChange={(e) => setSaleDeliveryLocation(e.target.value)}
                     placeholder="e.g. Kigali Central or Musanze"
                     className="accounting-input w-full"
                   />
@@ -941,14 +1035,6 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                     className="accounting-input w-full"
                   />
                 </div>
-                <div>
-                  <label className="accounting-label">Payment Method</label>
-                  <select className="accounting-select w-full" defaultValue="Cash">
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank</option>
-                    <option value="Mobile money">Mobile money</option>
-                  </select>
-                </div>
               </div>
 
               {/* Column 3 */}
@@ -957,6 +1043,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Invoice / Receipt Reference</label>
                   <input
                     type="text"
+                    value={saleInvoiceRef}
+                    onChange={(e) => setSaleInvoiceRef(e.target.value)}
                     placeholder="e.g. INV-2026-081"
                     className="accounting-input w-full"
                   />
@@ -965,6 +1053,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Tax ID / TIN (Optional)</label>
                   <input
                     type="text"
+                    value={saleTin}
+                    onChange={(e) => setSaleTin(e.target.value)}
                     placeholder="e.g. 100-294-882"
                     className="accounting-input w-full"
                   />
@@ -1092,6 +1182,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               <label className="accounting-label">Description / Transaction Memo</label>
               <textarea
                 rows={2}
+                value={saleNotes}
+                onChange={(e) => setSaleNotes(e.target.value)}
                 placeholder="Add audit notes, payment terms, or delivery voucher details..."
                 className="accounting-textarea w-full"
               />
@@ -1100,7 +1192,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
             {/* Bottom Total & Actions Bar */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-[#e2e8f0] gap-3">
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 uppercase font-semibold">Total Sale Settlement:</span>
+                <span className="text-xs text-slate-500 uppercase font-semibold">Total Sale Amount:</span>
                 <span className="text-lg font-bold font-mono text-emerald-700">{formatRWF(saleTotal)}</span>
               </div>
 
@@ -1117,7 +1209,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   type="button"
                   onClick={() => {
                     setSaleCustomer('');
+                    setSaleCustomerSegment('retail');
+                    setSaleDeliveryLocation('');
                     setSaleContact('');
+                    setSalePaymentMethod('Cash');
+                    setSaleInvoiceRef('');
+                    setSaleTin('');
+                    setSaleNotes('');
                     setSaleItems([{ id: '1', productId: '', product: '', unit: 'pcs', price: 0, quantity: 1, availableStock: 0 }]);
                   }}
                   className="accounting-btn-secondary"
@@ -1153,18 +1251,14 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 </div>
                 <div>
                   <label className="accounting-label">Inventory Warehouse / Hub</label>
-                  <select className="accounting-select w-full">
+                  <select
+                    value={purchaseWarehouse}
+                    onChange={(e) => setPurchaseWarehouse(e.target.value)}
+                    className="accounting-select w-full"
+                  >
                     <option value="main">Main Enterprise Warehouse</option>
                     <option value="transit">Goods in Transit</option>
                     <option value="store">Retail Storefront</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="accounting-label">Payment Method</label>
-                  <select className="accounting-select w-full" defaultValue="Cash">
-                    <option value="Cash">Cash</option>
-                    <option value="Bank">Bank</option>
-                    <option value="Mobile money">Mobile money</option>
                   </select>
                 </div>
               </div>
@@ -1210,6 +1304,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Supplier TIN / Tax Number</label>
                   <input
                     type="text"
+                    value={purchaseSupplierTin}
+                    onChange={(e) => setPurchaseSupplierTin(e.target.value)}
                     placeholder="e.g. 102-394-118"
                     className="accounting-input w-full"
                   />
@@ -1218,6 +1314,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Supplier Contact Number</label>
                   <input
                     type="text"
+                    value={purchaseSupplierContact}
+                    onChange={(e) => setPurchaseSupplierContact(e.target.value)}
                     placeholder="+250 788 000 000"
                     className="accounting-input w-full"
                   />
@@ -1226,6 +1324,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Received By / Inspector</label>
                   <input
                     type="text"
+                    value={purchaseReceivedBy}
+                    onChange={(e) => setPurchaseReceivedBy(e.target.value)}
                     placeholder={activeSme.ownerName || 'Procurement Officer'}
                     className="accounting-input w-full"
                   />
@@ -1353,6 +1453,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               <label className="accounting-label">Description / Intake Goods Memo</label>
               <textarea
                 rows={2}
+                value={purchaseNotes}
+                onChange={(e) => setPurchaseNotes(e.target.value)}
                 placeholder="Log supplier delivery consignment number, warehouse shelf, or batch expiration date..."
                 className="accounting-textarea w-full"
               />
@@ -1378,7 +1480,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   type="button"
                   onClick={() => {
                     setPurchaseSupplier('');
+                    setPurchaseWarehouse('main');
                     setPurchaseInvoiceRef('');
+                    setPurchasePaymentMethod('Cash');
+                    setPurchaseSupplierTin('');
+                    setPurchaseSupplierContact('');
+                    setPurchaseReceivedBy('');
+                    setPurchaseNotes('');
                     setPurchaseItems([{ id: '1', productId: '', name: '', unit: 'pcs', unitPrice: 0, quantity: 1 }]);
                   }}
                   className="accounting-btn-secondary"
@@ -1441,7 +1549,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                     <option value="Owner capital injection">Owner Equity / Capital Injection</option>
                     <option value="Grant received">Donor / Government Grant Award</option>
                     <option value="Customer advance">Customer Advance / Retainer</option>
-                    <option value="Receivable collected">Accounts Receivable Settlement</option>
+                    <option value="Receivable collected">Accounts Receivable Collection</option>
                     <option value="Asset disposal">Disposal of Fixed Assets</option>
                     <option value="Other inflow">Other Direct Cash Inflow</option>
                   </select>
@@ -1466,8 +1574,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Bank Reference / Deposit Slip</label>
                   <input
                     type="text"
-                    value={cashInNotes}
-                    onChange={(e) => setCashInNotes(e.target.value)}
+                    value={cashInBankRef}
+                    onChange={(e) => setCashInBankRef(e.target.value)}
                     placeholder="e.g. TXN-8942-019"
                     className="accounting-input w-full"
                   />
@@ -1476,6 +1584,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   <label className="accounting-label">Receiving Account / Drawer</label>
                   <input
                     type="text"
+                    value={cashInAccount}
+                    onChange={(e) => setCashInAccount(e.target.value)}
                     placeholder="BK Corporate / Main Cash Box"
                     className="accounting-input w-full"
                   />
@@ -1514,6 +1624,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   onClick={() => {
                     setCashInAmount('');
                     setCashInSource('');
+                    setCashInReason('Loan received');
+                    setCashInBankRef('');
+                    setCashInAccount('');
                     setCashInNotes('');
                   }}
                   className="accounting-btn-secondary"
@@ -1614,7 +1727,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                         </optgroup>
                         <optgroup label="Financial Outflows">
                           <option value="Loan Repayment">Bank Loan / Credit Repayment</option>
-                          <option value="Supplier Settlement">Accounts Payable / Supplier Settlement</option>
+                          <option value="Supplier Settlement">Accounts Payable / Supplier Payment</option>
                           <option value="Owner Drawing">Owner Drawing / Dividend Cashout</option>
                           <option value="Asset Purchase">Machinery / Fixed Asset Purchase</option>
                         </optgroup>
@@ -1640,8 +1753,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                       <label className="accounting-label">Voucher / Receipt Reference</label>
                       <input
                         type="text"
-                        value={cashOutNotes}
-                        onChange={(e) => setCashOutNotes(e.target.value)}
+                        value={cashOutVoucherRef}
+                        onChange={(e) => setCashOutVoucherRef(e.target.value)}
                         placeholder="e.g. Receipt #84092"
                         className="accounting-input w-full"
                       />
@@ -1650,6 +1763,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                       <label className="accounting-label">Approval Authority</label>
                       <input
                         type="text"
+                        value={cashOutApproval}
+                        onChange={(e) => setCashOutApproval(e.target.value)}
                         placeholder={activeSme.ownerName || 'Finance Manager'}
                         className="accounting-input w-full"
                       />
@@ -1688,6 +1803,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                       onClick={() => {
                         setCashOutAmount('');
                         setCashOutDescription('');
+                        setCashOutVoucherRef('');
+                        setCashOutApproval('');
                         setCashOutNotes('');
                       }}
                       className="accounting-btn-secondary"
@@ -1699,6 +1816,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 </div>
               </form>
             ) : (
+
               /* Batch Invoices Mode */
               <form onSubmit={handleRecordBatchCashOut} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1723,7 +1841,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                         <th className="py-2 px-3 w-10 text-center">#</th>
                         <th className="py-2 px-3 min-w-[200px]">Expense Description</th>
                         <th className="py-2 px-3 w-56">Category</th>
-                        <th className="py-2 px-3 w-40">Payment Channel</th>
+                        <th className="py-2 px-3 w-40">Payment Method</th>
                         <th className="py-2 px-3 w-40 text-right">Amount (FRW)</th>
                         <th className="py-2 px-3 w-14 text-center">Action</th>
                       </tr>
@@ -1901,7 +2019,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   />
                 </div>
                 <div>
-                  <label className="accounting-label">Payment / Settlement Status</label>
+                  <label className="accounting-label">Payment Status</label>
                   <select
                     value={otherPaymentStatus}
                     onChange={(e) => setOtherPaymentStatus(e.target.value as any)}
@@ -1909,7 +2027,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   >
                     <option value="Completed">Fully Paid / Cleared</option>
                     <option value="Pending">Pending Payment</option>
-                    <option value="Partial">Partial Settlement</option>
+                    <option value="Partial">Partial Payment</option>
                     <option value="N/A">Not Applicable</option>
                   </select>
                 </div>
@@ -2011,7 +2129,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 <th className="py-3 px-4">Activity Type</th>
                 <th className="py-3 px-4">Title / Description</th>
                 <th className="py-3 px-4">Entity / Counterparty</th>
-                <th className="py-3 px-4">Category / Channel</th>
+                <th className="py-3 px-4">Category / Payment Method</th>
                 <th className="py-3 px-4 text-right">Amount (FRW)</th>
                 <th className="py-3 px-4 text-center">Status</th>
                 <th className="py-3 px-4 text-center w-14">Action</th>
@@ -2053,14 +2171,28 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                           {act.typeLabel}
                         </span>
                       </td>
-                      <td className="py-3 px-4 font-semibold text-slate-900">
-                        {act.title}
+                      <td className="py-3 px-4">
+                        <div className="font-semibold text-slate-900">{act.title}</div>
+                        {act.memo && (
+                          <div className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 font-normal">
+                            {act.memo}
+                          </div>
+                        )}
                       </td>
-                      <td className="py-3 px-4 text-slate-600 font-medium">
-                        {act.party || '—'}
+                      <td className="py-3 px-4">
+                        <div className="text-slate-700 font-medium">{act.party || '—'}</div>
+                        {act.contact && (
+                          <div className="text-[10px] text-slate-400 font-mono">{act.contact}</div>
+                        )}
+                        {act.reference && (
+                          <div className="text-[10px] text-slate-400 font-mono">Ref: {act.reference}</div>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-slate-500 text-[11px]">
-                        {act.category}
+                        <div>{act.category}</div>
+                        {act.paymentMethod && act.paymentMethod !== act.category && (
+                          <div className="text-[10px] text-slate-400 font-medium">{act.paymentMethod}</div>
+                        )}
                       </td>
                       <td className="py-3 px-4 text-right font-mono font-bold whitespace-nowrap">
                         {act.amount > 0 ? (

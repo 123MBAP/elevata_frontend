@@ -186,7 +186,7 @@ interface AppContextType {
   deleteInventoryItem: (smeId: string, itemId: string) => void;
   addExpense: (smeId: string, description: string, category: string, amount: number) => void;
   deleteExpense: (smeId: string, expenseId: string | number) => void;
-  addPurchase: (smeId: string, supplier: string, items: any[], invoiceRef?: string, paymentMethod?: string, notes?: string) => Promise<any>;
+  addPurchase: (smeId: string, supplier: string, items: any[], invoiceRef?: string, paymentMethod?: string, notes?: string, date?: string) => Promise<any>;
   deletePurchase: (smeId: string, purchaseId: string | number) => void;
   addCashIn: (smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string }) => void;
   deleteCashIn: (smeId: string, id: string | number) => void;
@@ -210,13 +210,14 @@ interface AppContextType {
   }) => Promise<ProductItem>;
   updateProduct: (id: string, data: Partial<ProductItem>) => Promise<ProductItem>;
   deleteProduct: (id: string) => Promise<void>;
-  recordStockIntake: (supplier: string, items: any[], notes?: string) => Promise<any>;
+  recordStockIntake: (supplier: string, items: any[], notes?: string, date?: string) => Promise<any>;
   recordSaleTransaction: (payload: {
     customer: string;
     customerContact?: string;
     invoiceNumber?: string;
     paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'Cancelled';
     paymentMethod?: string;
+    date?: string;
     notes?: string;
     items: {
       productId?: string;
@@ -441,12 +442,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       sales: Array.isArray(raw.sales) ? raw.sales.map((sale: any) => ({
         id: sale.id,
         customer: sale.customer,
+        customerContact: sale.customerContact,
+        invoiceNumber: sale.invoiceNumber,
+        paymentMethod: sale.paymentMethod || 'Cash',
+        notes: sale.notes,
         product: sale.product || sale.items?.[0]?.productName || 'Sale',
         unit: sale.unit || sale.items?.[0]?.unit || 'pcs',
         quantity: sale.quantity ?? sale.items?.reduce((sum: number, item: any) => sum + Number(item.quantity || 0), 0) ?? 0,
         price: sale.price ?? sale.items?.[0]?.unitPrice ?? sale.totalAmount ?? 0,
         total: sale.total ?? sale.totalAmount ?? 0,
-        date: sale.date || sale.createdAt,
+        date: sale.date ? sale.date : (sale.createdAt ? new Date(sale.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US')),
         status: sale.status || sale.paymentStatus || 'Completed',
         items: sale.items || []
       })) : [],
@@ -455,44 +460,47 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         description: entry.description,
         category: entry.category || 'Expense',
         amount: entry.amount,
-        date: entry.occurredAt || entry.date
+        date: entry.occurredAt ? new Date(entry.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (entry.date || new Date().toLocaleDateString('en-US'))
       })) : [],
       purchases: Array.isArray(raw.purchases) ? raw.purchases.map((entry: any) => ({
         id: entry.id,
         supplier: entry.supplier || 'Supplier',
-        invoiceRef: entry.invoiceNumber,
+        invoiceRef: entry.invoiceNumber || entry.invoiceRef,
         totalAmount: entry.totalAmount || 0,
-        date: entry.createdAt || entry.date,
+        date: entry.date ? entry.date : (entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US')),
         status: entry.status || 'Completed',
         items: entry.items || [],
-        notes: entry.notes
+        notes: entry.notes || entry.metadata?.notes
       })) : [],
       cashIns: Array.isArray(raw.cashIns) ? raw.cashIns.map((entry: any) => ({
         id: entry.id,
         amount: entry.amount,
         source: entry.counterparty || 'Business income',
         reason: entry.description,
-        category: entry.category,
-        paymentMethod: entry.paymentMethod || '',
-        date: entry.occurredAt
+        category: entry.category || 'Other Inflow',
+        paymentMethod: entry.paymentMethod || 'Bank Transfer',
+        date: entry.occurredAt ? new Date(entry.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (entry.date || new Date().toLocaleDateString('en-US')),
+        notes: entry.metadata?.notes || entry.notes
       })) : [],
       cashOuts: Array.isArray(raw.cashOuts) ? raw.cashOuts.map((entry: any) => ({
         id: entry.id,
         amount: entry.amount,
         category: entry.category || 'Expense',
         description: entry.description,
-        paymentMethod: entry.paymentMethod || '',
-        date: entry.occurredAt
+        paymentMethod: entry.paymentMethod || 'Cash',
+        date: entry.occurredAt ? new Date(entry.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (entry.date || new Date().toLocaleDateString('en-US')),
+        notes: entry.metadata?.notes || entry.notes
       })) : [],
       otherActivities: Array.isArray(raw.otherActivities) ? raw.otherActivities.map((entry: any) => ({
         id: entry.id,
         title: entry.description,
-        description: entry.metadata?.description,
-        date: entry.occurredAt,
-        status: entry.status,
-        moneyInvolved: entry.amount > 0,
-        amount: entry.amount,
-        category: entry.category
+        description: entry.metadata?.description || entry.description,
+        date: entry.occurredAt ? new Date(entry.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (entry.date || new Date().toLocaleDateString('en-US')),
+        status: entry.status || 'Completed',
+        moneyInvolved: entry.metadata?.moneyInvolved ?? (entry.amount > 0),
+        amount: entry.amount || 0,
+        paymentStatus: entry.metadata?.paymentStatus || (entry.amount > 0 ? 'Completed' : 'N/A'),
+        category: entry.category || 'Milestone'
       })) : []
     };
   }, []);
@@ -809,15 +817,16 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
-  const recordStockIntake = async (supplier: string, items: any[], notes?: string): Promise<any> => {
+  const recordStockIntake = async (supplier: string, items: any[], notes?: string, date?: string): Promise<any> => {
     const res = await apiRequest('/inventory/stock-intake', {
       method: 'POST',
-      body: JSON.stringify({ supplier, items, notes })
+      body: JSON.stringify({ supplier, items, notes, date })
     });
     if (!res?.success || !res.data?.intake) {
       throw new Error('Stock intake did not return a persisted record.');
     }
     await refreshProducts();
+    await refreshBusinessData();
     return res;
   };
 
@@ -827,6 +836,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     invoiceNumber?: string;
     paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'Cancelled';
     paymentMethod?: string;
+    date?: string;
     notes?: string;
     items: {
       productId?: string;
@@ -836,7 +846,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       unitPrice: number;
     }[];
   }): Promise<any> => {
-    const totalAmount = payload.items.reduce((sum, item) => sum + (Number(item.quantity) * Number(item.unitPrice)), 0);
     const res = await apiRequest('/sales', {
       method: 'POST',
       body: JSON.stringify(payload)
@@ -845,129 +854,33 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       throw new Error('Sale recording did not return a persisted sale.');
     }
     const s = res.data.sale;
-    const createdSaleRecord: Sale = {
-      id: s.id,
-      customer: s.customer,
-      product: s.items && s.items.length > 0 ? s.items[0].productName + (s.items.length > 1 ? ` (+${s.items.length - 1} items)` : '') : 'Sale',
-      unit: s.items && s.items.length > 0 ? s.items[0].unit : 'pcs',
-      quantity: s.items ? s.items.reduce((sum: number, it: any) => sum + it.quantity, 0) : 1,
-      price: s.items && s.items.length > 0 ? s.items[0].unitPrice : s.totalAmount,
-      total: s.totalAmount,
-      date: new Date(s.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: s.paymentStatus || 'Completed',
-      items: s.items || []
-    };
     await refreshProducts();
-
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === selectedSmeId) {
-        const updatedAlerts = [
-          {
-            id: `alert-sale-${Date.now()}`,
-            type: 'info' as const,
-            text: `Sale recorded: Invoice for ${payload.customer} (${formatRWF(totalAmount)}). Reserves credited.`
-          },
-          ...sme.riskAlerts
-        ];
-
-        return {
-          ...sme,
-          currentBalance: sme.currentBalance + totalAmount,
-          sales: [createdSaleRecord, ...sme.sales],
-          riskAlerts: updatedAlerts
-        };
-      }
-      return sme;
-    }));
-
-    return createdSaleRecord;
+    await refreshBusinessData();
+    return s;
   };
 
-  const addExpense = async (smeId: string, description: string, category: string, amount: number) => {
+  const addExpense = async (_smeId: string, description: string, category: string, amount: number) => {
     await apiRequest('/business/ledger', {
       method: 'POST',
       body: JSON.stringify({ kind: 'EXPENSE', description, category, amount })
     });
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const newExpense: Expense = {
-          id: Date.now(),
-          description,
-          category,
-          amount,
-          date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
-        };
-
-        const updatedAlerts = [
-          {
-            id: `alert-exp-add-${Date.now()}`,
-            type: 'info' as const,
-            text: `Expense recorded: ${description} (${category}). Cash reserves debited by ${formatRWF(amount)}.`
-          },
-          ...sme.riskAlerts
-        ];
-
-        const updatedMonthlyData = [...sme.monthlyData];
-        if (updatedMonthlyData.length > 0) {
-          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
-          updatedMonthlyData[updatedMonthlyData.length - 1] = {
-            ...currentMonth,
-            expenses: currentMonth.expenses + amount,
-            outflow: currentMonth.outflow + amount
-          };
-        }
-
-        return {
-          ...sme,
-          currentBalance: Math.max(0, sme.currentBalance - amount),
-          riskAlerts: updatedAlerts,
-          monthlyData: updatedMonthlyData,
-          expenses: [newExpense, ...(sme.expenses || [])]
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
-  const deleteExpense = async (smeId: string, expenseId: string | number) => {
+  const deleteExpense = async (_smeId: string, expenseId: string | number) => {
     await apiRequest(`/business/ledger/${expenseId}`, { method: 'DELETE' });
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const expenseToDelete = (sme.expenses || []).find(e => e.id === expenseId);
-        if (!expenseToDelete) return sme;
-
-        const updatedAlerts = [
-          {
-            id: `alert-exp-del-${Date.now()}`,
-            type: 'warning' as const,
-            text: `Expense reversed: ${expenseToDelete.description}. Cash reserves credited by ${formatRWF(expenseToDelete.amount)}.`
-          },
-          ...sme.riskAlerts
-        ];
-
-        const updatedMonthlyData = [...sme.monthlyData];
-        if (updatedMonthlyData.length > 0) {
-          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
-          updatedMonthlyData[updatedMonthlyData.length - 1] = {
-            ...currentMonth,
-            expenses: Math.max(0, currentMonth.expenses - expenseToDelete.amount),
-            outflow: Math.max(0, currentMonth.outflow - expenseToDelete.amount)
-          };
-        }
-
-        return {
-          ...sme,
-          currentBalance: sme.currentBalance + expenseToDelete.amount,
-          riskAlerts: updatedAlerts,
-          monthlyData: updatedMonthlyData,
-          expenses: (sme.expenses || []).filter(e => e.id !== expenseId)
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
-  const addPurchase = async (_smeId: string, supplier: string, items: any[], invoiceRef?: string, _paymentMethod: string = 'Cash', notes?: string) => {
+  const addPurchase = async (
+    _smeId: string,
+    supplier: string,
+    items: any[],
+    invoiceRef?: string,
+    paymentMethod: string = 'Cash',
+    notes?: string,
+    date?: string
+  ) => {
     const res = await recordStockIntake(
       supplier,
       items.map(it => ({
@@ -977,236 +890,81 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         quantity: Number(it.quantity || 0),
         unitPrice: Number(it.unitPrice || 0)
       })),
-      invoiceRef ? `Invoice: ${invoiceRef}` : notes
+      notes || (invoiceRef ? `Invoice: ${invoiceRef} | Payment: ${paymentMethod}` : undefined),
+      date
     );
-    await refreshBusinessData();
     return res.data.intake;
   };
 
-  const deletePurchase = (smeId: string, purchaseId: string | number) => {
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const pToDelete = (sme.purchases || []).find(p => p.id === purchaseId);
-        if (!pToDelete) return sme;
-
-        const updatedMonthlyData = [...sme.monthlyData];
-        if (updatedMonthlyData.length > 0) {
-          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
-          updatedMonthlyData[updatedMonthlyData.length - 1] = {
-            ...currentMonth,
-            outflow: Math.max(0, currentMonth.outflow - pToDelete.totalAmount)
-          };
-        }
-
-        return {
-          ...sme,
-          currentBalance: sme.currentBalance + pToDelete.totalAmount,
-          monthlyData: updatedMonthlyData,
-          purchases: (sme.purchases || []).filter(p => p.id !== purchaseId)
-        };
-      }
-      return sme;
-    }));
+  const deletePurchase = async (_smeId: string, purchaseId: string | number) => {
+    if (typeof purchaseId === 'string' && !purchaseId.startsWith('purch-')) {
+      await apiRequest(`/inventory/stock-intake/${purchaseId}`, { method: 'DELETE' }).catch(() => {});
+    }
+    await refreshBusinessData();
   };
 
-  const addCashIn = async (smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string }) => {
+  const addCashIn = async (_smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string }) => {
     await apiRequest('/business/ledger', {
       method: 'POST',
-      body: JSON.stringify({ kind: 'CASH_IN', amount: data.amount, counterparty: data.source, description: data.reason, paymentMethod: data.paymentMethod, category: data.category, occurredAt: data.date, metadata: { notes: data.notes } })
+      body: JSON.stringify({
+        kind: 'CASH_IN',
+        amount: data.amount,
+        counterparty: data.source,
+        description: data.reason,
+        paymentMethod: data.paymentMethod,
+        category: data.category || data.reason,
+        occurredAt: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+        metadata: { notes: data.notes }
+      })
     });
-    const newCashIn: CashInTransaction = {
-      id: `cashin-${Date.now()}`,
-      amount: data.amount,
-      source: data.source,
-      reason: data.reason,
-      category: data.category || 'Other Inflow',
-      paymentMethod: data.paymentMethod,
-      date: data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      notes: data.notes
-    };
-
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const updatedAlerts = [
-          {
-            id: `alert-cashin-${Date.now()}`,
-            type: 'info' as const,
-            text: `Cash Inflow logged: ${formatRWF(data.amount)} received from ${data.source} (${data.reason}).`
-          },
-          ...sme.riskAlerts
-        ];
-
-        const updatedMonthlyData = [...sme.monthlyData];
-        if (updatedMonthlyData.length > 0) {
-          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
-          updatedMonthlyData[updatedMonthlyData.length - 1] = {
-            ...currentMonth,
-            inflow: currentMonth.inflow + data.amount
-          };
-        }
-
-        return {
-          ...sme,
-          currentBalance: sme.currentBalance + data.amount,
-          riskAlerts: updatedAlerts,
-          monthlyData: updatedMonthlyData,
-          cashIns: [newCashIn, ...(sme.cashIns || [])]
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
-  const deleteCashIn = async (smeId: string, id: string | number) => {
+  const deleteCashIn = async (_smeId: string, id: string | number) => {
     await apiRequest(`/business/ledger/${id}`, { method: 'DELETE' });
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const item = (sme.cashIns || []).find(c => c.id === id);
-        if (!item) return sme;
-
-        const updatedMonthlyData = [...sme.monthlyData];
-        if (updatedMonthlyData.length > 0) {
-          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
-          updatedMonthlyData[updatedMonthlyData.length - 1] = {
-            ...currentMonth,
-            inflow: Math.max(0, currentMonth.inflow - item.amount)
-          };
-        }
-
-        return {
-          ...sme,
-          currentBalance: Math.max(0, sme.currentBalance - item.amount),
-          monthlyData: updatedMonthlyData,
-          cashIns: (sme.cashIns || []).filter(c => c.id !== id)
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
-  const addCashOut = async (smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string }) => {
+  const addCashOut = async (_smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string }) => {
     await apiRequest('/business/ledger', {
       method: 'POST',
-      body: JSON.stringify({ kind: 'CASH_OUT', amount: data.amount, category: data.category, description: data.description, paymentMethod: data.paymentMethod, occurredAt: data.date, metadata: { notes: data.notes } })
+      body: JSON.stringify({
+        kind: 'CASH_OUT',
+        amount: data.amount,
+        category: data.category,
+        description: data.description,
+        paymentMethod: data.paymentMethod,
+        occurredAt: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+        metadata: { notes: data.notes }
+      })
     });
-    const newCashOut: CashOutTransaction = {
-      id: `cashout-${Date.now()}`,
-      amount: data.amount,
-      category: data.category,
-      description: data.description,
-      paymentMethod: data.paymentMethod,
-      date: data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      notes: data.notes
-    };
-
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const updatedAlerts = [
-          {
-            id: `alert-cashout-${Date.now()}`,
-            type: 'info' as const,
-            text: `Cash Outflow logged: ${formatRWF(data.amount)} for ${data.description} (${data.category}).`
-          },
-          ...sme.riskAlerts
-        ];
-
-        const updatedMonthlyData = [...sme.monthlyData];
-        if (updatedMonthlyData.length > 0) {
-          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
-          updatedMonthlyData[updatedMonthlyData.length - 1] = {
-            ...currentMonth,
-            outflow: currentMonth.outflow + data.amount
-          };
-        }
-
-        return {
-          ...sme,
-          currentBalance: Math.max(0, sme.currentBalance - data.amount),
-          riskAlerts: updatedAlerts,
-          monthlyData: updatedMonthlyData,
-          cashOuts: [newCashOut, ...(sme.cashOuts || [])]
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
-  const deleteCashOut = async (smeId: string, id: string | number) => {
+  const deleteCashOut = async (_smeId: string, id: string | number) => {
     await apiRequest(`/business/ledger/${id}`, { method: 'DELETE' });
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const item = (sme.cashOuts || []).find(c => c.id === id);
-        if (!item) return sme;
-
-        const updatedMonthlyData = [...sme.monthlyData];
-        if (updatedMonthlyData.length > 0) {
-          const currentMonth = updatedMonthlyData[updatedMonthlyData.length - 1];
-          updatedMonthlyData[updatedMonthlyData.length - 1] = {
-            ...currentMonth,
-            outflow: Math.max(0, currentMonth.outflow - item.amount)
-          };
-        }
-
-        return {
-          ...sme,
-          currentBalance: sme.currentBalance + item.amount,
-          monthlyData: updatedMonthlyData,
-          cashOuts: (sme.cashOuts || []).filter(c => c.id !== id)
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
-  const addOtherActivity = async (smeId: string, data: { title: string; description?: string; date: string; status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold'; moneyInvolved: boolean; amount?: number; paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'N/A'; category?: string }) => {
+  const addOtherActivity = async (_smeId: string, data: { title: string; description?: string; date: string; status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold'; moneyInvolved: boolean; amount?: number; paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'N/A'; category?: string }) => {
     await apiRequest('/business/ledger', {
       method: 'POST',
-      body: JSON.stringify({ kind: 'OTHER', amount: data.moneyInvolved ? data.amount : 0, category: data.category, description: data.title, status: data.status, occurredAt: data.date, metadata: { description: data.description, paymentStatus: data.paymentStatus } })
+      body: JSON.stringify({
+        kind: 'OTHER',
+        amount: data.moneyInvolved ? (data.amount || 0) : 0,
+        category: data.category || 'Milestone',
+        description: data.title,
+        status: data.status || 'Completed',
+        occurredAt: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+        metadata: { description: data.description, paymentStatus: data.paymentStatus, moneyInvolved: data.moneyInvolved }
+      })
     });
-    const newAct: OtherActivity = {
-      id: `act-${Date.now()}`,
-      title: data.title,
-      description: data.description,
-      date: data.date || new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      status: data.status || 'Completed',
-      moneyInvolved: data.moneyInvolved,
-      amount: data.amount,
-      paymentStatus: data.paymentStatus,
-      category: data.category
-    };
-
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        const updatedAlerts = [
-          {
-            id: `alert-act-${Date.now()}`,
-            type: 'info' as const,
-            text: `Milestone logged: ${data.title} marked as ${data.status || 'Completed'}.`
-          },
-          ...sme.riskAlerts
-        ];
-
-        return {
-          ...sme,
-          riskAlerts: updatedAlerts,
-          otherActivities: [newAct, ...(sme.otherActivities || [])]
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
-  const deleteOtherActivity = async (smeId: string, id: string | number) => {
+  const deleteOtherActivity = async (_smeId: string, id: string | number) => {
     await apiRequest(`/business/ledger/${id}`, { method: 'DELETE' });
-    setSmes(prev => prev.map(sme => {
-      if (sme.id === smeId) {
-        return {
-          ...sme,
-          otherActivities: (sme.otherActivities || []).filter(a => a.id !== id)
-        };
-      }
-      return sme;
-    }));
+    await refreshBusinessData();
   };
 
   const publishOpportunity = async (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => {

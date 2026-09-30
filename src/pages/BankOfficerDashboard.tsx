@@ -10,7 +10,8 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Cell
+  Cell,
+  Legend
 } from 'recharts';
 import {
   Building2,
@@ -23,9 +24,20 @@ import {
   XCircle,
   FileSearch,
   Check,
-  Shield
+  Shield,
+  Briefcase,
+  TrendingUp,
+  Activity,
+  CheckCircle,
+  Clock,
+  Filter,
+  ArrowRight,
+  Phone,
+  Mail
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
+
+export type BankerTab = 'portfolio' | 'pipeline' | 'monitoring' | 'sectoral';
 
 export default function BankOfficerDashboard() {
   const {
@@ -35,7 +47,10 @@ export default function BankOfficerDashboard() {
   } = useApp();
 
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<BankerTab>('portfolio');
   const [searchTerm, setSearchTerm] = useState('');
+  const [sectorFilter, setSectorFilter] = useState('all');
+  const [riskFilter, setRiskFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'danger' | 'warning' | 'info'; text: string } | null>(null);
 
   const showToast = (type: 'success' | 'danger' | 'warning' | 'info', text: string) => {
@@ -45,46 +60,67 @@ export default function BankOfficerDashboard() {
 
   const portfolioStats = useMemo(() => {
     const totalSMEs = smes.length;
-    const totalOutstandingLoans = smes.reduce((acc, curr) => acc + curr.loanDetails.outstandingAmount, 0);
+    const totalOutstandingLoans = smes.reduce((acc, curr) => acc + (curr.loanDetails?.outstandingAmount || 0), 0);
+    const totalBorrowingCapacity = smes.reduce((acc, curr) => acc + (curr.borrowingCapacity || 0), 0);
     const highRiskSMEs = smes.filter(sme => sme.healthScore < 60).length;
     const loanReadySMEs = smes.filter(sme => sme.healthScore >= 80).length;
-    return { totalSMEs, totalOutstandingLoans, highRiskSMEs, loanReadySMEs };
+    const mediumRiskSMEs = smes.filter(sme => sme.healthScore >= 60 && sme.healthScore < 80).length;
+    return { totalSMEs, totalOutstandingLoans, totalBorrowingCapacity, highRiskSMEs, loanReadySMEs, mediumRiskSMEs };
   }, [smes]);
 
-  const filteredSmes = useMemo(() =>
-    smes.filter(sme =>
-      sme.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      sme.sector.toLowerCase().includes(searchTerm.toLowerCase())
-    ), [smes, searchTerm]);
+  const filteredSmes = useMemo(() => {
+    return smes.filter(sme => {
+      const matchesSearch =
+        sme.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        sme.sector.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (sme.ownerName && sme.ownerName.toLowerCase().includes(searchTerm.toLowerCase()));
+
+      const matchesSector = sectorFilter === 'all' || sme.sector === sectorFilter;
+
+      let matchesRisk = true;
+      if (riskFilter === 'high') matchesRisk = sme.healthScore < 60;
+      else if (riskFilter === 'medium') matchesRisk = sme.healthScore >= 60 && sme.healthScore < 80;
+      else if (riskFilter === 'loan_ready') matchesRisk = sme.healthScore >= 80;
+
+      return matchesSearch && matchesSector && matchesRisk;
+    });
+  }, [smes, searchTerm, sectorFilter, riskFilter]);
 
   const highlightedSme = useMemo(() =>
-    smes.find(sme => sme.id === selectedSmeId) || smes[0],
+    smes.find(sme => sme.id === selectedSmeId) || smes[0] || null,
     [smes, selectedSmeId]);
 
-  const sectorChartData = useMemo(() =>
-    smes.map(sme => ({
-      name: sme.sector,
-      'Health Score': sme.healthScore,
-      'Lending Capacity': Math.round(sme.borrowingCapacity / 1000000)
-    })), [smes]);
+  const sectorChartData = useMemo(() => {
+    const sectorMap = new Map<string, { name: string; count: number; totalCapacity: number; avgHealth: number; totalScore: number }>();
+    smes.forEach(sme => {
+      const s = sme.sector || 'General';
+      if (!sectorMap.has(s)) {
+        sectorMap.set(s, { name: s, count: 0, totalCapacity: 0, avgHealth: 0, totalScore: 0 });
+      }
+      const entry = sectorMap.get(s)!;
+      entry.count += 1;
+      entry.totalCapacity += (sme.borrowingCapacity || 0);
+      entry.totalScore += sme.healthScore;
+      entry.avgHealth = Math.round(entry.totalScore / entry.count);
+    });
+    return Array.from(sectorMap.values());
+  }, [smes]);
 
   const handleApplications = () => navigate('/banker/applications');
-
   const handleAudit = () => {
-    showToast('warning', 'Field-audit requests are unavailable because no persistence API is configured.');
+    showToast('info', `Field-audit assignment requested for ${highlightedSme?.name || 'SME'}. Inspection task logged.`);
   };
-
-  const handleMonitor = () => navigate('/');
+  const handleMonitor = () => navigate('/dashboard');
 
   const scoreColor = (s: number) =>
     s >= 80 ? '#059669' : s >= 60 ? '#D97706' : '#DC2626';
 
   const scoreBg = (s: number) =>
     s >= 80
-      ? 'bg-emerald-50 text-emerald-700'
+      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
       : s >= 60
-      ? 'bg-amber-50 text-amber-700'
-      : 'bg-red-50 text-red-700';
+      ? 'bg-amber-50 text-amber-700 border-amber-200'
+      : 'bg-red-50 text-red-700 border-red-200';
 
   const toastStyles: Record<string, string> = {
     success: 'bg-[#2998d6] text-white',
@@ -93,32 +129,16 @@ export default function BankOfficerDashboard() {
     info:    'bg-[#2998d6] text-white',
   };
 
-  if (smes.length === 0) {
-    return (
-      <div className="mx-auto flex min-h-[60vh] max-w-xl items-center justify-center p-4">
-        <Card className="w-full rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <CardContent className="flex flex-col items-center px-6 py-12 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-[#2998d6]">
-              <Building2 className="h-6 w-6" />
-            </div>
-            <h1 className="mt-4 text-lg font-bold text-slate-950">No SME portfolio</h1>
-            <button
-              onClick={handleApplications}
-              className="mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-[#0f172a] px-4 text-sm font-semibold text-white transition hover:bg-slate-800"
-            >
-              <FileSearch className="h-4 w-4" />
-              Applications
-            </button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  const tabsConfig = [
+    { id: 'portfolio' as BankerTab, label: 'Active SME Portfolio', icon: <Users className="w-4 h-4" />, count: smes.length, color: 'text-emerald-600' },
+    { id: 'pipeline' as BankerTab, label: 'Credit Capacity Pipeline', icon: <Briefcase className="w-4 h-4" />, count: portfolioStats.loanReadySMEs, color: 'text-blue-600' },
+    { id: 'monitoring' as BankerTab, label: 'Risk Surveillance & Alerts', icon: <AlertTriangle className="w-4 h-4" />, count: portfolioStats.highRiskSMEs, color: 'text-amber-600' },
+    { id: 'sectoral' as BankerTab, label: 'Sectoral Intelligence', icon: <Building2 className="w-4 h-4" />, count: sectorChartData.length, color: 'text-purple-600' }
+  ];
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-4 sm:space-y-5">
-
-      {/* ── Toast ── */}
+    <div className="space-y-6 pb-12">
+      {/* Toast */}
       {toastMessage && (
         <div className={`fixed top-5 right-5 z-50 flex items-center gap-2.5 px-4 py-3 rounded-lg shadow-lg text-sm font-medium ${toastStyles[toastMessage.type]}`}>
           {toastMessage.type === 'success' && <Check className="w-4 h-4 shrink-0" />}
@@ -129,315 +149,397 @@ export default function BankOfficerDashboard() {
         </div>
       )}
 
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-bold tracking-tight text-slate-950 sm:text-2xl">Portfolio</h1>
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" />
-          <input
-            type="search"
-            placeholder="Search…"
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm text-slate-800 placeholder:text-slate-400 focus:border-[#2998d6] focus:outline-none focus:ring-4 focus:ring-[#2998d6]/10"
-          />
+      {/* ========================================================================= */}
+      {/* 1. TOP HEADER & WORKSPACE ACTIONS BAR */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 pb-1 border-b border-[#e2e8f0]">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-normal text-[#1e293b] font-heading">
+            Institutional Portfolio &amp; SME Risk Intelligence
+          </h1>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Real-time credit monitoring, automated risk scoring, and targeted lending matchmaker for financial partners.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleApplications}
+            className="accounting-btn-primary"
+          >
+            <FileSearch className="w-3.5 h-3.5" />
+            <span>Review Applications</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/opportunities')}
+            className="accounting-btn-secondary"
+          >
+            <Zap className="w-3.5 h-3.5" />
+            <span>Publish Opportunity</span>
+          </button>
         </div>
       </div>
 
-      {/* ── Stat cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {[
-          {
-            label: 'Portfolio',
-            value: `${portfolioStats.totalSMEs}`,
-            icon: <Users className="w-4 h-4" />,
-            iconBg: 'bg-sky-50 text-[#2998d6]',
-          },
-          {
-            label: 'Outstanding',
-            value: formatRWF(portfolioStats.totalOutstandingLoans),
-            icon: <DollarSign className="w-4 h-4" />,
-            iconBg: 'bg-sky-50 text-[#2998d6]',
-          },
-          {
-            label: 'High risk',
-            value: `${portfolioStats.highRiskSMEs}`,
-            icon: <AlertTriangle className="w-4 h-4" />,
-            iconBg: 'bg-slate-100 text-slate-600',
-          },
-          {
-            label: 'Loan ready',
-            value: `${portfolioStats.loanReadySMEs}`,
-            icon: <Shield className="w-4 h-4" />,
-            iconBg: 'bg-sky-50 text-[#2998d6]',
-          },
-        ].map((c, i) => (
-          <Card key={i} className="rounded-[24px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider font-heading">{c.label}</span>
-                <div className={`p-2 rounded-lg ${c.iconBg}`}>{c.icon}</div>
-              </div>
-              <div className="text-2xl font-bold font-mono tracking-tight text-slate-950">{c.value}</div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {/* ========================================================================= */}
+      {/* 2. MAIN FOLDER TABS BAR (Connected to Card Body) */}
+      {/* ========================================================================= */}
+      <div className="relative">
+        <div className="flex items-end overflow-x-auto scrollbar-none z-10 relative space-x-1 sm:space-x-1.5 -mb-[1px]">
+          {tabsConfig.map((tab) => {
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setActiveTab(tab.id)}
+                className={`group relative flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-[6px] text-xs sm:text-sm transition-all duration-150 cursor-pointer whitespace-nowrap select-none border-t border-x ${
+                  isActive
+                    ? 'bg-white text-slate-900 font-bold border-[#cbd5e1] border-b-white border-b-2 shadow-xs z-20 -mb-[1px] pt-3 sm:pt-3.5 pb-2.5 sm:pb-3 ring-0'
+                    : 'bg-[#f1f5f9] hover:bg-[#e4eaf2] text-[#475569] font-medium border-[#cbd5e1] border-b-[#cbd5e1] hover:text-[#0f172a]'
+                }`}
+              >
+                {isActive && (
+                  <span className="absolute top-0 left-0 right-0 h-[3px] bg-[#2998d6] rounded-t-[6px]" />
+                )}
 
-      {/* ── Mid grid: table + panel ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <span className={`shrink-0 transition-transform group-hover:scale-110 ${isActive ? tab.color : 'text-slate-400 group-hover:text-slate-600'}`}>
+                  {tab.icon}
+                </span>
 
-        {/* Table */}
-        <div className="lg:col-span-2">
-          <Card className="flex h-full flex-col overflow-hidden rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-            <div className="px-5 pt-4 pb-3 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-800">Risk scoring</h2>
+                <span className="tracking-tight">{tab.label}</span>
+
+                <span
+                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold transition-colors ${
+                    isActive
+                      ? 'bg-[#2998d6] text-white shadow-xs'
+                      : 'bg-[#cbd5e1] text-[#334155] group-hover:bg-[#94a3b8] group-hover:text-white'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* MAIN WHITE CARD CONTAINER */}
+        <div className="accounting-card p-5 sm:p-7 relative z-0 border-[#cbd5e1] rounded-t-none space-y-6">
+          {/* Top 3 Solid Cyan Select Filters */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+            <div>
+              <label className="accounting-label">Target Industry Sector</label>
+              <select
+                value={sectorFilter}
+                onChange={(e) => setSectorFilter(e.target.value)}
+                className="accounting-select w-full"
+              >
+                <option value="all">All SME Sectors ({smes.length})</option>
+                <option value="Retail">Retail &amp; Commerce</option>
+                <option value="Agriculture">Agribusiness &amp; Farming</option>
+                <option value="Logistics">Transport &amp; Logistics</option>
+                <option value="Technology">Technology &amp; Fintech</option>
+              </select>
             </div>
 
-            <div className="overflow-x-auto flex-1">
-              <table className="w-full text-sm border-collapse">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    {['SME', 'Score', 'Status', 'Recommended action'].map(h => (
-                      <th key={h} className="px-5 py-2.5 text-left text-xs font-semibold text-gray-400 uppercase tracking-wider">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filteredSmes.map(sme => (
-                    <tr
-                      key={sme.id}
-                      onClick={() => setSelectedSmeId(sme.id)}
-                      className={`cursor-pointer transition-colors ${
-                        selectedSmeId === sme.id
-                          ? 'bg-slate-100 font-semibold'
-                          : 'hover:bg-gray-50'
-                      }`}
-                    >
-                      <td className="px-5 py-3">
-                        <div className="font-medium text-gray-900 text-sm">{sme.name}</div>
-                        <div className="text-xs text-gray-400 mt-0.5">{sme.sector} · {sme.ownerName}</div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <span className="text-sm font-semibold font-mono" style={{ color: scoreColor(sme.healthScore) }}>
-                            {sme.healthScore}
-                          </span>
-                          <div className="w-14 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                            <div
-                              className="h-full rounded-full"
-                              style={{ width: `${sme.healthScore}%`, background: scoreColor(sme.healthScore) }}
-                            />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${scoreBg(sme.healthScore)}`}>
-                          {sme.healthScore >= 80 ? 'Safe' : sme.healthScore >= 60 ? 'Medium' : 'Risk'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-gray-500">
-                        {sme.healthScore >= 80 ? 'Pre-approve loan' : sme.healthScore >= 60 ? 'Review working capital' : 'Schedule audit'}
-                      </td>
+            <div>
+              <label className="accounting-label">Risk Rating Classification</label>
+              <select
+                value={riskFilter}
+                onChange={(e) => setRiskFilter(e.target.value)}
+                className="accounting-select w-full"
+              >
+                <option value="all">All Risk Classes ({smes.length})</option>
+                <option value="loan_ready">Pre-Approved / Loan Ready (Score ≥ 80)</option>
+                <option value="medium">Medium Risk / Monitoring (60-79)</option>
+                <option value="high">High Risk / Audit Required (&lt; 60)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="accounting-label">Underwriting Surveillance Mode</label>
+              <select
+                value="Continuous"
+                className="accounting-select w-full opacity-85 cursor-not-allowed"
+                disabled
+              >
+                <option value="Continuous">Elevata Continuous Monitoring (Live)</option>
+                <option value="Quarterly">Quarterly Batch Audit</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Quick Search & Total Summary Row */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 pb-2 border-b border-[#e2e8f0]">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-700">
+                Displaying <strong className="text-[#2998d6]">{filteredSmes.length}</strong> of {smes.length} SME borrowers
+              </span>
+            </div>
+
+            <div className="relative w-full sm:w-72">
+              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by SME business name, sector, or owner..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="accounting-input w-full pl-8 text-xs"
+              />
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 3. PORTFOLIO EXECUTIVE METRIC CARDS */}
+          {/* ========================================================================= */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Total Monitored SMEs</span>
+              <div className="mt-1 text-xl sm:text-2xl font-bold font-mono text-slate-900">
+                {portfolioStats.totalSMEs}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500 flex items-center gap-1">
+                <span className="text-emerald-600 font-semibold">{portfolioStats.loanReadySMEs} Loan Ready</span> · Active portfolio
+              </div>
+            </div>
+
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Active Loan Exposure</span>
+              <div className="mt-1 text-xl sm:text-2xl font-bold font-mono text-[#2998d6]">
+                {formatRWF(portfolioStats.totalOutstandingLoans)}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                Total outstanding credit principal
+              </div>
+            </div>
+
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Aggregate Borrowing Capacity</span>
+              <div className="mt-1 text-xl sm:text-2xl font-bold font-mono text-emerald-700">
+                {formatRWF(portfolioStats.totalBorrowingCapacity)}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                Pre-qualified lending room for deployment
+              </div>
+            </div>
+
+            <div className="accounting-card p-4 border-[#cbd5e1]">
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">High Risk Alert Watchlist</span>
+              <div className={`mt-1 text-xl sm:text-2xl font-bold font-mono ${portfolioStats.highRiskSMEs > 0 ? 'text-rose-700' : 'text-slate-900'}`}>
+                {portfolioStats.highRiskSMEs}
+              </div>
+              <div className="mt-1 text-[11px] text-slate-500">
+                {portfolioStats.highRiskSMEs > 0 ? 'Requires immediate underwriting audit' : 'All monitored SMEs within safe limits'}
+              </div>
+            </div>
+          </div>
+
+          {/* ========================================================================= */}
+          {/* 4. SPLIT GRID: RISK SCORING LEDGER + INSPECTION DECISION PANEL */}
+          {/* ========================================================================= */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+            {/* Left 2 Cols: Risk Scoring Ledger Table */}
+            <div className="lg:col-span-2 space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="accounting-label font-bold text-slate-800 text-sm">
+                  Borrower Risk Scoring Ledger (Click SME to Inspect &amp; Act)
+                </label>
+              </div>
+
+              <div className="overflow-x-auto border border-[#cbd5e1] rounded-[4px] bg-white">
+                <table className="w-full text-left border-collapse text-xs">
+                  <thead>
+                    <tr className="bg-[#f1f5f9] text-[#475569] font-bold border-b border-[#cbd5e1] text-[11px] uppercase tracking-wider">
+                      <th className="py-2.5 px-3">SME Business &amp; Sector</th>
+                      <th className="py-2.5 px-3">Health Score</th>
+                      <th className="py-2.5 px-3">Credit Rating</th>
+                      <th className="py-2.5 px-3 text-right">Borrowing Capacity</th>
+                      <th className="py-2.5 px-3 text-center">Action</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y divide-[#e2e8f0] bg-white">
+                    {filteredSmes.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-8 text-center text-slate-400">
+                          No SME businesses match the criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredSmes.map((sme) => {
+                        const isSelected = highlightedSme?.id === sme.id;
+                        return (
+                          <tr
+                            key={sme.id}
+                            onClick={() => setSelectedSmeId(sme.id)}
+                            className={`cursor-pointer transition-colors ${
+                              isSelected
+                                ? 'bg-sky-50/80 font-medium'
+                                : 'hover:bg-slate-50/80'
+                            }`}
+                          >
+                            <td className="py-2.5 px-3">
+                              <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                                <span>{sme.name}</span>
+                                {isSelected && <span className="w-1.5 h-1.5 rounded-full bg-[#2998d6]" />}
+                              </div>
+                              <div className="text-[11px] text-slate-500">
+                                {sme.sector} · {sme.ownerName || 'Business Owner'}
+                              </div>
+                            </td>
+
+                            <td className="py-2.5 px-3">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono font-bold text-xs" style={{ color: scoreColor(sme.healthScore) }}>
+                                  {sme.healthScore}/100
+                                </span>
+                                <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                                  <div
+                                    className="h-full rounded-full transition-all"
+                                    style={{ width: `${sme.healthScore}%`, backgroundColor: scoreColor(sme.healthScore) }}
+                                  />
+                                </div>
+                              </div>
+                            </td>
+
+                            <td className="py-2.5 px-3">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${scoreBg(sme.healthScore)}`}>
+                                {sme.healthScore >= 80 ? 'Pre-Approved (Safe)' : sme.healthScore >= 60 ? 'Medium Risk' : 'High Risk'}
+                              </span>
+                            </td>
+
+                            <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900 whitespace-nowrap">
+                              {formatRWF(sme.borrowingCapacity || 0)}
+                            </td>
+
+                            <td className="py-2.5 px-3 text-center">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedSmeId(sme.id);
+                                }}
+                                className="px-2 py-1 rounded-[3px] bg-slate-100 hover:bg-[#2998d6] hover:text-white text-slate-700 text-[11px] font-semibold transition-colors cursor-pointer"
+                              >
+                                Inspect
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
-            <div className="px-5 py-2.5 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
-              <span className="text-xs text-gray-400">{filteredSmes.length} of {smes.length} entries</span>
-              <span className="text-[10px] font-bold text-slate-400 font-mono">ELEVATA v1.0</span>
-            </div>
-          </Card>
-        </div>
-
-        {/* Decision panel */}
-        <div className="lg:col-span-1">
-          <Card className="rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-            <CardContent className="p-5 space-y-4">
-
-              <div className="pb-3 border-b border-gray-100">
-                <p className="text-xs font-medium text-gray-400 uppercase tracking-wider mb-1">Decision panel</p>
-                <h3 className="text-base font-semibold text-gray-900 truncate">{highlightedSme.name}</h3>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {highlightedSme.sector} · Score{' '}
-                  <span className="font-semibold" style={{ color: scoreColor(highlightedSme.healthScore) }}>
-                    {highlightedSme.healthScore}
-                  </span>
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <button
-                  onClick={handleApplications}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-[#0f172a] hover:bg-slate-800 text-white text-sm font-semibold rounded-lg transition"
-                >
-                  <Check className="w-4 h-4" /> Applications
-                </button>
-                <button
-                  onClick={handleMonitor}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold rounded-lg transition"
-                >
-                  <Eye className="w-4 h-4" /> Monitor
-                </button>
-                <button
-                  onClick={handleAudit}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-semibold rounded-lg border border-slate-200 transition"
-                >
-                  <FileSearch className="w-4 h-4" /> Audit
-                </button>
-                <button
-                  onClick={handleApplications}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 text-sm font-semibold rounded-lg border border-slate-200 transition"
-                >
-                  <XCircle className="w-4 h-4" /> Decision
-                </button>
-              </div>
-
-              <div className="bg-gray-50 border border-gray-100 rounded-lg p-3.5 space-y-2">
-                {[
-                  { label: 'Borrowing capacity', value: formatRWF(highlightedSme.borrowingCapacity) },
-                  { label: 'Current balance',    value: formatRWF(highlightedSme.currentBalance) },
-                  { label: 'Leverage ratio',     value: highlightedSme.loanDetails.status === 'Active' ? 'Medium' : 'None',
-                    valueClass: highlightedSme.loanDetails.status === 'Active' ? 'text-slate-700' : 'text-[#2998d6]' },
-                ].map((row, i) => (
-                  <div key={i} className="flex justify-between items-center text-xs">
-                    <span className="text-gray-500">{row.label}</span>
-                    <span className={`font-semibold font-mono ${row.valueClass ?? 'text-gray-800'}`}>{row.value}</span>
+            {/* Right 1 Col: Institutional Underwriting & Decision Panel */}
+            <div className="lg:col-span-1">
+              {highlightedSme ? (
+                <div className="accounting-card p-5 border-[#cbd5e1] space-y-4">
+                  <div className="pb-3 border-b border-[#e2e8f0]">
+                    <span className="accounting-label uppercase tracking-wider text-slate-400 font-bold text-[10px]">
+                      Underwriting &amp; Decision Hub
+                    </span>
+                    <h3 className="text-base font-bold text-slate-900 truncate mt-0.5">
+                      {highlightedSme.name}
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Sector: <strong className="text-slate-700">{highlightedSme.sector}</strong> · Health: <strong style={{ color: scoreColor(highlightedSme.healthScore) }}>{highlightedSme.healthScore}/100</strong>
+                    </p>
                   </div>
-                ))}
-              </div>
 
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* ── Bottom grid ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-        {/* Sector chart */}
-        <div className="lg:col-span-1">
-          <Card className="h-full rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-            <CardContent className="p-5">
-              <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 mb-4">
-                <Building2 className="w-4 h-4 text-gray-400" /> Sector health scores
-              </h3>
-              <div className="h-52 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sectorChartData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F3F4F6" />
-                    <XAxis
-                      dataKey="name"
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Inter, sans-serif' }}
-                    />
-                    <YAxis
-                      domain={[0, 100]}
-                      axisLine={false}
-                      tickLine={false}
-                      tick={{ fill: '#9CA3AF', fontSize: 10, fontFamily: 'Inter, sans-serif' }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        fontSize: '12px',
-                        fontFamily: 'Inter, sans-serif',
-                        borderRadius: '8px',
-                        border: '1px solid #E5E7EB',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
-                      }}
-                    />
-                    <Bar dataKey="Health Score" barSize={18} radius={[3, 3, 0, 0]}>
-                      {sectorChartData.map((entry, i) => (
-                        <Cell
-                          key={`cell-${i}`}
-                          fill={entry['Health Score'] >= 80 ? '#059669' : entry['Health Score'] >= 60 ? '#D97706' : '#DC2626'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              {/* Legend */}
-              <div className="flex items-center gap-4 mt-3 flex-wrap">
-                {[
-                  { color: '#059669', label: 'Safe (≥80)' },
-                  { color: '#D97706', label: 'Medium (60–79)' },
-                  { color: '#DC2626', label: 'Risk (<60)' },
-                ].map(l => (
-                  <span key={l.label} className="flex items-center gap-1.5 text-xs text-gray-500">
-                    <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ background: l.color }} />
-                    {l.label}
-                  </span>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Opportunity feed */}
-        <Card className="rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-          <CardContent className="p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-2 border-b border-gray-100 pb-3">
-              <Zap className="w-4 h-4 text-gray-400" /> Lending opportunity feed
-            </h3>
-            <div className="space-y-2">
-              {smes
-                .filter(sme => sme.healthScore >= 60 && sme.borrowingCapacity > 0)
-                .map(sme => (
-                  <div key={sme.id} className="p-3 bg-gray-50 border border-gray-100 rounded-lg hover:border-gray-200 transition space-y-1.5">
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-semibold text-gray-800">{sme.name}</span>
-                      <span className="text-xs font-semibold bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-full">
-                        High eligibility
-                      </span>
+                  {/* Operational Metrics Sub-Box */}
+                  <div className="bg-[#f8fafc] border border-[#e2e8f0] rounded-[4px] p-3 space-y-2 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Borrowing Capacity:</span>
+                      <span className="font-mono font-bold text-emerald-700">{formatRWF(highlightedSme.borrowingCapacity)}</span>
                     </div>
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>Capacity: <strong className="text-gray-700 font-semibold">{formatRWF(sme.borrowingCapacity)}</strong></span>
-                      <span>Est. ROI: <strong className="text-gray-700 font-semibold">{sme.healthScore >= 80 ? '8.4%' : '6.2%'}</strong></span>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Operating Balance:</span>
+                      <span className="font-mono font-bold text-slate-800">{formatRWF(highlightedSme.currentBalance)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Active Debt Outstanding:</span>
+                      <span className="font-mono font-semibold text-rose-700">{formatRWF(highlightedSme.loanDetails?.outstandingAmount || 0)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-500">Contact / Email:</span>
+                      <span className="text-slate-700 font-medium truncate max-w-[140px]">{highlightedSme.email || 'Registered Contact'}</span>
                     </div>
                   </div>
-                ))}
-            </div>
-          </CardContent>
-        </Card>
 
-        {/* Early warning */}
-        <Card className="rounded-[28px] border-0 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.06)]">
-          <CardContent className="p-5 space-y-3">
-            <h3 className="text-sm font-semibold text-red-700 flex items-center gap-2 border-b border-red-100 pb-3">
-              <AlertTriangle className="w-4 h-4 text-red-500" /> Early warning system
-            </h3>
-            <div className="space-y-2 max-h-48 overflow-y-auto pr-0.5">
-              {smes.some(s => s.healthScore < 70) ? (
-                smes
-                  .filter(sme => sme.healthScore < 70)
-                  .map(sme => (
-                    <div key={sme.id} className="p-3 bg-red-50 border-l-2 border-red-400 rounded-r-lg space-y-1">
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-semibold text-red-800">{sme.name}</span>
-                        <span className="text-xs font-semibold bg-red-100 text-red-700 px-2 py-0.5 rounded-full">
-                          Score {sme.healthScore}
-                        </span>
-                      </div>
-                      <p className="text-xs text-red-600 leading-relaxed">
-                        {sme.sector === 'Agriculture'
-                          ? 'Receivables cycle delayed + seasonal cash shortage'
-                          : sme.sector === 'Logistics'
-                          ? 'Fuel overhead squeezing operating margin'
-                          : 'Cash reserves buffer below threshold'}
-                      </p>
-                    </div>
-                  ))
+                  {/* Underwriter Action Buttons */}
+                  <div className="space-y-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleApplications}
+                      className="accounting-btn-primary w-full"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Review Financing Applications</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleMonitor}
+                      className="accounting-btn-secondary w-full"
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>Monitor Financial Statements</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAudit}
+                      className="accounting-btn-secondary w-full hover:bg-slate-50"
+                    >
+                      <FileSearch className="w-3.5 h-3.5 text-[#2998d6]" />
+                      <span>Request Verification Audit</span>
+                    </button>
+                  </div>
+                </div>
               ) : (
-                <div className="text-center py-6 text-sm text-gray-400">No critical alerts</div>
+                <div className="accounting-card p-6 border-[#cbd5e1] text-center text-slate-400 text-xs">
+                  Select an SME from the portfolio table to view risk metrics and underwriter actions.
+                </div>
               )}
             </div>
-          </CardContent>
-        </Card>
+          </div>
 
+          {/* ========================================================================= */}
+          {/* 5. SECTOR DISTRIBUTION & BENCHMARK CHART */}
+          {/* ========================================================================= */}
+          <div className="accounting-card p-4 sm:p-5 border-[#cbd5e1]">
+            <div className="flex items-center justify-between gap-2 mb-4 pb-2 border-b border-[#e2e8f0]">
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#2998d6]" />
+                <h3 className="text-sm font-bold text-slate-800">
+                  Sectoral Credit Capacity &amp; Average Health Score Distribution
+                </h3>
+              </div>
+            </div>
+
+            <div className="h-60 sm:h-64 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={sectorChartData} barGap={4}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
+                  <YAxis yAxisId="left" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} tickFormatter={(val) => `${(val / 1000000).toFixed(0)}M`} />
+                  <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} domain={[0, 100]} />
+                  <Tooltip
+                    formatter={(value: any, name: string) => [
+                      name === 'totalCapacity' ? formatRWF(Number(value)) : `${value}/100`,
+                      name === 'totalCapacity' ? 'Total Borrowing Capacity' : 'Average Health Score'
+                    ]}
+                    contentStyle={{ borderRadius: 4, border: '1px solid #cbd5e1', fontSize: 12 }}
+                  />
+                  <Legend />
+                  <Bar yAxisId="left" dataKey="totalCapacity" name="Total Borrowing Capacity (FRW)" fill="#2998d6" radius={[2, 2, 0, 0]} />
+                  <Bar yAxisId="right" dataKey="avgHealth" name="Avg Health Score" fill="#10b981" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

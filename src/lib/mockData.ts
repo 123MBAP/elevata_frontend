@@ -67,6 +67,10 @@ export interface Sale {
   customer: string;
   status: 'Completed' | 'Processing' | 'Cancelled' | 'Pending' | 'Partial';
   items?: SaleItemSnapshot[];
+  notes?: string;
+  customerContact?: string;
+  invoiceNumber?: string;
+  paymentMethod?: string;
 }
 
 export interface Expense {
