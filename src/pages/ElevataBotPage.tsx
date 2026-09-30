@@ -10,7 +10,6 @@ import {
   PanelLeftClose,
   PanelLeft,
   Sparkles,
-  Paperclip,
   ArrowUp
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -54,7 +53,6 @@ export default function ElevataBotPage() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Load conversations from localStorage on mount
   useEffect(() => {
@@ -294,23 +292,8 @@ export default function ElevataBotPage() {
         }
       ];
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setInputMessage((prev) => `${prev} [Attached file: ${file.name}] `);
-    }
-  };
-
   return (
     <div className="flex h-[calc(100vh-80px)] bg-[#0c121e] text-slate-100 font-sans -m-3 md:-m-6 overflow-hidden">
-      {/* Hidden file input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileUpload}
-        className="hidden"
-      />
-
       {/* =========================================================================
           LEFT SIDEBAR: Conversation History
       ========================================================================== */}
@@ -491,15 +474,6 @@ export default function ElevataBotPage() {
                     {/* Bottom toolbar */}
                     <div className="flex items-center justify-between pt-1 border-t border-slate-800/60">
                       <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700/80 text-xs font-semibold text-slate-300 border border-slate-700/70 transition cursor-pointer"
-                      >
-                        <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                        <span>Attach file</span>
-                      </button>
-
-                      <button
                         type="submit"
                         disabled={!inputMessage.trim() || loading}
                         className="h-9 w-9 bg-[#2998d6] hover:bg-[#1f85be] disabled:bg-slate-800 disabled:text-slate-600 text-white rounded-xl transition shrink-0 flex items-center justify-center disabled:cursor-not-allowed shadow-md shadow-sky-950/50 cursor-pointer"
@@ -613,15 +587,6 @@ export default function ElevataBotPage() {
                 </div>
 
                 <div className="flex items-center justify-between pt-1 border-t border-slate-800/50">
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-800/70 hover:bg-slate-700/80 text-[11px] font-semibold text-slate-300 border border-slate-700/60 transition cursor-pointer"
-                  >
-                    <Paperclip className="w-3 h-3 text-slate-400" />
-                    <span>Attach file</span>
-                  </button>
-
                   <button
                     type="submit"
                     disabled={!inputMessage.trim() || loading}

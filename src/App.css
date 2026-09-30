@@ -147,42 +147,69 @@ textarea:disabled {
 }
 
 .register-glass label {
-    color: rgba(255, 255, 255, 0.82) !important;
+    color: rgba(255, 255, 255, 0.85) !important;
 }
 
+.register-glass input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
+.register-glass select,
 .register-glass .auth-input,
 .register-glass .auth-select {
-    height: 2.55rem !important;
-    min-height: 2.55rem;
-    width: 100%;
+    height: 2.65rem !important;
+    min-height: 2.65rem !important;
+    width: 100% !important;
     border: 0 !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.35) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
     border-radius: 0 !important;
+    background-color: transparent !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #f4fffe !important;
-    padding-left: 0 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff !important;
+    padding-left: 0.25rem !important;
     padding-right: 1.75rem !important;
-    font-size: 0.9rem !important;
+    font-size: 0.925rem !important;
+    line-height: 1.4 !important;
+    outline: none !important;
 }
 
-.register-glass .auth-input::placeholder {
-    color: rgba(236, 252, 251, 0.62) !important;
-}
-
-.register-glass .auth-input:hover,
+.register-glass input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):focus,
+.register-glass select:focus,
 .register-glass .auth-input:focus,
-.register-glass .auth-select:hover,
 .register-glass .auth-select:focus {
     border: 0 !important;
-    border-bottom: 1px solid #fff !important;
+    border-bottom: 2px solid #ffffff !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff !important;
+    outline: none !important;
+}
+
+.register-glass input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):hover,
+.register-glass select:hover,
+.register-glass .auth-input:hover,
+.register-glass .auth-select:hover {
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.85) !important;
+    background-color: transparent !important;
     background: transparent !important;
     box-shadow: none !important;
 }
 
+.register-glass input::placeholder,
+.register-glass .auth-input::placeholder {
+    color: rgba(236, 252, 251, 0.55) !important;
+    -webkit-text-fill-color: rgba(236, 252, 251, 0.55) !important;
+}
+
+.register-glass select option,
 .register-glass .auth-select option {
-    color: #0f172a;
-    background: #fff;
+    color: #0f172a !important;
+    background-color: #ffffff !important;
+    -webkit-text-fill-color: #0f172a !important;
 }
 
 .register-glass .role-card {
@@ -200,31 +227,65 @@ textarea:disabled {
     position: relative;
 }
 
+.login-glass input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']),
 .login-field input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']) {
     height: 2.45rem !important;
-    min-height: 2.45rem;
-    width: 100%;
+    min-height: 2.45rem !important;
+    width: 100% !important;
     border: 0 !important;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.38) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.45) !important;
     border-radius: 0 !important;
+    background-color: transparent !important;
     background: transparent !important;
     box-shadow: none !important;
-    color: #f4fffe !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff !important;
     padding-left: 1.55rem !important;
     padding-right: 2rem !important;
     font-size: 0.875rem !important;
+    outline: none !important;
 }
 
-.login-field input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden'])::placeholder {
-    color: rgba(236, 252, 251, 0.72) !important;
-}
-
-.login-field input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):hover,
+.login-glass input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):focus,
 .login-field input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):focus {
     border: 0 !important;
-    border-bottom: 1px solid #fff !important;
+    border-bottom: 2px solid #ffffff !important;
+    background-color: transparent !important;
     background: transparent !important;
     box-shadow: none !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    caret-color: #ffffff !important;
+    outline: none !important;
+}
+
+.login-glass input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):hover,
+.login-field input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='file']):not([type='hidden']):hover {
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.85) !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+.login-glass input::placeholder,
+.login-field input::placeholder {
+    color: rgba(236, 252, 251, 0.6) !important;
+    -webkit-text-fill-color: rgba(236, 252, 251, 0.6) !important;
+}
+
+/* Chrome / Safari / Edge Autofill Fix for Dark Glass */
+.register-glass input:-webkit-autofill,
+.register-glass input:-webkit-autofill:hover,
+.register-glass input:-webkit-autofill:focus,
+.login-glass input:-webkit-autofill,
+.login-glass input:-webkit-autofill:hover,
+.login-glass input:-webkit-autofill:focus {
+    -webkit-text-fill-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0px 1000px rgba(28, 66, 78, 0.98) inset !important;
+    transition: background-color 5000s ease-in-out 0s;
+    caret-color: #ffffff !important;
 }
 
 .login-field-icon {
