@@ -128,8 +128,8 @@ export default function CreateProductModal({ isOpen, onClose, onSubmit }: Create
                 <PackagePlus className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-base font-bold font-heading">New Master Product</h3>
-                <p className="text-[11px] text-slate-300 mt-0.5">
+                <h3 className="text-base font-bold font-heading !text-white">New Master Product</h3>
+                <p className="text-[11px] !text-slate-300 mt-0.5">
                   Add product master with units, pricing, and initial stock balance
                 </p>
               </div>
