@@ -136,6 +136,7 @@ textarea:disabled {
     background: linear-gradient(180deg, rgba(46, 91, 102, 0.94), rgba(28, 66, 78, 0.96));
     box-shadow: 0 18px 42px rgba(12, 70, 78, 0.26);
     backdrop-filter: blur(14px);
+    color-scheme: dark;
 }
 
 .register-glass {
@@ -144,6 +145,7 @@ textarea:disabled {
     background: linear-gradient(180deg, rgba(46, 91, 102, 0.96), rgba(28, 66, 78, 0.98));
     box-shadow: 0 22px 50px rgba(12, 70, 78, 0.28);
     backdrop-filter: blur(14px);
+    color-scheme: dark;
 }
 
 .register-glass label {
@@ -279,13 +281,88 @@ textarea:disabled {
 .register-glass input:-webkit-autofill,
 .register-glass input:-webkit-autofill:hover,
 .register-glass input:-webkit-autofill:focus,
+.register-glass input:-webkit-autofill:active,
+.register-glass .auth-input:-webkit-autofill,
+.register-glass .auth-input:-webkit-autofill:hover,
+.register-glass .auth-input:-webkit-autofill:focus,
+.register-glass .auth-input:-webkit-autofill:active,
+input.auth-input:-webkit-autofill,
+input.auth-input:-webkit-autofill:hover,
+input.auth-input:-webkit-autofill:focus,
+input.auth-input:-webkit-autofill:active {
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0 1000px #24525e inset !important;
+    box-shadow: 0 0 0 1000px #24525e inset !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.65) !important;
+    transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
+}
+
+/* Firefox / Standard Autofill Fix for Dark Glass */
+.register-glass input:autofill,
+.register-glass input:autofill:hover,
+.register-glass input:autofill:focus,
+.register-glass input:autofill:active,
+.register-glass .auth-input:autofill,
+.register-glass .auth-input:autofill:hover,
+.register-glass .auth-input:autofill:focus,
+.register-glass .auth-input:autofill:active,
+input.auth-input:autofill,
+input.auth-input:autofill:hover,
+input.auth-input:autofill:focus,
+input.auth-input:autofill:active {
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0 1000px #24525e inset !important;
+    box-shadow: 0 0 0 1000px #24525e inset !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.65) !important;
+    transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
+}
+
+/* Chrome / Safari / Edge Autofill Fix for Login */
 .login-glass input:-webkit-autofill,
 .login-glass input:-webkit-autofill:hover,
-.login-glass input:-webkit-autofill:focus {
+.login-glass input:-webkit-autofill:focus,
+.login-glass input:-webkit-autofill:active,
+.login-field input:-webkit-autofill,
+.login-field input:-webkit-autofill:hover,
+.login-field input:-webkit-autofill:focus,
+.login-field input:-webkit-autofill:active {
     -webkit-text-fill-color: #ffffff !important;
-    -webkit-box-shadow: 0 0 0px 1000px rgba(28, 66, 78, 0.98) inset !important;
-    transition: background-color 5000s ease-in-out 0s;
+    color: #ffffff !important;
     caret-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0 1000px #1e4753 inset !important;
+    box-shadow: 0 0 0 1000px #1e4753 inset !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.65) !important;
+    transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
+}
+
+/* Firefox / Standard Autofill Fix for Login */
+.login-glass input:autofill,
+.login-glass input:autofill:hover,
+.login-glass input:autofill:focus,
+.login-glass input:autofill:active,
+.login-field input:autofill,
+.login-field input:autofill:hover,
+.login-field input:autofill:focus,
+.login-field input:autofill:active {
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+    caret-color: #ffffff !important;
+    -webkit-box-shadow: 0 0 0 1000px #1e4753 inset !important;
+    box-shadow: 0 0 0 1000px #1e4753 inset !important;
+    border-radius: 0 !important;
+    border: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.65) !important;
+    transition: background-color 5000000s ease-in-out 0s, color 5000000s ease-in-out 0s !important;
 }
 
 .login-field-icon {
