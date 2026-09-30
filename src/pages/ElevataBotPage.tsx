@@ -37,8 +37,11 @@ export default function ElevataBotPage() {
   const { user } = useAuth();
   const { activeSme } = useApp();
 
-  const isFI = user?.role === 'FINANCIAL_INSTITUTION' || user?.role === 'ADMIN';
-  const firstName = user?.business?.ownerName
+  const isAdmin = user?.role === 'ADMIN';
+  const isFI = user?.role === 'FINANCIAL_INSTITUTION';
+  const firstName = isAdmin
+    ? (user?.email ? user.email.split('@')[0] : 'Admin')
+    : user?.business?.ownerName
     ? user.business.ownerName.split(' ')[0]
     : user?.financialInstitution?.representativeName
     ? user.financialInstitution.representativeName.split(' ')[0]
@@ -250,7 +253,28 @@ export default function ElevataBotPage() {
   };
 
   // Quick Action Cards matching mockup style
-  const quickCards = isFI
+  const quickCards = isAdmin
+    ? [
+        {
+          badge: 'KYC & Compliance',
+          badgeStyle: 'text-cyan-400 bg-cyan-950/70 border-cyan-800/80',
+          subtitle: 'Review & verify user onboarding',
+          prompt: 'What verification criteria should I check before approving a new financial institution or SME on Elevata?'
+        },
+        {
+          badge: 'Platform Metrics',
+          badgeStyle: 'text-rose-400 bg-rose-950/70 border-rose-800/80',
+          subtitle: 'Analyze ecosystem performance',
+          prompt: 'Summarize the key platform health metrics, SME adoption trends, and credit disbursements.'
+        },
+        {
+          badge: 'Category Master',
+          badgeStyle: 'text-emerald-400 bg-emerald-950/70 border-emerald-800/80',
+          subtitle: 'Categorization & risk mapping',
+          prompt: 'How should business sectors and opportunity categories be structured to maximize SME matching?'
+        }
+      ]
+    : isFI
     ? [
         {
           badge: 'Credit Assessment',
@@ -361,7 +385,7 @@ export default function ElevataBotPage() {
           </div>
           <div className="truncate">
             <p className="text-xs font-bold text-slate-200 truncate">
-              {isFI ? 'Banker Copilot' : 'SME Copilot'}
+              {isAdmin ? 'Platform Admin Copilot' : isFI ? 'Banker Copilot' : 'SME Copilot'}
             </p>
             <p className="text-[10px] text-slate-400 truncate">Powered by Elevata AI</p>
           </div>

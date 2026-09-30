@@ -17,7 +17,9 @@ export default function Header({ onMenuClick, onToggleCollapse, isCollapsed }: H
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const businessName = user?.role === 'FINANCIAL_INSTITUTION'
+  const businessName = user?.role === 'ADMIN'
+    ? 'Elevata Platform Admin'
+    : user?.role === 'FINANCIAL_INSTITUTION'
     ? (user.financialInstitution?.institutionName || 'Credit Institution')
     : (activeSme.name || user?.business?.businessName || 'Business Entity');
 
@@ -51,7 +53,7 @@ export default function Header({ onMenuClick, onToggleCollapse, isCollapsed }: H
 
           {/* Logo & Brand Name */}
           <div
-            onClick={() => navigate('/')}
+            onClick={() => navigate(user?.role === 'ADMIN' ? '/admin/users' : user?.role === 'FINANCIAL_INSTITUTION' ? '/banker' : '/')}
             className="flex items-center gap-2 cursor-pointer select-none group"
           >
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-[#0284c7] to-[#38bdf8] p-1 shadow-sm">

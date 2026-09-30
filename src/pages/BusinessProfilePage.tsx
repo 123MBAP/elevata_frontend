@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Building2,
   Cpu,
@@ -13,7 +14,13 @@ import {
   ShieldCheck,
   TrendingUp,
   Edit3,
-  X
+  X,
+  Layers,
+  PieChart,
+  Share2,
+  Monitor,
+  Phone,
+  MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiRequest } from '../lib/api';
@@ -29,7 +36,8 @@ interface EquipmentItem {
 
 export default function BusinessProfilePage() {
   const { user } = useAuth();
-  const isFI = user?.role === 'FINANCIAL_INSTITUTION' || user?.role === 'ADMIN';
+  const isAdmin = user?.role === 'ADMIN';
+  const isFI = user?.role === 'FINANCIAL_INSTITUTION';
 
   const [activeTab, setActiveTab] = useState<'general' | 'equipment' | 'balance' | 'workforce' | 'strategy'>('general');
   const [isEditing, setIsEditing] = useState(false);
@@ -303,54 +311,64 @@ export default function BusinessProfilePage() {
         <div className="space-y-1">
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl md:text-2xl font-bold text-slate-900 tracking-tight">
-              {isFI ? fiForm.institutionName || 'Financial Institution Profile' : smeForm.businessName || 'Business Profile'}
+              {isAdmin
+                ? 'Elevata System Administration'
+                : isFI
+                ? fiForm.institutionName || 'Financial Institution Profile'
+                : smeForm.businessName || 'Business Profile'}
             </h1>
             <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
-              isFI
+              isAdmin
+                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                : isFI
                 ? 'bg-sky-50 text-[#2998d6] border-sky-200'
                 : 'bg-sky-50 text-[#2998d6] border-sky-200'
             }`}>
-              {isFI ? 'Credit Institution' : smeForm.businessType || 'SME Business'}
+              {isAdmin ? 'Super Administrator' : isFI ? 'Credit Institution' : smeForm.businessType || 'SME Business'}
             </span>
           </div>
           <p className="text-xs md:text-sm text-slate-500">
-            {isFI
+            {isAdmin
+              ? 'Platform governance, KYC verification controls, category master, and institutional supervision.'
+              : isFI
               ? 'Institutional accreditation, representative details, and regulatory credentials.'
               : 'Operational assets, machinery, balance sheet, and categorization intelligence.'}
           </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="flex items-center gap-2.5">
-          {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="px-4 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm"
-            >
-              <Edit3 className="w-4 h-4" />
-              <span>Edit Profile</span>
-            </button>
-          ) : (
-            <>
+        {!isAdmin && (
+          <div className="flex items-center gap-2.5">
+            {!isEditing ? (
               <button
-                onClick={handleCancelEdit}
-                disabled={saving}
-                className="px-4 py-2 bg-white hover:bg-slate-50 border border-gray-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5"
+                onClick={() => setIsEditing(true)}
+                className="px-4 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm cursor-pointer"
               >
-                <X className="w-4 h-4" />
-                <span>Cancel</span>
+                <Edit3 className="w-4 h-4" />
+                <span>Edit Profile</span>
               </button>
-              <button
-                onClick={handleSaveProfile}
-                disabled={saving}
-                className="px-5 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
-              >
-                <Save className="w-4 h-4" />
-                <span>{saving ? 'Saving...' : 'Save Changes'}</span>
-              </button>
-            </>
-          )}
-        </div>
+            ) : (
+              <>
+                <button
+                  onClick={handleCancelEdit}
+                  disabled={saving}
+                  className="px-4 py-2 bg-white hover:bg-slate-50 border border-gray-200 text-slate-700 rounded-xl text-xs font-semibold transition flex items-center gap-1.5 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                  <span>Cancel</span>
+                </button>
+                <button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="px-5 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  <span>{saving ? 'Saving...' : 'Save Changes'}</span>
+                </button>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Status Alerts */}
@@ -369,9 +387,151 @@ export default function BusinessProfilePage() {
       )}
 
       {/* =========================================================================
-          SME PROFILE VIEW & EDIT (Tabs & Detailed Categorization Forms)
+          ADMIN PROFILE VIEW & MANAGEMENT DASHBOARD
       ========================================================================== */}
-      {!isFI ? (
+      {isAdmin ? (
+        <div className="space-y-6">
+          {/* Admin Quick Launch Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              to="/admin/users"
+              className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-[#2998d6] hover:shadow-md transition group block"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-sky-50 text-[#2998d6] flex items-center justify-center font-bold group-hover:bg-[#2998d6] group-hover:text-white transition">
+                  <Users className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold text-sky-600 uppercase tracking-wider bg-sky-50 px-2 py-0.5 rounded-md border border-sky-100">
+                  Primary
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 group-hover:text-[#2998d6] transition">User & KYC Management</h3>
+              <p className="text-xs text-slate-500 mt-1">Review registrations, verify documents, and activate platform accounts.</p>
+            </Link>
+
+            <Link
+              to="/admin/categories"
+              className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-[#2998d6] hover:shadow-md transition group block"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold group-hover:bg-indigo-600 group-hover:text-white transition">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-wider bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
+                  Taxonomy
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition">Business Sectors & Master</h3>
+              <p className="text-xs text-slate-500 mt-1">Configure business types, activity categories, and opportunity tags.</p>
+            </Link>
+
+            <Link
+              to="/banker"
+              className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-[#2998d6] hover:shadow-md transition group block"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold group-hover:bg-emerald-600 group-hover:text-white transition">
+                  <PieChart className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-wider bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                  Pipeline
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 group-hover:text-emerald-600 transition">Credit Institution Panel</h3>
+              <p className="text-xs text-slate-500 mt-1">Audit institutional lending portfolios and active financing applications.</p>
+            </Link>
+
+            <Link
+              to="/ai-bot"
+              className="p-5 rounded-2xl bg-white border border-slate-200 hover:border-[#2998d6] hover:shadow-md transition group block"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold group-hover:bg-purple-600 group-hover:text-white transition">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <span className="text-[10px] font-bold text-purple-600 uppercase tracking-wider bg-purple-50 px-2 py-0.5 rounded-md border border-purple-100">
+                  AI Intelligence
+                </span>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 group-hover:text-purple-600 transition">Admin AI Copilot</h3>
+              <p className="text-xs text-slate-500 mt-1">Execute platform compliance checks and review ecosystem insights.</p>
+            </Link>
+          </div>
+
+          {/* Admin Account Credentials Card */}
+          <Card className="rounded-2xl border-gray-200 bg-white p-6 md:p-8 space-y-6 shadow-sm">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-3">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#2998d6]" />
+                  Administrator Credentials & System Privileges
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Your authorized administrative session parameters and system capability controls.
+                </p>
+              </div>
+              <span className="px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200 text-xs font-bold flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Superuser Role
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Official Admin Email</label>
+                <p className="text-xs font-semibold text-slate-900 bg-slate-50 px-3.5 py-2.5 rounded-lg border border-gray-100">
+                  {user?.email || 'admin@elevata.com'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Contact Phone Number</label>
+                <p className="text-xs font-semibold text-slate-900 bg-slate-50 px-3.5 py-2.5 rounded-lg border border-gray-100">
+                  {user?.phone || '+250 780 000 000'}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">System Access Level</label>
+                <p className="text-xs font-mono font-bold text-purple-700 bg-purple-50 px-3.5 py-2.5 rounded-lg border border-purple-100">
+                  ROLE_ADMIN (Full Platform Privileges)
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1.5">Account Status</label>
+                <p className="text-xs font-bold text-emerald-700 bg-emerald-50 px-3.5 py-2.5 rounded-lg border border-emerald-100 flex items-center gap-1.5">
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  Active & Fully Verified
+                </p>
+              </div>
+            </div>
+
+            {/* Platform Scope Checklist */}
+            <div className="pt-2 border-t border-gray-100">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-3">Enabled Administrative Capabilities</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-600">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>SME & Financial Institution KYC Approvals</span>
+                </div>
+                <div className="grid-cols-1 flex items-center gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Business Sector & Subsector Master Data CRUD</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Institutional Financing Opportunity Supervision</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Cross-Platform Virtual Training Session Monitoring</span>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      ) : !isFI ? (
         <div className="space-y-6">
           {/* Quick Metrics Bar */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

@@ -10,7 +10,9 @@ const Navigationbar: React.FC = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
 
-    const businessName = user?.role === 'FINANCIAL_INSTITUTION'
+    const businessName = user?.role === 'ADMIN'
+        ? 'Elevata Platform Admin'
+        : user?.role === 'FINANCIAL_INSTITUTION'
         ? (user.financialInstitution?.institutionName || 'Credit Institution')
         : (activeSme.name || user?.business?.businessName || 'Business Entity');
 
@@ -26,7 +28,7 @@ const Navigationbar: React.FC = () => {
                 <div className="flex justify-between items-center h-14">
                     {/* Left: Elevata Logo, Brand name & Active Business Name */}
                     <div className="flex items-center gap-3">
-                        <Link to="/" className="flex items-center gap-2">
+                        <Link to={user?.role === 'ADMIN' ? '/admin/users' : user?.role === 'FINANCIAL_INSTITUTION' ? '/banker' : '/'} className="flex items-center gap-2">
                             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-[#0284c7] to-[#38bdf8] p-1 shadow-sm">
                                 <img src={ElevataLogo} alt="Elevata Logo" className="h-6 w-6 object-contain" />
                             </div>

@@ -186,7 +186,9 @@ export default function SmeDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user?.role === 'FINANCIAL_INSTITUTION') {
+    if (user?.role === 'ADMIN') {
+      navigate('/admin/users', { replace: true });
+    } else if (user?.role === 'FINANCIAL_INSTITUTION') {
       navigate('/banker', { replace: true });
     }
   }, [user, navigate]);

@@ -21,7 +21,10 @@ import {
   Monitor,
   ChevronRight,
   ChevronLeft,
-  X
+  X,
+  Users,
+  Layers,
+  ShieldCheck
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -193,8 +196,72 @@ export default function Sidebar({
     }
   ];
 
+  const adminNavItems = [
+    {
+      id: 'admin-users',
+      path: '/admin/users',
+      label: 'User & KYC Management',
+      tooltip: 'Manage Users, SMEs & Institutions',
+      icon: <Users className="w-5 h-5" />,
+      highlightTop: true
+    },
+    {
+      id: 'admin-categories',
+      path: '/admin/categories',
+      label: 'Business Sectors & Master Data',
+      tooltip: 'Business Categories & Sectors',
+      icon: <Layers className="w-5 h-5" />
+    },
+    {
+      id: 'admin-banker-panel',
+      path: '/banker',
+      label: 'Credit Institutions Panel',
+      tooltip: 'Institutional Portfolio & Pipelines',
+      icon: <PieChart className="w-5 h-5" />
+    },
+    {
+      id: 'admin-applications',
+      path: '/banker/applications',
+      label: 'Financing Applications',
+      tooltip: 'Credit Applications Across Platform',
+      icon: <Folder className="w-5 h-5" />
+    },
+    {
+      id: 'admin-publisher',
+      path: '/banker/publisher',
+      label: 'Credit Opportunities',
+      tooltip: 'Published Institutional Products',
+      icon: <Share2 className="w-5 h-5" />
+    },
+    {
+      id: 'admin-trainings',
+      path: '/banker/trainings',
+      label: 'Training Sessions & Manager',
+      tooltip: 'Virtual Training Management',
+      icon: <Phone className="w-5 h-5" />
+    },
+    {
+      id: 'admin-monitoring',
+      path: '/banker/monitoring',
+      label: 'SME Monitoring Matrix',
+      tooltip: 'Borrower Risk & Health',
+      icon: <Monitor className="w-5 h-5" />
+    },
+    {
+      id: 'admin-copilot',
+      path: '/ai-bot',
+      label: 'Elevata AI Platform Copilot',
+      tooltip: 'AI Platform & Risk Assistant',
+      icon: <MessageSquare className="w-5 h-5" />
+    }
+  ];
+
   const currentNavItems =
-    user?.role === 'FINANCIAL_INSTITUTION' ? bankerNavItems : smeNavItems;
+    user?.role === 'ADMIN'
+      ? adminNavItems
+      : user?.role === 'FINANCIAL_INSTITUTION'
+      ? bankerNavItems
+      : smeNavItems;
 
   const isItemActive = (path: string) => {
     if (path === '/activities') {
@@ -205,6 +272,9 @@ export default function Sidebar({
     }
     if (path === '/banker') {
       return location.pathname === '/banker';
+    }
+    if (path === '/admin/users') {
+      return location.pathname === '/admin/users';
     }
     return location.pathname === path || location.pathname.startsWith(`${path}/`);
   };
@@ -308,8 +378,8 @@ export default function Sidebar({
             )}
           </div>
 
-          {/* Reset Simulations (SME mode) */}
-          {user?.role !== 'FINANCIAL_INSTITUTION' && (
+          {/* Reset Simulations (SME mode only) */}
+          {user?.role === 'BUSINESS' && (
             <div className="relative group">
               <button
                 type="button"
