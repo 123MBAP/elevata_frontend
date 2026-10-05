@@ -2,7 +2,8 @@ import { useApp } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import {
-  LogOut
+  LogOut,
+  MessageSquare
 } from 'lucide-react';
 import ElevataLogo from '../images/elevata_logo.png';
 
@@ -73,8 +74,17 @@ export default function Header({ onMenuClick, onToggleCollapse, isCollapsed }: H
           {businessName}
         </div>
 
-        {/* Right Section: Profile & Sign Out (No dropdowns) */}
+        {/* Right Section: Feedback Shortcut, Profile & Sign Out (No dropdowns) */}
         <div className="flex items-center gap-2 sm:gap-3">
+          <Link
+            to={user?.role === 'ADMIN' ? '/admin/feedback' : user?.role === 'FINANCIAL_INSTITUTION' ? '/banker/feedback' : '/feedback'}
+            title="Feedback & Admin Helpdesk Chat"
+            className="flex items-center justify-center h-8 w-8 rounded-lg text-slate-300 hover:text-white hover:bg-white/10 transition-colors relative"
+          >
+            <MessageSquare className="h-4 w-4" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-sky-400 ring-2 ring-[#1a2536]" />
+          </Link>
+
           <Link
             to="/profile"
             title="View Business Profile"

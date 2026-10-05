@@ -3,6 +3,7 @@ import { apiRequest } from '../lib/api';
 
 export interface User {
   id: string;
+  name?: string;
   email: string;
   phone: string;
   role: 'ADMIN' | 'BUSINESS' | 'FINANCIAL_INSTITUTION';

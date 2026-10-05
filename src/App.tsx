@@ -25,8 +25,12 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminCategoriesPage from './pages/AdminCategoriesPage';
 import ElevataBotPage from './pages/ElevataBotPage';
 import BusinessProfilePage from './pages/BusinessProfilePage';
+import MyApplications from './pages/MyApplications';
 import SmeTrainingManager from './pages/SmeTrainingManager';
 import BankerTrainingManager from './pages/BankerTrainingManager';
+import FeedbackPage from './pages/FeedbackPage';
+import TermsPage from './pages/TermsPage';
+import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
 
 function App() {
   return (
@@ -34,10 +38,14 @@ function App() {
       <AppContextProvider>
         <Router>
           <Routes>
-            {/* Public authentication screens */}
+            {/* Public authentication screens & legal documents */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/terms-and-conditions" element={<TermsPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
 
             {/* Protected application layout */}
             <Route element={<PrivateRoute />}>
@@ -46,6 +54,8 @@ function App() {
                 <Route index element={<SmeDashboard />} />
                 <Route path="profile" element={<BusinessProfilePage />} />
                 <Route path="opportunity-hub" element={<OpportunityHub />} />
+                <Route path="my-applications" element={<MyApplications />} />
+                <Route path="applications" element={<MyApplications />} />
                 <Route path="trainings" element={<SmeTrainingManager />} />
                 <Route path="training-manager" element={<SmeTrainingManager />} />
                 <Route path="inventory" element={<Inventory />} />
@@ -58,21 +68,25 @@ function App() {
                 <Route path="tech-advisor" element={<TechAdvisor />} />
                 <Route path="business-advisor" element={<BusinessStartAdvisor />} />
                 <Route path="ai-bot" element={<ElevataBotPage />} />
+                <Route path="feedback" element={<FeedbackPage />} />
 
                 {/* Restricted banker route - gate to ADMIN/FI users */}
                 <Route element={<RoleRoute allowedRoles={['ADMIN', 'FINANCIAL_INSTITUTION']} />}>
+                  <Route path="banker-panel" element={<BankOfficerDashboard />} />
                   <Route path="banker" element={<BankOfficerDashboard />} />
                   <Route path="banker/publisher" element={<OpportunityPublisher />} />
                   <Route path="banker/trainings" element={<BankerTrainingManager />} />
                   <Route path="banker/training-manager" element={<BankerTrainingManager />} />
                   <Route path="banker/applications" element={<BankerApplications />} />
                   <Route path="banker/monitoring" element={<SmeMonitoring />} />
+                  <Route path="banker/feedback" element={<FeedbackPage />} />
                 </Route>
 
                 {/* Restricted Admin user and category management */}
                 <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
                   <Route path="admin/users" element={<AdminUsersPage />} />
                   <Route path="admin/categories" element={<AdminCategoriesPage />} />
+                  <Route path="admin/feedback" element={<FeedbackPage />} />
                 </Route>
               </Route>
             </Route>

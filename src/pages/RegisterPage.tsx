@@ -10,6 +10,7 @@ import {
   Briefcase,
   ShieldCheck,
   CheckCircle,
+  Check,
   Eye,
   EyeOff
 } from 'lucide-react';
@@ -131,6 +132,7 @@ export default function RegisterPage() {
   const [verificationSent, setVerificationSent] = useState(false);
   const [emailVerified, setEmailVerified] = useState(false);
   const [verificationLoading, setVerificationLoading] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   // Password visibility states
   const [showPassword, setShowPassword] = useState(false);
@@ -320,6 +322,11 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    if (!agreedToTerms) {
+      setError('You must read and agree to the Terms & Conditions and Privacy Policy to register.');
+      return;
+    }
 
     let lat = 0;
     let lon = 0;
@@ -992,6 +999,49 @@ export default function RegisterPage() {
             </motion.div>
           )}
 
+          {/* Terms & Conditions Agreement Checkbox */}
+          {step === totalSteps && (
+            <div className="pt-2">
+              <label
+                className="flex items-start gap-2.5 cursor-pointer text-left select-none group"
+                onClick={() => setAgreedToTerms(!agreedToTerms)}
+              >
+                <div
+                  className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border transition-colors ${
+                    agreedToTerms
+                      ? 'border-white bg-white text-[#1d4d57]'
+                      : 'border-white/50 bg-white/5 group-hover:border-white'
+                  }`}
+                >
+                  {agreedToTerms && <Check className="h-3 w-3 stroke-[3]" />}
+                </div>
+                <span className="text-[12px] text-white/85 leading-snug">
+                  I agree to the{' '}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-semibold text-white underline hover:text-sky-300 transition-colors"
+                  >
+                    Terms &amp; Conditions
+                  </Link>{' '}
+                  and{' '}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="font-semibold text-white underline hover:text-sky-300 transition-colors"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
+            </div>
+          )}
+
           {/* Action buttons */}
           <div className="flex gap-3 pt-3">
             {step > 1 && (
@@ -1041,6 +1091,16 @@ export default function RegisterPage() {
           Already on Elevata?{' '}
           <Link to="/login" className="font-semibold text-white hover:underline">
             Sign in
+          </Link>
+        </div>
+
+        <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-center gap-3 text-[11px] text-white/50">
+          <Link to="/terms" target="_blank" className="hover:text-white/80 transition-colors">
+            Terms &amp; Conditions
+          </Link>
+          <span>•</span>
+          <Link to="/privacy" target="_blank" className="hover:text-white/80 transition-colors">
+            Privacy Policy
           </Link>
         </div>
       </motion.div>

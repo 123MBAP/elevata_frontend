@@ -26,7 +26,8 @@ import {
   Settings,
   ChevronRight,
   ChevronLeft,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -129,6 +130,13 @@ export default function Sidebar({
       icon: <Target className="w-5 h-5" />
     },
     {
+      id: 'my-applications',
+      path: '/my-applications',
+      label: 'My Applications',
+      tooltip: 'Applications, Statuses & Requirements',
+      icon: <ClipboardCheck className="w-5 h-5" />
+    },
+    {
       id: 'reports',
       path: '/reports',
       label: 'Financial Statements & Reports',
@@ -148,13 +156,20 @@ export default function Sidebar({
       label: 'Elevata AI Copilot',
       tooltip: 'Intelligent Advisory & AI Assistance',
       icon: <Bot className="w-5 h-5" />
+    },
+    {
+      id: 'feedback',
+      path: '/feedback',
+      label: 'Feedback & Admin Support',
+      tooltip: 'Direct feedback & live chats with Admin',
+      icon: <MessageSquare className="w-5 h-5" />
     }
   ];
 
   const bankerNavItems = [
     {
       id: 'banker-panel',
-      path: '/banker',
+      path: '/banker-panel',
       label: 'Credit Institution Panel',
       tooltip: 'Banker Portfolio & Pipelines',
       icon: <Landmark className="w-5 h-5" />
@@ -193,6 +208,13 @@ export default function Sidebar({
       label: 'AI Banker Copilot',
       tooltip: 'AI Credit Risk & Underwriting Assistant',
       icon: <Bot className="w-5 h-5" />
+    },
+    {
+      id: 'banker-feedback',
+      path: '/banker/feedback',
+      label: 'Feedback & Admin Helpdesk',
+      tooltip: 'Institutional feedback & inquiries with Admin',
+      icon: <MessageSquare className="w-5 h-5" />
     }
   ];
 
@@ -252,6 +274,13 @@ export default function Sidebar({
       label: 'Elevata AI Platform Copilot',
       tooltip: 'AI Platform & Risk Assistant',
       icon: <Bot className="w-5 h-5" />
+    },
+    {
+      id: 'admin-feedback',
+      path: '/admin/feedback',
+      label: 'Helpdesk & Live Feedback Chats',
+      tooltip: 'Omnichannel live chats with SMEs & Institutions',
+      icon: <MessageSquare className="w-5 h-5" />
     }
   ];
 
@@ -263,6 +292,21 @@ export default function Sidebar({
       : smeNavItems;
 
   const isItemActive = (path: string) => {
+    if (path === '/my-applications' || path === '/opportunity-hub?tab=applications') {
+      const searchParams = new URLSearchParams(location.search);
+      return (
+        location.pathname === '/my-applications' ||
+        location.pathname === '/applications' ||
+        (location.pathname === '/opportunity-hub' && searchParams.get('tab') === 'applications')
+      );
+    }
+    if (path === '/opportunity-hub') {
+      const searchParams = new URLSearchParams(location.search);
+      return (
+        location.pathname === '/opportunity-hub' &&
+        searchParams.get('tab') !== 'applications'
+      );
+    }
     if (path === '/activities') {
       return isActivitiesRoute;
     }

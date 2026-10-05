@@ -66,12 +66,13 @@ export interface Application {
   id: string;
   opportunityId: string;
   opportunityTitle: string;
+  institution?: string;
   smeId: string;
   smeName: string;
   smeSector: string;
   smeReadiness: number;
   smeHealth: number;
-  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected';
+  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected' | 'Pending' | 'Completed';
   appliedAt: string;
   feedback: string;
   aiSuggestions: string[];
@@ -249,6 +250,7 @@ interface AppContextType {
     documents: Record<string, File>;
   }) => Promise<Application>;
   updateApplicationStatus: (appId: string, status: Application['status'], feedback?: string) => Promise<void>;
+  uploadApplicationDocument: (applicationId: string, documentType: string, file: File) => Promise<Application>;
   createTraining: (training: Omit<Training, 'id' | 'participantsCount' | 'attended' | 'completed' | 'hasCertificate'>) => void;
   updateTraining: (trainingId: string, data: Partial<Training>) => void;
   deleteTraining: (trainingId: string) => void;
@@ -305,6 +307,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (res?.success && Array.isArray(res.data)) {
         setApplications(res.data.map((application: any) => ({
           ...application,
+          institution: application.institution || application.opportunity?.institution || '',
           smeReadiness: application.smeReadiness ?? 0,
           smeHealth: application.smeHealth ?? 0,
           feedback: application.feedback || 'Application received. Pending review.',
@@ -1042,6 +1045,32 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     )));
   };
 
+  const uploadApplicationDocument = async (applicationId: string, documentType: string, file: File): Promise<Application> => {
+    const form = new FormData();
+    form.append('documentTypes', JSON.stringify([documentType]));
+    form.append('documents', file);
+
+    const res = await apiRequest(`/applications/${applicationId}/documents`, {
+      method: 'POST',
+      body: form
+    });
+
+    if (!res?.success || !res.data) {
+      throw new Error(res?.message || 'Failed to upload document.');
+    }
+
+    const updatedApp: Application = {
+      ...res.data,
+      institution: res.data.institution || res.data.opportunity?.institution || '',
+      smeReadiness: res.data.smeReadiness ?? Math.round(activeSme.healthScore * 1.05),
+      smeHealth: res.data.smeHealth ?? activeSme.healthScore,
+      aiSuggestions: res.data.aiSuggestions || []
+    };
+
+    setApplications(prev => prev.map(app => (app.id === applicationId ? updatedApp : app)));
+    return updatedApp;
+  };
+
   const syncLiveRoomToBackend = async (trainingId: string, updates: { status?: string; attendees?: any[]; chatMessages?: any[]; liveState?: TrainingLiveState }) => {
     try {
       await apiRequest(`/trainings/${trainingId}/live`, {
@@ -1392,6 +1421,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       publishOpportunity,
       applyForOpportunity,
       updateApplicationStatus,
+      uploadApplicationDocument,
       createTraining,
       updateTraining,
       deleteTraining,

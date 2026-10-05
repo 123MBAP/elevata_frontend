@@ -173,7 +173,7 @@ export default function BankOfficerDashboard() {
           </button>
           <button
             type="button"
-            onClick={() => navigate('/opportunities')}
+            onClick={() => navigate('/banker/publisher')}
             className="accounting-btn-secondary"
           >
             <Zap className="w-3.5 h-3.5" />
