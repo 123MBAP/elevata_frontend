@@ -233,33 +233,6 @@ export default function BankerLoansPage() {
               Commercial credit institution monitoring portal. Approve or reject applications, trigger interbank disbursements, and monitor borrower repayment cashflows.
             </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 w-full md:w-auto shrink-0">
-            {/* Institution Switcher */}
-            <div className="bg-[#f8fafc] border border-[#cbd5e1] rounded-[4px] px-2.5 py-1 text-xs">
-              <span className="text-[10px] text-slate-500 block uppercase font-mono">Logged institution</span>
-              <select
-                value={selectedFiId}
-                onChange={(e) => setSelectedFiId(e.target.value)}
-                className="bg-transparent text-slate-900 font-semibold text-xs focus:outline-none cursor-pointer"
-              >
-                {institutions.map(inst => (
-                  <option key={inst.id} value={inst.id} className="bg-white text-slate-900">
-                    {inst.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              onClick={handleResetDemo}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-semibold rounded-[4px] border border-[#2998d6] transition"
-              title="Refresh lending records"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              <span>Refresh records</span>
-            </button>
-          </div>
         </div>
       </div>
 
