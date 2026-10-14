@@ -31,6 +31,13 @@ import BankerTrainingManager from './pages/BankerTrainingManager';
 import FeedbackPage from './pages/FeedbackPage';
 import TermsPage from './pages/TermsPage';
 import PrivacyPolicyPage from './pages/PrivacyPolicyPage';
+import SmeLoansPage from './pages/SmeLoansPage';
+import DigitalFinancialServicesMarketplace from './pages/DigitalFinancialServicesMarketplace';
+import BankerLoansPage from './pages/BankerLoansPage';
+import BankerServicesPublisher from './pages/BankerServicesPublisher';
+import ApiIntegrationMonitor from './pages/ApiIntegrationMonitor';
+import ComplaintsSupportPage from './pages/ComplaintsSupportPage';
+import AdminComplaintsPage from './pages/AdminComplaintsPage';
 
 function App() {
   return (
@@ -69,16 +76,25 @@ function App() {
                 <Route path="business-advisor" element={<BusinessStartAdvisor />} />
                 <Route path="ai-bot" element={<ElevataBotPage />} />
                 <Route path="feedback" element={<FeedbackPage />} />
+                <Route path="complaints" element={<ComplaintsSupportPage />} />
+                <Route path="loans" element={<SmeLoansPage />} />
+                <Route path="loans-and-repayments" element={<SmeLoansPage />} />
+                <Route path="financial-services" element={<DigitalFinancialServicesMarketplace />} />
+                <Route path="marketplace" element={<DigitalFinancialServicesMarketplace />} />
 
                 {/* Restricted banker route - gate to ADMIN/FI users */}
                 <Route element={<RoleRoute allowedRoles={['ADMIN', 'FINANCIAL_INSTITUTION']} />}>
                   <Route path="banker-panel" element={<BankOfficerDashboard />} />
                   <Route path="banker" element={<BankOfficerDashboard />} />
+                  <Route path="banker/loans" element={<BankerLoansPage />} />
+                  <Route path="banker/loan-management" element={<BankerLoansPage />} />
                   <Route path="banker/publisher" element={<OpportunityPublisher />} />
+                  <Route path="banker/services" element={<BankerServicesPublisher />} />
                   <Route path="banker/trainings" element={<BankerTrainingManager />} />
                   <Route path="banker/training-manager" element={<BankerTrainingManager />} />
                   <Route path="banker/applications" element={<BankerApplications />} />
                   <Route path="banker/monitoring" element={<SmeMonitoring />} />
+                  <Route path="banker/api-monitor" element={<ApiIntegrationMonitor />} />
                   <Route path="banker/feedback" element={<FeedbackPage />} />
                 </Route>
 
@@ -86,7 +102,9 @@ function App() {
                 <Route element={<RoleRoute allowedRoles={['ADMIN']} />}>
                   <Route path="admin/users" element={<AdminUsersPage />} />
                   <Route path="admin/categories" element={<AdminCategoriesPage />} />
+                  <Route path="admin/api-monitor" element={<ApiIntegrationMonitor />} />
                   <Route path="admin/feedback" element={<FeedbackPage />} />
+                  <Route path="admin/complaints" element={<AdminComplaintsPage />} />
                 </Route>
               </Route>
             </Route>

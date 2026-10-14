@@ -28,6 +28,7 @@ import {
   FilePlus,
   Coins,
   ChevronRight,
+  CreditCard,
   Sparkles,
   Loader2,
   ArrowRight,
@@ -871,7 +872,17 @@ export default function MyApplications() {
                   Need assistance with this facility? Contact the underwriter directly:
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  {statusCategory === 'completed' && (
+                    <Link
+                      to="/loans"
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition"
+                    >
+                      <CreditCard className="w-3.5 h-3.5" />
+                      <span>Track &amp; Repay Loan</span>
+                    </Link>
+                  )}
+
                   {matchedOpp && (
                     <button
                       type="button"

@@ -59,8 +59,10 @@ import {
   Activity
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
-import FormattedText from '../assets/components/ui/FormattedText';
+import FormattedText, { stripFormattedText } from '../assets/components/ui/FormattedText';
 import VirtualTrainingAttendeeModal from '../assets/components/VirtualTrainingAttendeeModal';
+import VideoPreviewPlayer from '../assets/components/ui/VideoPreviewPlayer';
+import GuideDocumentCard from '../assets/components/ui/GuideDocumentCard';
 
 const getDocIcon = (docName: string, className = "w-4 h-4") => {
   const lower = docName.toLowerCase();
@@ -216,6 +218,13 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
 
   // Selected opportunity for details panel
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+  const [detailsModalTab, setDetailsModalTab] = useState<'overview' | 'terms' | 'eligibility' | 'docs' | 'contact'>('overview');
+
+  useEffect(() => {
+    if (selectedOppId) {
+      setDetailsModalTab('overview');
+    }
+  }, [selectedOppId]);
 
   // AI Assistant Chat state (simulated)
   const [chatInput, setChatInput] = useState('');
@@ -586,7 +595,7 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
       const matchSearch =
         opp.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         opp.institution.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        opp.description.toLowerCase().includes(searchTerm.toLowerCase());
+        stripFormattedText(opp.description).toLowerCase().includes(searchTerm.toLowerCase());
       const matchCat = categoryFilter === 'All' || opp.category === categoryFilter;
       const matchSector =
         sectorFilter === 'All' ||
@@ -813,8 +822,8 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
                   <p className="text-[10px] text-slate-400">Published by {recommendedOpp.institution} · Category: {recommendedOpp.category}</p>
                 </div>
 
-                <p className="text-[11px] text-slate-600 leading-relaxed max-w-lg">
-                  {recommendedOpp.description}
+                <p className="text-[11px] text-slate-600 leading-relaxed max-w-lg line-clamp-2">
+                  {stripFormattedText(recommendedOpp.description, `${recommendedOpp.category} facility targeting growing local enterprises.`)}
                 </p>
 
                 <div className="p-3 bg-white border border-emerald-100 rounded-lg text-[10px] text-slate-500 space-y-1.5 max-w-lg shadow-sm">
@@ -1082,7 +1091,7 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
                         </div>
 
                         <p className="text-xs text-[#5e5e5e] line-clamp-2 leading-relaxed">
-                          {opp.description}
+                          {stripFormattedText(opp.description, `${opp.category} facility targeting growing local enterprises.`)}
                         </p>
 
                         <div className="grid grid-cols-2 gap-2 text-[10px] pt-1">
@@ -1171,7 +1180,7 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
                           <td className="py-2.5 px-3">
                             <div className="space-y-0.5">
                               <p className="font-bold text-slate-900 leading-tight">{opp.title}</p>
-                              <p className="text-[11px] text-slate-500 line-clamp-1">{opp.description}</p>
+                              <p className="text-[11px] text-slate-500 line-clamp-1">{stripFormattedText(opp.description, `${opp.category} facility targeting growing local enterprises.`)}</p>
                             </div>
                           </td>
                           <td className="py-2.5 px-3 font-semibold text-slate-700">
@@ -1404,7 +1413,7 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
                       </div>
 
                       <h4 className="text-xs font-bold text-slate-900 leading-snug">{tr.title}</h4>
-                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{tr.description}</p>
+                      <p className="text-[11px] text-slate-500 line-clamp-2 leading-relaxed">{stripFormattedText(tr.description, 'Capacity building training session.')}</p>
                       
                       <div className="space-y-1.5 text-[11px] text-slate-500 font-sans border-t border-slate-100 pt-2.5">
                         <div className="flex items-center gap-1.5">
@@ -2189,428 +2198,839 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
         const minMonthly = selectedOpp.minMonthlyRevenue || Math.round(selectedOpp.minRevenue / 12);
 
         return (
-          <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
-            <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-5xl h-[650px] max-h-[92vh] overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-150">
+          <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-50 flex items-start justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xl max-w-4xl w-full my-4 animate-in zoom-in-95 duration-150">
               
-              {/* Left Column: Opportunity Core Details & Criteria */}
-              <div className="flex-1 p-6 overflow-y-auto space-y-5 border-r border-slate-100">
-                
-                {/* Header info */}
-                <div className="flex justify-between items-start gap-4">
-                  <div className="space-y-1.5 flex-1">
-                    <div className="flex flex-wrap gap-1.5 items-center">
-                      <span className="text-[10px] font-bold bg-[#1a2332] text-white px-2.5 py-0.5 rounded uppercase tracking-wider">
-                        {selectedOpp.category}
+              {/* Header */}
+              <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 flex justify-between items-start gap-4 bg-slate-50/50">
+                <div className="space-y-1.5 flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-bold bg-[#1a2332] text-white px-2.5 py-0.5 rounded uppercase tracking-wider font-mono">
+                      {selectedOpp.category}
+                    </span>
+                    {selectedOpp.category === 'Loan' && (
+                      <span className="text-[10px] font-bold bg-sky-50 text-[#2998d6] border border-sky-200 px-2.5 py-0.5 rounded uppercase flex items-center gap-1 font-mono">
+                        <Coins className="w-3 h-3 text-[#2998d6]" />
+                        Credit Facility
                       </span>
-                      {selectedOpp.category === 'Loan' && (
-                        <span className="text-[10px] font-bold bg-sky-50 text-[#2998d6] border border-sky-200 px-2.5 py-0.5 rounded uppercase flex items-center gap-1 font-mono">
-                          <Coins className="w-3 h-3 text-[#2998d6]" />
-                          Credit Facility
-                        </span>
-                      )}
-                      {selectedOpp.sectors.includes('Agriculture') && (
-                        <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded uppercase flex items-center gap-1">
-                          <Sprout className="w-3 h-3 text-emerald-600" />
-                          Agrisolutions
-                        </span>
-                      )}
-                    </div>
-                    
-                    <h3 className="text-base font-extrabold text-slate-900 tracking-tight leading-snug">
-                      {selectedOpp.title}
-                    </h3>
-                    <p className="text-[11px] text-slate-500 flex items-center gap-2 flex-wrap">
-                      <span>Offered by <strong className="text-slate-800 font-semibold">{selectedOpp.institution}</strong></span>
-                      <span>·</span>
-                      <span className="font-mono text-slate-600">Deadline: {selectedOpp.deadline}</span>
-                    </p>
-                  </div>
-                  
-                  <button
-                    onClick={() => setSelectedOppId(null)}
-                    className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition shrink-0 md:hidden"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Verified Institution strip */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="space-y-0.5">
-                      <span className="text-[9px] font-bold uppercase tracking-widest text-[#2998d6] flex items-center gap-1">
-                        <ShieldCheck className="w-3.5 h-3.5 text-[#2998d6]" />
-                        Verified Financial Institution
+                    )}
+                    {selectedOpp.sectors?.includes('Agriculture') && (
+                      <span className="text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 px-2.5 py-0.5 rounded uppercase flex items-center gap-1">
+                        <Sprout className="w-3 h-3 text-emerald-600" />
+                        Agrisolutions
                       </span>
-                      <p className="text-xs font-bold text-slate-900">{selectedOpp.publisher?.institutionName || selectedOpp.institution}</p>
-                      {selectedOpp.publisher?.representativeName && (
-                        <p className="text-[10px] text-slate-500">Officer / Desk: {selectedOpp.publisher.representativeName}</p>
-                      )}
-                    </div>
-                    <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[9px] font-bold rounded-full uppercase tracking-wider">
-                      Active
+                    )}
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border bg-emerald-50 text-emerald-700 border-emerald-200">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+                      Active Opportunity
                     </span>
                   </div>
 
-                  <div className="mt-2.5 flex flex-wrap gap-2 pt-2 border-t border-slate-200/60">
-                    {selectedOpp.publisher?.phone && (
-                      <a href={`tel:${selectedOpp.publisher.phone}`} className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
-                        <Phone className="h-3 w-3 text-[#2998d6]" />
-                        {selectedOpp.publisher.phone}
-                      </a>
+                  <h2 className="text-lg sm:text-xl font-bold text-slate-900 tracking-tight leading-snug">
+                    {selectedOpp.title}
+                  </h2>
+
+                  <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500 font-medium">
+                    <span className="flex items-center gap-1 text-slate-800 font-semibold">
+                      <Building2 className="w-3.5 h-3.5 text-[#2998d6]" />
+                      <span>{selectedOpp.institution}</span>
+                    </span>
+                    {selectedOpp.publisher?.representativeName && (
+                      <span>· Lead Officer: {selectedOpp.publisher.representativeName}</span>
                     )}
-                    {selectedOpp.publisher?.email && (
-                      <a href={`mailto:${selectedOpp.publisher.email}`} className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
-                        <Mail className="h-3 w-3 text-[#2998d6]" />
-                        Email Desk
-                      </a>
-                    )}
-                    {selectedOpp.publisher?.website && (
-                      <a href={selectedOpp.publisher.website} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-2.5 py-1 text-[10px] font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs">
-                        <Globe className="h-3 w-3 text-[#2998d6]" />
-                        Web Portal
-                      </a>
+                    {selectedOpp.deadline && (
+                      <span className="font-mono text-slate-600">· Deadline: {selectedOpp.deadline}</span>
                     )}
                   </div>
                 </div>
 
-                {/* Key Financing Terms Breakdown */}
-                {selectedOpp.category === 'Loan' && (
-                  <div className="bg-slate-50/90 border border-slate-200 rounded-xl p-3.5 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <Coins className="w-3.5 h-3.5 text-[#2998d6]" />
-                        Financing Terms &amp; Cost Structure
-                      </span>
-                      <span className="text-[9px] font-mono text-slate-500">Ledger-backed</span>
+                <button
+                  type="button"
+                  onClick={() => setSelectedOppId(null)}
+                  className="p-2 text-slate-400 hover:text-slate-700 rounded-full hover:bg-slate-200/60 transition-colors cursor-pointer shrink-0"
+                  aria-label="Close modal"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Quick KPI Metric Strips */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3 p-4 bg-white border-b border-slate-100 text-xs">
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Max Facility</span>
+                  <span className="text-sm font-bold text-slate-900 font-mono block mt-0.5 truncate">{selectedOpp.maxFunding}</span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">
+                    {typeof selectedOpp.loanRate === 'number' ? 'Annual Rate' : typeof selectedOpp.grantCoFundingPct === 'number' ? 'Co-Funding' : 'Cost Structure'}
+                  </span>
+                  <span className="text-sm font-bold text-emerald-700 font-mono block mt-0.5 truncate">
+                    {typeof selectedOpp.loanRate === 'number' ? `${selectedOpp.loanRate}% p.a.` : typeof selectedOpp.grantCoFundingPct === 'number' ? `${selectedOpp.grantCoFundingPct}% Required` : '100% Fully Funded'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Financing Tenor</span>
+                  <span className="text-sm font-bold text-slate-900 font-mono block mt-0.5 truncate">
+                    {selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : 'Flexible Term'}
+                  </span>
+                </div>
+                <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-200/80">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase block">Min Readiness</span>
+                  <span className="text-sm font-bold text-[#2998d6] font-mono block mt-0.5 truncate">
+                    {selectedOpp.minReadinessScore || 60}% Score
+                  </span>
+                </div>
+              </div>
+
+              {/* Modal Folder Navigation Tabs */}
+              <div className="flex items-center overflow-x-auto border-b border-slate-200 px-5 sm:px-6 bg-slate-50/50 space-x-2 text-xs shrink-0">
+                {[
+                  { id: 'overview', label: 'Program Overview', icon: <Info className="w-3.5 h-3.5" /> },
+                  { id: 'terms', label: 'Financial & Terms', icon: <Coins className="w-3.5 h-3.5" /> },
+                  { id: 'eligibility', label: 'Underwriting & Match', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
+                  { id: 'docs', label: `Required Files (${(selectedOpp.requiredDocs || []).length})`, icon: <FileText className="w-3.5 h-3.5" /> },
+                  {
+                    id: 'contact',
+                    label: `How to Apply & Contact${Boolean(selectedOpp.videoUrl || (selectedOpp.metadata as any)?.videoUrl || selectedOpp.guideDocument || (selectedOpp.metadata as any)?.guideDocument) ? ' (Guide Attached)' : ''}`,
+                    icon: <Building2 className="w-3.5 h-3.5" />
+                  }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setDetailsModalTab(tab.id as any)}
+                    className={`py-3 px-3 font-semibold border-b-2 flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap ${
+                      detailsModalTab === tab.id
+                        ? 'border-[#2998d6] text-[#2998d6] font-bold bg-white'
+                        : 'border-transparent text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    {tab.icon}
+                    <span>{tab.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Tab Content Body */}
+              <div className="p-5 sm:p-6 space-y-5 text-slate-700 text-xs">
+                
+                {/* TAB 1: OVERVIEW */}
+                {detailsModalTab === 'overview' && (
+                  <div className="space-y-4 animate-in fade-in duration-150">
+                    {/* Optional Opportunity Cover Banner */}
+                    {((selectedOpp.metadata as any)?.bannerImage || (selectedOpp.metadata as any)?.imageUrl) && (
+                      <div className="w-full h-44 sm:h-56 rounded-xl overflow-hidden border border-slate-200 bg-slate-900 shadow-2xs">
+                        <img
+                          src={(selectedOpp.metadata as any)?.bannerImage || (selectedOpp.metadata as any)?.imageUrl}
+                          alt={selectedOpp.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+
+                    {/* Guide Accessories notification strip if present */}
+                    {Boolean(
+                      selectedOpp.videoUrl ||
+                      (selectedOpp.metadata as any)?.videoUrl ||
+                      selectedOpp.guideDocument ||
+                      (selectedOpp.metadata as any)?.guideDocument
+                    ) && (
+                      <div className="p-3.5 rounded-xl bg-gradient-to-r from-sky-50 via-indigo-50/40 to-slate-50 border border-sky-200/80 flex items-center justify-between gap-3 shadow-2xs">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-[#2998d6]/10 text-[#2998d6] flex items-center justify-center font-bold shrink-0 border border-[#2998d6]/20">
+                            <Sparkles className="w-4 h-4 text-[#2998d6]" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 text-xs">Official Guide &amp; Application Resources Attached</p>
+                            <p className="text-[11px] text-slate-500">Video walkthrough and preparation guidelines available in the "How to Apply &amp; Contact" tab.</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setDetailsModalTab('contact')}
+                          className="px-3 py-1.5 text-xs font-bold text-white bg-[#2998d6] hover:bg-[#1f85be] rounded-lg transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1"
+                        >
+                          <span>View Guide &amp; Apply</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Verified Institution strip */}
+                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-[#2998d6] flex items-center gap-1">
+                            <ShieldCheck className="w-3.5 h-3.5 text-[#2998d6]" />
+                            Verified Financial Institution
+                          </span>
+                          <p className="text-sm font-bold text-slate-900">{selectedOpp.publisher?.institutionName || selectedOpp.institution}</p>
+                          {selectedOpp.publisher?.representativeName && (
+                            <p className="text-[11px] text-slate-500">Officer / Desk: {selectedOpp.publisher.representativeName}</p>
+                          )}
+                        </div>
+                        <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-bold rounded-full uppercase tracking-wider">
+                          Active Provider
+                        </span>
+                      </div>
                     </div>
-                    
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Interest Rate</span>
-                        <span className="font-bold text-slate-900 block text-xs mt-0.5">
-                          {selectedOpp.loanRate ? `${selectedOpp.loanRate}% p.a.` : 'Standard'}
-                        </span>
+
+                    {/* Scope & Description */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                        <FileText className="w-4 h-4 text-[#2998d6]" />
+                        <span>Detailed Opportunity Description</span>
+                      </h4>
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl leading-relaxed text-xs">
+                        <FormattedText text={selectedOpp.description} />
                       </div>
-                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Repayment Term</span>
-                        <span className="font-bold text-slate-900 block text-xs mt-0.5">
-                          {selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : 'Negotiable'}
-                        </span>
+                    </div>
+
+                    {/* Benefits */}
+                    {selectedOpp.benefits && (
+                      <div className="space-y-1.5">
+                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
+                          <Sparkles className="w-4 h-4 text-emerald-600" />
+                          <span>Key Program Benefits &amp; Terms</span>
+                        </h4>
+                        <div className="p-4 bg-emerald-50/50 border border-emerald-200/70 rounded-xl leading-relaxed text-slate-800 text-xs">
+                          <FormattedText text={selectedOpp.benefits} />
+                        </div>
                       </div>
-                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Grace Period</span>
-                        <span className="font-bold text-slate-900 block text-xs mt-0.5">
-                          {selectedOpp.loanGrace ? `${selectedOpp.loanGrace} Months` : 'None'}
-                        </span>
+                    )}
+
+                    {/* Sectors and Locations */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+                      <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Targeted Business Sectors</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {(selectedOpp.sectors || []).map((sec, i) => (
+                            <span key={i} className="px-2.5 py-0.5 rounded-full bg-white border border-slate-200 text-slate-700 font-semibold text-[11px] shadow-2xs">
+                              {sec}
+                            </span>
+                          ))}
+                        </div>
                       </div>
-                      <div className="p-2.5 bg-white rounded-lg border border-slate-200 shadow-2xs">
-                        <span className="text-slate-400 block text-[8px] uppercase tracking-wider font-semibold">Collateral Type</span>
-                        <span className="font-bold text-slate-900 block text-xs mt-0.5 truncate" title={selectedOpp.collateralRequired ? (selectedOpp.collateralType || 'Asset Registration') : 'No Land Collateral'}>
-                          {selectedOpp.collateralRequired ? (selectedOpp.collateralType || 'Asset Registration') : 'No Land Collateral'}
-                        </span>
+
+                      <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1.5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Geographical Scope</span>
+                        <p className="text-xs font-semibold text-slate-800">
+                          {selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'Open to All Districts in Rwanda'}
+                        </p>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {/* Scope & Description */}
-                <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
-                    Overview &amp; Scope
-                  </h4>
-                  <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-xl leading-relaxed">
-                    <FormattedText text={selectedOpp.description} />
-                  </div>
-                </div>
-
-                {/* Benefits */}
-                <div className="space-y-1.5">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
-                    Program Benefits &amp; Terms
-                  </h4>
-                  <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-xl leading-relaxed">
-                    <FormattedText text={selectedOpp.benefits} />
-                  </div>
-                </div>
-
-                {/* Published Requirements Summary Cards */}
-                <div className="space-y-1.5 pt-2 border-t border-slate-150">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
-                    Published Program Requirements
-                  </h4>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                      <div className="flex items-center gap-1.5 text-slate-400">
-                        <TrendingUp className="w-3.5 h-3.5 shrink-0" />
-                        <span className="text-[8px] uppercase tracking-wider font-bold">Min Turnover</span>
-                      </div>
-                      <strong className="text-slate-900 block text-xs font-mono font-bold truncate" title={`${formatRWF(minMonthly)}/mo`}>
-                        {formatRWF(minMonthly)}/mo
-                      </strong>
-                    </div>
-                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                      <div className="flex items-center gap-1.5 text-slate-400">
-                        <Coins className="w-3.5 h-3.5 shrink-0" />
-                        <span className="text-[8px] uppercase tracking-wider font-bold">Max Funding</span>
-                      </div>
-                      <strong className="text-slate-900 block text-xs font-mono font-bold truncate">
-                        {selectedOpp.maxFunding}
-                      </strong>
-                    </div>
-                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                      <div className="flex items-center gap-1.5 text-slate-400">
-                        <Calendar className="w-3.5 h-3.5 shrink-0" />
-                        <span className="text-[8px] uppercase tracking-wider font-bold">Operating Age</span>
-                      </div>
-                      <strong className="text-slate-900 block text-xs font-bold truncate">
-                        {selectedOpp.minAge === 0 ? 'Any Age' : `${selectedOpp.minAge}+ Years`}
-                      </strong>
-                    </div>
-                    <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
-                      <div className="flex items-center gap-1.5 text-slate-400">
-                        <MapPin className="w-3.5 h-3.5 shrink-0" />
-                        <span className="text-[8px] uppercase tracking-wider font-bold">Target Districts</span>
-                      </div>
-                      <strong className="text-slate-900 block text-xs font-bold truncate" title={selectedOpp.eligLocations?.join(', ') || 'All districts'}>
-                        {selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'All districts'}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Eligibility Match Table */}
-                <div className="space-y-2 pt-2 border-t border-slate-150">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
-                    Business Profile Eligibility Match
-                  </h4>
-                  <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
-                    <table className="w-full text-left text-xs font-sans border-collapse bg-white">
-                      <thead>
-                        <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[9px] tracking-wider">
-                          <th className="px-4 py-2.5">Requirement</th>
-                          <th className="px-4 py-2.5">Criteria Threshold</th>
-                          <th className="px-4 py-2.5">Your Profile</th>
-                          <th className="px-4 py-2.5 text-right">Status</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {[
-                          {
-                            name: 'Target Sector',
-                            req: selectedOpp.sectors.join(', '),
-                            val: activeSme.sector,
-                            met: selectedOpp.sectors.includes(activeSme.sector)
-                          },
-                          {
-                            name: 'Min Monthly Turnover',
-                            req: formatRWF(minMonthly),
-                            val: formatRWF(activeSmeMonthlyRevenue),
-                            met: activeSmeMonthlyRevenue >= minMonthly
-                          },
-                          {
-                            name: 'Min Annual Turnover',
-                            req: formatRWF(selectedOpp.minRevenue),
-                            val: formatRWF(activeSmeAnnualRevenue),
-                            met: activeSmeAnnualRevenue >= selectedOpp.minRevenue
-                          },
-                          {
-                            name: 'Business Age',
-                            req: selectedOpp.minAge === 0 ? 'Any' : `${selectedOpp.minAge}+ Years`,
-                            val: `${activeSme.age} Years`,
-                            met: activeSme.age >= selectedOpp.minAge
-                          },
-                          {
-                            name: 'Business Health Score',
-                            req: `Min ${selectedOpp.minHealthScore}%`,
-                            val: `${activeSme.healthScore}%`,
-                            met: activeSme.healthScore >= selectedOpp.minHealthScore
-                          },
-                          {
-                            name: 'Loan Readiness Score',
-                            req: `Min ${selectedOpp.minReadinessScore}%`,
-                            val: `${calculatedReadiness}%`,
-                            met: calculatedReadiness >= selectedOpp.minReadinessScore
-                          },
-                          {
-                            name: 'Geographical Scope',
-                            req: selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'All districts',
-                            val: activeSmeLocation,
-                            met: !selectedOpp.eligLocations || selectedOpp.eligLocations.length === 0
-                          }
-                        ].map((chk, idx) => (
-                          <tr key={idx} className="hover:bg-slate-50/60 transition">
-                            <td className="px-4 py-2.5 font-semibold text-slate-800 text-[10.5px]">{chk.name}</td>
-                            <td className="px-4 py-2.5 text-slate-600 font-mono text-[10px]">{chk.req}</td>
-                            <td className="px-4 py-2.5 text-slate-600 font-mono text-[10px]">{chk.val}</td>
-                            <td className="px-4 py-2.5 text-right">
-                              <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold border uppercase tracking-wider ${
-                                chk.met 
-                                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
-                                  : 'bg-rose-50 text-rose-700 border-rose-200'
-                              }`}>
-                                {chk.met ? <Check className="w-2.5 h-2.5" /> : <AlertCircle className="w-2.5 h-2.5" />}
-                                {chk.met ? 'Met' : 'Not Met'}
-                              </span>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* Required Documentation Checklist */}
-                <div className="space-y-2 pt-2 border-t border-slate-150">
-                  <h4 className="text-[10px] font-bold text-slate-700 uppercase tracking-widest block font-sans">
-                    Required Verification Files &amp; Checklist
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                    {selectedOpp.requiredDocs.map((doc, i) => {
-                      const isTax = doc.toLowerCase().includes('tax') || doc.toLowerCase().includes('compliance') || doc.toLowerCase().includes('rra');
-                      const isFinancial = doc.toLowerCase().includes('financial') || doc.toLowerCase().includes('ledger') || doc.toLowerCase().includes('statements');
-                      const isLicense = doc.toLowerCase().includes('license') || doc.toLowerCase().includes('address') || doc.toLowerCase().includes('profile');
-                      
-                      let isUploaded = false;
-                      let action = null;
-                      let label = "";
-
-                      if (isTax) {
-                        isUploaded = taxClearanceUploaded;
-                        action = () => {
-                          setTaxClearanceUploaded(true);
-                          triggerToast('Tax Clearance Certificate uploaded. Compliance score increased to 100%!');
-                        };
-                        label = "Upload Tax Certificate";
-                      } else if (isFinancial) {
-                        isUploaded = auditedStatementsUploaded;
-                        action = () => {
-                          setAuditedStatementsUploaded(true);
-                          triggerToast('Financial statements uploaded successfully. Documentation score updated.');
-                        };
-                        label = "Upload Financials";
-                      } else if (isLicense) {
-                        isUploaded = profileCompleted;
-                        action = () => {
-                          setProfileCompleted(true);
-                          triggerToast('Business profile completed. Readiness index improved.');
-                        };
-                        label = "Complete License Info";
-                      } else {
-                        isUploaded = false;
-                        action = () => {
-                          triggerToast(`"${doc}" uploaded successfully!`);
-                        };
-                        label = "Upload File";
-                      }
-
-                      return (
-                        <div key={i} className="p-3 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center gap-3">
-                          <div className="flex items-center gap-2.5 text-[10.5px] font-semibold text-slate-800 truncate max-w-[65%]">
-                            <span className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 shrink-0">
-                              {getDocIcon(doc, "w-3.5 h-3.5 text-slate-600")}
-                            </span>
-                            <span title={doc} className="truncate">{doc}</span>
+                {/* TAB 2: FINANCIAL & TERMS */}
+                {detailsModalTab === 'terms' && (
+                  <div className="space-y-4 animate-in fade-in duration-150">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                        <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block border-b border-slate-200 pb-1.5">
+                          Financing Envelope
+                        </span>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500">Maximum Funding:</span>
+                          <span className="font-bold text-slate-900 font-mono text-sm">{selectedOpp.maxFunding}</span>
+                        </div>
+                        {(selectedOpp.metadata as any)?.loanMinAmt ? (
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-slate-500">Minimum Ticket:</span>
+                            <span className="font-mono font-bold text-slate-800">{formatRWF((selectedOpp.metadata as any).loanMinAmt)}</span>
                           </div>
-                          {isUploaded ? (
-                            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[9px] font-bold px-2 py-1 rounded-lg flex items-center gap-1 uppercase tracking-wider font-sans shrink-0">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                              Uploaded
-                            </span>
-                          ) : (
-                            <button
-                              onClick={action}
-                              className="bg-slate-900 hover:bg-slate-800 text-white text-[9.5px] font-bold px-3 py-1.5 rounded-lg shadow-2xs transition flex items-center gap-1 shrink-0"
-                            >
-                              <FileUp className="w-3 h-3 text-slate-300" />
-                              {label}
-                            </button>
-                          )}
+                        ) : null}
+                        {typeof selectedOpp.loanRate === 'number' && (
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-slate-500">Annual Interest Rate:</span>
+                            <span className="font-bold text-emerald-700 font-mono">{selectedOpp.loanRate}% p.a.</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500">Interest Calculation:</span>
+                          <span className="font-semibold text-slate-800">{(selectedOpp.metadata as any)?.interestType || (selectedOpp.metadata as any)?.loanStructure || 'Fixed p.a.'}</span>
                         </div>
-                      );
-                    })}
-                  </div>
-                </div>
-
-              </div>
-
-              {/* Right Column: AI Assistant Panel & Action Footer */}
-              <div className="w-full md:w-88 bg-slate-50/70 p-5 flex flex-col justify-between h-full border-t md:border-t-0 md:border-l border-slate-200">
-                <div className="flex-1 flex flex-col justify-between h-[88%] overflow-hidden">
-                  <div className="pb-3 border-b border-slate-200 flex justify-between items-center">
-                    <div className="flex items-center gap-2">
-                      <div className="p-1.5 bg-sky-50 border border-sky-200 rounded-lg">
-                        <Sparkles className="w-4 h-4 text-[#2998d6]" />
+                        {typeof selectedOpp.grantCoFundingPct === 'number' && (
+                          <div className="flex justify-between items-center py-1">
+                            <span className="text-slate-500">Grant Co-Funding:</span>
+                            <span className="font-bold text-amber-700 font-mono">{selectedOpp.grantCoFundingPct}%</span>
+                          </div>
+                        )}
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500">Disbursement Currency:</span>
+                          <span className="font-mono font-bold text-slate-800">{(selectedOpp.metadata as any)?.currency || 'RWF'}</span>
+                        </div>
                       </div>
-                      <div>
-                        <h4 className="text-xs font-bold text-slate-900">Elevata AI Advisor</h4>
-                        <p className="text-[9px] text-slate-400 uppercase tracking-wider">Opportunity Copilot</p>
+
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2.5">
+                        <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block border-b border-slate-200 pb-1.5">
+                          Tenor &amp; Repayment Schedule
+                        </span>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500">Financing Tenor / Term:</span>
+                          <span className="font-bold text-slate-900 font-mono">{selectedOpp.loanTerm ? `${selectedOpp.loanTerm} Months` : 'Flexible Term'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500">Grace Period:</span>
+                          <span className="font-bold text-slate-900 font-mono">{selectedOpp.loanGrace ? `${selectedOpp.loanGrace} Months` : 'None / Standard'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500">Repayment Frequency:</span>
+                          <span className="font-semibold text-slate-800">{(selectedOpp.metadata as any)?.repaymentFrequency || 'Monthly Amortization'}</span>
+                        </div>
+                        <div className="flex justify-between items-center py-1">
+                          <span className="text-slate-500">Expected SLA:</span>
+                          <span className="font-semibold text-slate-800">{(selectedOpp.metadata as any)?.disbursementTimeline || '5 - 10 Business Days'}</span>
+                        </div>
                       </div>
                     </div>
-                    
-                    <button
-                      onClick={() => setSelectedOppId(null)}
-                      className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition hidden md:block"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
 
-                  {/* Chat conversation area */}
-                  <div className="flex-1 overflow-y-auto py-3 space-y-3 pr-1 text-xs">
-                    {chatHistory.map((msg, i) => (
-                      <div key={i} className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`p-3 rounded-lg max-w-[88%] leading-relaxed ${
-                          msg.sender === 'user'
-                            ? 'bg-[#1a2332] text-white font-medium shadow-xs'
-                            : 'bg-white border border-slate-200 text-slate-700 shadow-2xs'
+                    {/* Collateral Terms Card */}
+                    <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-2">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                          Collateral Structuring
+                        </span>
+                        <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+                          selectedOpp.collateralRequired ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'
                         }`}>
-                          {msg.text}
-                        </div>
+                          {selectedOpp.collateralRequired ? 'Collateral Required' : 'No Collateral Required'}
+                        </span>
                       </div>
-                    ))}
-                    {isTyping && (
-                      <div className="flex justify-start">
-                        <div className="p-2.5 bg-white border border-slate-200 rounded-lg text-slate-400 font-sans flex items-center gap-2">
-                          <Loader2 className="w-3.5 h-3.5 animate-spin text-[#2998d6]" />
-                          <span>AI Assistant is typing...</span>
-                        </div>
+                      <p className="text-slate-700 text-xs leading-relaxed pt-1">
+                        {(selectedOpp.metadata as any)?.collateralDescription || selectedOpp.collateralType || (
+                          selectedOpp.collateralRequired
+                            ? 'Specific asset pledge or personal guarantee required upon loan sanctioning.'
+                            : 'No tangible asset collateral required. Program underwritten based on verifiable business cashflows and digital ledger records.'
+                        )}
+                      </p>
+                    </div>
+
+                    {/* Additional Fees and Conditions if specified */}
+                    {Boolean((selectedOpp.metadata as any)?.additionalFees || (selectedOpp.metadata as any)?.additionalConditions) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        {(selectedOpp.metadata as any)?.additionalFees && (
+                          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Processing &amp; Admin Fees</span>
+                            <p className="text-xs font-medium text-slate-800 leading-relaxed">{(selectedOpp.metadata as any).additionalFees}</p>
+                          </div>
+                        )}
+                        {(selectedOpp.metadata as any)?.additionalConditions && (
+                          <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Facility Covenants / Conditions</span>
+                            <p className="text-xs font-medium text-slate-800 leading-relaxed">{(selectedOpp.metadata as any).additionalConditions}</p>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
+                )}
 
-                  {/* Input query box */}
-                  <form onSubmit={handleSendMessage} className="flex gap-2 pt-2.5 border-t border-slate-200">
-                    <input
-                      type="text"
-                      placeholder="Ask about collateral, interest rates..."
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      className="accounting-input flex-1 !text-xs"
-                    />
-                    <button
-                      type="submit"
-                      className="accounting-btn-primary !h-8 !px-3 !bg-[#2998d6] hover:!bg-[#1f85be] flex items-center justify-center shrink-0 cursor-pointer"
-                    >
-                      <Send className="w-3.5 h-3.5" />
-                    </button>
-                  </form>
+                {/* TAB 3: UNDERWRITING CRITERIA & PROFILE MATCH */}
+                {detailsModalTab === 'eligibility' && (
+                  <div className="space-y-4 animate-in fade-in duration-150">
+                    {/* Published Requirements Summary Cards */}
+                    <div className="space-y-1.5">
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                        Published Underwriting Thresholds
+                      </h4>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                          <div className="flex items-center gap-1.5 text-slate-400">
+                            <TrendingUp className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-[9px] uppercase tracking-wider font-bold">Min Turnover</span>
+                          </div>
+                          <strong className="text-slate-900 block text-xs font-mono font-bold truncate" title={`${formatRWF(minMonthly)}/mo`}>
+                            {formatRWF(minMonthly)}/mo
+                          </strong>
+                        </div>
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                          <div className="flex items-center gap-1.5 text-slate-400">
+                            <Coins className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-[9px] uppercase tracking-wider font-bold">Max Funding</span>
+                          </div>
+                          <strong className="text-slate-900 block text-xs font-mono font-bold truncate">
+                            {selectedOpp.maxFunding}
+                          </strong>
+                        </div>
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                          <div className="flex items-center gap-1.5 text-slate-400">
+                            <Calendar className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-[9px] uppercase tracking-wider font-bold">Operating Age</span>
+                          </div>
+                          <strong className="text-slate-900 block text-xs font-bold truncate">
+                            {selectedOpp.minAge === 0 ? 'Any Age / Startups' : `${selectedOpp.minAge}+ Years`}
+                          </strong>
+                        </div>
+                        <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-1">
+                          <div className="flex items-center gap-1.5 text-slate-400">
+                            <ShieldCheck className="w-3.5 h-3.5 shrink-0" />
+                            <span className="text-[9px] uppercase tracking-wider font-bold">Min Readiness</span>
+                          </div>
+                          <strong className="text-slate-900 block text-xs font-mono font-bold truncate text-[#2998d6]">
+                            {selectedOpp.minReadinessScore || 60}% Score
+                          </strong>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Eligibility Match Table */}
+                    <div className="space-y-2 pt-2 border-t border-slate-150">
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                        Business Profile Eligibility Match
+                      </h4>
+                      <div className="border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                        <table className="w-full text-left text-xs border-collapse bg-white">
+                          <thead>
+                            <tr className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase font-bold text-[10px] tracking-wider">
+                              <th className="px-4 py-3">Requirement</th>
+                              <th className="px-4 py-3">Criteria Threshold</th>
+                              <th className="px-4 py-3">Your Profile</th>
+                              <th className="px-4 py-3 text-right">Status</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {[
+                              {
+                                name: 'Target Sector',
+                                req: selectedOpp.sectors.join(', '),
+                                val: activeSme.sector,
+                                met: selectedOpp.sectors.includes(activeSme.sector)
+                              },
+                              {
+                                name: 'Min Monthly Turnover',
+                                req: formatRWF(minMonthly),
+                                val: formatRWF(activeSmeMonthlyRevenue),
+                                met: activeSmeMonthlyRevenue >= minMonthly
+                              },
+                              {
+                                name: 'Min Annual Turnover',
+                                req: formatRWF(selectedOpp.minRevenue),
+                                val: formatRWF(activeSmeAnnualRevenue),
+                                met: activeSmeAnnualRevenue >= selectedOpp.minRevenue
+                              },
+                              {
+                                name: 'Business Age',
+                                req: selectedOpp.minAge === 0 ? 'Any' : `${selectedOpp.minAge}+ Years`,
+                                val: `${activeSme.age} Years`,
+                                met: activeSme.age >= selectedOpp.minAge
+                              },
+                              {
+                                name: 'Business Health Score',
+                                req: `Min ${selectedOpp.minHealthScore}%`,
+                                val: `${activeSme.healthScore}%`,
+                                met: activeSme.healthScore >= selectedOpp.minHealthScore
+                              },
+                              {
+                                name: 'Loan Readiness Score',
+                                req: `Min ${selectedOpp.minReadinessScore}%`,
+                                val: `${calculatedReadiness}%`,
+                                met: calculatedReadiness >= selectedOpp.minReadinessScore
+                              },
+                              {
+                                name: 'Geographical Scope',
+                                req: selectedOpp.eligLocations && selectedOpp.eligLocations.length > 0 ? selectedOpp.eligLocations.join(', ') : 'All districts',
+                                val: activeSmeLocation,
+                                met: !selectedOpp.eligLocations || selectedOpp.eligLocations.length === 0
+                              }
+                            ].map((chk, idx) => (
+                              <tr key={idx} className="hover:bg-slate-50/60 transition">
+                                <td className="px-4 py-2.5 font-semibold text-slate-800 text-[11px]">{chk.name}</td>
+                                <td className="px-4 py-2.5 text-slate-600 font-mono text-[10.5px]">{chk.req}</td>
+                                <td className="px-4 py-2.5 text-slate-600 font-mono text-[10.5px]">{chk.val}</td>
+                                <td className="px-4 py-2.5 text-right">
+                                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wider ${
+                                    chk.met 
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200' 
+                                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                                  }`}>
+                                    {chk.met ? <Check className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                                    {chk.met ? 'Met' : 'Not Met'}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {/* Permitted Legal Structures & Enterprise Stages */}
+                    {Boolean(
+                      (selectedOpp.metadata as any)?.legalStructures?.length ||
+                      (selectedOpp.metadata as any)?.targetStage ||
+                      (selectedOpp.metadata as any)?.otherEligibility
+                    ) && (
+                      <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-3 pt-3">
+                        <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block border-b border-slate-200 pb-1.5">
+                          Enterprise Structure &amp; Additional Criteria
+                        </span>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                          {(selectedOpp.metadata as any)?.legalStructures?.length > 0 && (
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Permitted Legal Forms</span>
+                              <div className="flex flex-wrap gap-1">
+                                {(selectedOpp.metadata as any).legalStructures.map((leg: string, idx: number) => (
+                                  <span key={idx} className="px-2 py-0.5 bg-white border border-slate-200 rounded text-[10.5px] font-medium text-slate-700">
+                                    {leg}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {(selectedOpp.metadata as any)?.targetStage && (
+                            <div>
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Target Enterprise Stage</span>
+                              <span className="px-2.5 py-1 bg-white border border-slate-200 rounded text-xs font-semibold text-slate-800 inline-block">
+                                {(selectedOpp.metadata as any).targetStage}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {(selectedOpp.metadata as any)?.otherEligibility && (
+                          <div className="pt-2 border-t border-slate-200/80">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Special Eligibility Notes</span>
+                            <p className="text-slate-700 text-xs leading-relaxed">{(selectedOpp.metadata as any).otherEligibility}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 4: REQUIRED VERIFICATION FILES */}
+                {detailsModalTab === 'docs' && (
+                  <div className="space-y-4 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider block">
+                        Required Verification Files &amp; Checklist
+                      </h4>
+                      <span className="text-[11px] text-slate-400 font-mono">
+                        {(selectedOpp.requiredDocs || []).length} items required
+                      </span>
+                    </div>
+
+                    {/* Render rich document dossier if present */}
+                    {Array.isArray((selectedOpp.metadata as any)?.documentDossier) && (selectedOpp.metadata as any).documentDossier.length > 0 ? (
+                      <div className="grid grid-cols-1 gap-2.5 text-xs">
+                        {(selectedOpp.metadata as any).documentDossier.map((docItem: any, i: number) => {
+                          const docName = typeof docItem === 'string' ? docItem : docItem.name;
+                          const isReq = docItem.status === 'Required';
+                          return (
+                            <div key={i} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <span className="p-2 bg-white border border-slate-200 rounded-lg text-slate-600 shrink-0">
+                                  {getDocIcon(docName, "w-4 h-4 text-slate-600")}
+                                </span>
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-bold text-slate-800 text-xs truncate">{docName}</span>
+                                    <span className={`px-2 py-0.5 rounded text-[9px] font-bold border uppercase font-mono ${
+                                      isReq ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                                    }`}>
+                                      {docItem.status || 'Required'}
+                                    </span>
+                                  </div>
+                                  {docItem.description && (
+                                    <p className="text-[11px] text-slate-500 mt-0.5">{docItem.description}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (selectedOpp.requiredDocs || []).length === 0 ? (
+                      <div className="p-6 text-center text-slate-400 bg-slate-50 rounded-xl border border-slate-200">
+                        <FileText className="w-8 h-8 mx-auto mb-2 text-slate-300" />
+                        <p className="font-semibold text-xs text-slate-600">No specific documents specified</p>
+                        <p className="text-[11px] mt-0.5">You can apply directly with your standard Elevata business profile.</p>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        {selectedOpp.requiredDocs.map((doc, i) => {
+                          const isTax = doc.toLowerCase().includes('tax') || doc.toLowerCase().includes('compliance') || doc.toLowerCase().includes('rra');
+                          const isFinancial = doc.toLowerCase().includes('financial') || doc.toLowerCase().includes('ledger') || doc.toLowerCase().includes('statements');
+                          const isLicense = doc.toLowerCase().includes('license') || doc.toLowerCase().includes('address') || doc.toLowerCase().includes('profile');
+                          
+                          let isUploaded = false;
+                          let action = null;
+                          let label = "";
+
+                          if (isTax) {
+                            isUploaded = taxClearanceUploaded;
+                            action = () => {
+                              setTaxClearanceUploaded(true);
+                              triggerToast('Tax Clearance Certificate uploaded. Compliance score increased to 100%!');
+                            };
+                            label = "Upload Tax Certificate";
+                          } else if (isFinancial) {
+                            isUploaded = auditedStatementsUploaded;
+                            action = () => {
+                              setAuditedStatementsUploaded(true);
+                              triggerToast('Financial statements uploaded successfully. Documentation score updated.');
+                            };
+                            label = "Upload Financials";
+                          } else if (isLicense) {
+                            isUploaded = profileCompleted;
+                            action = () => {
+                              setProfileCompleted(true);
+                              triggerToast('Business profile completed. Readiness index improved.');
+                            };
+                            label = "Complete License Info";
+                          } else {
+                            isUploaded = false;
+                            action = () => {
+                              triggerToast(`"${doc}" uploaded successfully!`);
+                            };
+                            label = "Upload File";
+                          }
+
+                          return (
+                            <div key={i} className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex justify-between items-center gap-3">
+                              <div className="flex items-center gap-2.5 text-[11px] font-semibold text-slate-800 truncate max-w-[65%]">
+                                <span className="p-1.5 bg-white border border-slate-200 rounded-lg text-slate-600 shrink-0">
+                                  {getDocIcon(doc, "w-4 h-4 text-slate-600")}
+                                </span>
+                                <span title={doc} className="truncate">{doc}</span>
+                              </div>
+                              {isUploaded ? (
+                                <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 uppercase tracking-wider font-sans shrink-0">
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                                  Uploaded
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={action}
+                                  className="bg-slate-900 hover:bg-slate-800 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg shadow-2xs transition flex items-center gap-1 shrink-0 cursor-pointer"
+                                >
+                                  <FileUp className="w-3.5 h-3.5 text-slate-300" />
+                                  {label}
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 5: HOW TO APPLY & CONTACT (INCLUDING GUIDE ACCESSORIES) */}
+                {detailsModalTab === 'contact' && (
+                  <div className="space-y-5 animate-in fade-in duration-150">
+                    
+                    {/* Official Guidance Video & Document (if attached) */}
+                    {(() => {
+                      const videoUrl = selectedOpp.videoUrl || (selectedOpp.metadata as any)?.videoUrl;
+                      const guideDoc = selectedOpp.guideDocument || (selectedOpp.metadata as any)?.guideDocument;
+
+                      if (!videoUrl && !guideDoc) return null;
+
+                      return (
+                        <div className="space-y-4">
+                          {/* Header Banner */}
+                          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-50 via-indigo-50/40 to-white border border-sky-200/80 shadow-2xs">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-xl bg-[#2998d6]/10 text-[#2998d6] flex items-center justify-center font-bold border border-[#2998d6]/20 shrink-0">
+                                  <Sparkles className="w-5 h-5 text-[#2998d6]" />
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-bold text-slate-900">
+                                    Official Applicant Guidance &amp; Explainer Resources
+                                  </h4>
+                                  <p className="text-xs text-slate-500">
+                                    Preparation materials provided by {selectedOpp.institution}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                                {guideDoc && (
+                                  <span className="px-2.5 py-1 rounded text-[10px] font-bold bg-white text-emerald-700 border border-emerald-200 shadow-2xs flex items-center gap-1">
+                                    <FileText className="w-3.5 h-3.5 text-emerald-600" /> Guide Document
+                                  </span>
+                                )}
+                                {videoUrl && (
+                                  <span className="px-2.5 py-1 rounded text-[10px] font-bold bg-white text-indigo-700 border border-indigo-200 shadow-2xs flex items-center gap-1">
+                                    <Video className="w-3.5 h-3.5 text-indigo-600" /> Video Explainer
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Interactive Video Preview Player */}
+                          {videoUrl && (
+                            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <Video className="w-4 h-4 text-indigo-600" />
+                                <span>Program Explainer Video Walkthrough</span>
+                              </span>
+                              <VideoPreviewPlayer
+                                url={videoUrl}
+                                title={`${selectedOpp.title} - Video Walkthrough`}
+                              />
+                            </div>
+                          )}
+
+                          {/* Guide Document Card */}
+                          {guideDoc && (
+                            <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                                <FileText className="w-4 h-4 text-[#2998d6]" />
+                                <span>Downloadable Guidelines &amp; Preparation Instructions</span>
+                              </span>
+                              <GuideDocumentCard
+                                document={guideDoc}
+                              />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* Application Method & Delivery Channel Box */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-sky-50/60 border border-sky-200/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                          <Send className="w-4 h-4 text-[#2998d6]" />
+                          <span>Application Mode &amp; Delivery Channel</span>
+                        </span>
+                        <span className="px-3 py-1 rounded text-[10px] font-mono font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
+                          {((selectedOpp.metadata as any)?.applicationMethod || 'elevata').toUpperCase()}
+                        </span>
+                      </div>
+
+                      {/* Special Instructions if provided */}
+                      {(selectedOpp.metadata as any)?.applicationInstructions && (
+                        <div className="p-3.5 bg-white rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-xs">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Publisher Instructions:</span>
+                          <FormattedText text={(selectedOpp.metadata as any).applicationInstructions} />
+                        </div>
+                      )}
+
+                      {/* External Portal / Direct Link */}
+                      {(selectedOpp.metadata as any)?.externalApplicationUrl && (
+                        <div className="p-3.5 bg-white rounded-xl border border-sky-100 flex items-center justify-between gap-3 flex-wrap">
+                          <div className="min-w-0">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Application Portal:</span>
+                            <span className="text-xs font-mono text-slate-800 truncate block">{(selectedOpp.metadata as any).externalApplicationUrl}</span>
+                          </div>
+                          <a
+                            href={(selectedOpp.metadata as any).externalApplicationUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+                          >
+                            <span>Open External Link</span>
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Financial Institution & Desk Profile */}
+                    <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                      <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block border-b border-slate-200 pb-2">
+                        Publishing Institution &amp; Officer Desk
+                      </span>
+
+                      <div className="space-y-1">
+                        <p className="text-sm font-bold text-slate-900">{selectedOpp.publisher?.institutionName || selectedOpp.institution}</p>
+                        {selectedOpp.publisher?.representativeName && (
+                          <p className="text-xs text-slate-600">Lead Officer / Desk: <strong className="text-slate-800">{selectedOpp.publisher.representativeName}</strong></p>
+                        )}
+                        {selectedOpp.publisher?.operatingScope && (
+                          <p className="text-xs text-slate-500">Operating Scope: {selectedOpp.publisher.operatingScope}</p>
+                        )}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200/80">
+                        {(selectedOpp.publisher?.phone || (selectedOpp.metadata as any)?.applicationPhone) && (
+                          <a
+                            href={`tel:${selectedOpp.publisher?.phone || (selectedOpp.metadata as any)?.applicationPhone}`}
+                            className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+                          >
+                            <Phone className="h-3.5 w-3.5 text-[#2998d6]" />
+                            <span>{selectedOpp.publisher?.phone || (selectedOpp.metadata as any)?.applicationPhone}</span>
+                          </a>
+                        )}
+                        {(selectedOpp.publisher?.email || (selectedOpp.metadata as any)?.applicationEmail) && (
+                          <a
+                            href={`mailto:${selectedOpp.publisher?.email || (selectedOpp.metadata as any)?.applicationEmail}`}
+                            className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+                          >
+                            <Mail className="h-3.5 w-3.5 text-[#2998d6]" />
+                            <span>Email Officer</span>
+                          </a>
+                        )}
+                        {selectedOpp.publisher?.website && (
+                          <a
+                            href={selectedOpp.publisher.website}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+                          >
+                            <Globe className="h-3.5 w-3.5 text-[#2998d6]" />
+                            <span>Web Portal</span>
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* Modal Footer with Actions */}
+              <div className="p-4 sm:p-5 border-t border-slate-200 bg-slate-50/80 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
+                <div className="flex items-center gap-2 text-xs text-slate-500">
+                  <span className="font-semibold text-slate-700">Deadline:</span>
+                  <span className="font-mono font-bold text-slate-800">{selectedOpp.deadline || 'Open Enrollment'}</span>
+                  <span>·</span>
+                  <span className="text-emerald-700 font-semibold">{calculatedReadiness}% Profile Match</span>
                 </div>
 
-                <div className="pt-3 border-t border-slate-200 mt-3">
+                <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
                   <button
+                    type="button"
+                    onClick={() => setSelectedOppId(null)}
+                    className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold rounded-lg transition-colors cursor-pointer"
+                  >
+                    Close
+                  </button>
+                  
+                  {(selectedOpp.metadata as any)?.externalApplicationUrl && (
+                    <a
+                      href={(selectedOpp.metadata as any).externalApplicationUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                    >
+                      <span>External Portal</span>
+                      <ExternalLink className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+
+                  <button
+                    type="button"
                     onClick={() => {
                       const oppToApply = selectedOpp;
                       setSelectedOppId(null);
                       if (oppToApply) handleOpenApplyModal(oppToApply);
                     }}
-                    className="w-full flex items-center justify-center gap-2 py-2.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded shadow-xs transition cursor-pointer"
+                    className="px-5 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-lg shadow-sm transition-colors cursor-pointer flex items-center gap-1.5"
                   >
                     <span>Proceed to Quick Apply</span>
                     <ArrowRight className="w-4 h-4" />
                   </button>
                 </div>
               </div>
+
             </div>
           </div>
         );

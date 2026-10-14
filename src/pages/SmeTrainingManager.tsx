@@ -29,6 +29,7 @@ import {
 } from 'lucide-react';
 import { Training, useApp } from '../context/AppContext';
 import VirtualTrainingAttendeeModal from '../assets/components/VirtualTrainingAttendeeModal';
+import { stripFormattedText } from '../assets/components/ui/FormattedText';
 
 export type TrainingTab = 'all' | 'enrolled' | 'live' | 'certificates';
 
@@ -567,7 +568,7 @@ export default function SmeTrainingManager() {
                               {training.title}
                             </h3>
                             <p className="text-xs text-[#5e5e5e] line-clamp-2 leading-relaxed">
-                              {training.description}
+                              {stripFormattedText(training.description, 'Capacity building training session.')}
                             </p>
                           </div>
 
@@ -720,7 +721,7 @@ export default function SmeTrainingManager() {
                             <td className="py-2.5 px-3">
                               <div className="space-y-0.5">
                                 <p className="font-bold text-slate-900 leading-tight">{tr.title}</p>
-                                <p className="text-[11px] text-slate-500 line-clamp-1">{tr.description}</p>
+                                <p className="text-[11px] text-slate-500 line-clamp-1">{stripFormattedText(tr.description, 'Capacity building training session.')}</p>
                               </div>
                             </td>
                             <td className="py-2.5 px-3 font-semibold text-slate-700">

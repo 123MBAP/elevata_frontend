@@ -41,7 +41,9 @@ import {
   ShieldCheck,
   CheckCircle,
   FileText,
-  Briefcase
+  Briefcase,
+  CreditCard,
+  Sparkles
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 
@@ -164,11 +166,27 @@ export default function SmeDashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => navigate('/loans')}
+            className="accounting-btn-primary"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Loans &amp; Repay</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/financial-services')}
+            className="accounting-btn-secondary"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-sky-600" />
+            <span>Digital Services</span>
+          </button>
           <button
             type="button"
             onClick={() => navigate('/activities?tab=sales')}
-            className="accounting-btn-primary"
+            className="accounting-btn-secondary"
           >
             <ShoppingBag className="w-3.5 h-3.5" />
             <span>New Sale</span>

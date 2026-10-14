@@ -60,6 +60,16 @@ export interface Opportunity {
     phone?: string;
     website?: string;
   } | null;
+  metadata?: any;
+  guideDocument?: {
+    name: string;
+    url?: string;
+    fileData?: string;
+    size?: number;
+    type?: string;
+    uploadedAt?: string;
+  } | null;
+  videoUrl?: string | null;
 }
 
 export interface Application {
@@ -347,7 +357,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
           setOpportunities(res.data.map((opportunity: Opportunity) => ({
             ...opportunity,
             sectors: Array.isArray(opportunity.sectors) ? opportunity.sectors : [],
-            requiredDocs: Array.isArray(opportunity.requiredDocs) ? opportunity.requiredDocs : []
+            requiredDocs: Array.isArray(opportunity.requiredDocs) ? opportunity.requiredDocs : [],
+            guideDocument: opportunity.guideDocument || (opportunity.metadata as any)?.guideDocument || null,
+            videoUrl: opportunity.videoUrl || (opportunity.metadata as any)?.videoUrl || null
           })));
         }
       } catch (err) {
@@ -982,7 +994,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const createdOpp: Opportunity = {
       ...res.data,
       sectors: Array.isArray(res.data.sectors) ? res.data.sectors : [],
-      requiredDocs: Array.isArray(res.data.requiredDocs) ? res.data.requiredDocs : []
+      requiredDocs: Array.isArray(res.data.requiredDocs) ? res.data.requiredDocs : [],
+      guideDocument: res.data.guideDocument || (res.data.metadata as any)?.guideDocument || (opp as any).guideDocument || null,
+      videoUrl: res.data.videoUrl || (res.data.metadata as any)?.videoUrl || (opp as any).videoUrl || null
     };
     setOpportunities(prev => [createdOpp, ...prev.filter(o => o.id !== createdOpp.id)]);
     return createdOpp;

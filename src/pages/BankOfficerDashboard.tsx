@@ -33,7 +33,8 @@ import {
   Filter,
   ArrowRight,
   Phone,
-  Mail
+  Mail,
+  CreditCard
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 
@@ -162,14 +163,30 @@ export default function BankOfficerDashboard() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={() => navigate('/banker/loans')}
+            className="accounting-btn-primary"
+          >
+            <CreditCard className="w-3.5 h-3.5" />
+            <span>Disbursement &amp; Loans</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/banker/api-monitor')}
+            className="accounting-btn-secondary"
+          >
+            <Activity className="w-3.5 h-3.5 text-indigo-600" />
+            <span>API Monitor</span>
+          </button>
           <button
             type="button"
             onClick={handleApplications}
-            className="accounting-btn-primary"
+            className="accounting-btn-secondary"
           >
             <FileSearch className="w-3.5 h-3.5" />
-            <span>Review Applications</span>
+            <span>Applications</span>
           </button>
           <button
             type="button"
@@ -186,110 +203,11 @@ export default function BankOfficerDashboard() {
       {/* 2. MAIN FOLDER TABS BAR (Connected to Card Body) */}
       {/* ========================================================================= */}
       <div className="relative">
-        <div className="flex items-end overflow-x-auto scrollbar-none z-10 relative space-x-1 sm:space-x-1.5 -mb-[1px]">
-          {tabsConfig.map((tab) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                onClick={() => setActiveTab(tab.id)}
-                className={`group relative flex items-center gap-2 sm:gap-2.5 px-4 sm:px-6 py-2.5 sm:py-3 rounded-t-[6px] text-xs sm:text-sm transition-all duration-150 cursor-pointer whitespace-nowrap select-none border-t border-x ${
-                  isActive
-                    ? 'bg-white text-slate-900 font-bold border-[#cbd5e1] border-b-white border-b-2 shadow-xs z-20 -mb-[1px] pt-3 sm:pt-3.5 pb-2.5 sm:pb-3 ring-0'
-                    : 'bg-[#f1f5f9] hover:bg-[#e4eaf2] text-[#475569] font-medium border-[#cbd5e1] border-b-[#cbd5e1] hover:text-[#0f172a]'
-                }`}
-              >
-                {isActive && (
-                  <span className="absolute top-0 left-0 right-0 h-[3px] bg-[#2998d6] rounded-t-[6px]" />
-                )}
-
-                <span className={`shrink-0 transition-transform group-hover:scale-110 ${isActive ? tab.color : 'text-slate-400 group-hover:text-slate-600'}`}>
-                  {tab.icon}
-                </span>
-
-                <span className="tracking-tight">{tab.label}</span>
-
-                <span
-                  className={`ml-1 px-2 py-0.5 rounded-full text-[10px] font-mono font-bold transition-colors ${
-                    isActive
-                      ? 'bg-[#2998d6] text-white shadow-xs'
-                      : 'bg-[#cbd5e1] text-[#334155] group-hover:bg-[#94a3b8] group-hover:text-white'
-                  }`}
-                >
-                  {tab.count}
-                </span>
-              </button>
-            );
-          })}
-        </div>
+      
 
         {/* MAIN WHITE CARD CONTAINER */}
-        <div className="accounting-card p-5 sm:p-7 relative z-0 border-[#cbd5e1] rounded-t-none space-y-6">
-          {/* Top 3 Solid Cyan Select Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
-            <div>
-              <label className="accounting-label">Target Industry Sector</label>
-              <select
-                value={sectorFilter}
-                onChange={(e) => setSectorFilter(e.target.value)}
-                className="accounting-select w-full"
-              >
-                <option value="all">All SME Sectors ({smes.length})</option>
-                <option value="Retail">Retail &amp; Commerce</option>
-                <option value="Agriculture">Agribusiness &amp; Farming</option>
-                <option value="Logistics">Transport &amp; Logistics</option>
-                <option value="Technology">Technology &amp; Fintech</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="accounting-label">Risk Rating Classification</label>
-              <select
-                value={riskFilter}
-                onChange={(e) => setRiskFilter(e.target.value)}
-                className="accounting-select w-full"
-              >
-                <option value="all">All Risk Classes ({smes.length})</option>
-                <option value="loan_ready">Pre-Approved / Loan Ready (Score ≥ 80)</option>
-                <option value="medium">Medium Risk / Monitoring (60-79)</option>
-                <option value="high">High Risk / Audit Required (&lt; 60)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="accounting-label">Underwriting Surveillance Mode</label>
-              <select
-                value="Continuous"
-                className="accounting-select w-full opacity-85 cursor-not-allowed"
-                disabled
-              >
-                <option value="Continuous">Elevata Continuous Monitoring (Live)</option>
-                <option value="Quarterly">Quarterly Batch Audit</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Quick Search & Total Summary Row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1 pb-2 border-b border-[#e2e8f0]">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-700">
-                Displaying <strong className="text-[#2998d6]">{filteredSmes.length}</strong> of {smes.length} SME borrowers
-              </span>
-            </div>
-
-            <div className="relative w-full sm:w-72">
-              <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by SME business name, sector, or owner..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="accounting-input w-full pl-8 text-xs"
-              />
-            </div>
-          </div>
-
+      <div className="accounting-card p-5 sm:p-7 relative z-0 border-[#cbd5e1] rounded-t-none space-y-6">
+        
           {/* ========================================================================= */}
           {/* 3. PORTFOLIO EXECUTIVE METRIC CARDS */}
           {/* ========================================================================= */}

@@ -27,7 +27,11 @@ import {
   ChevronRight,
   ChevronLeft,
   X,
-  MessageSquare
+  MessageSquare,
+  CreditCard,
+  Sparkles,
+  Terminal,
+  ShieldAlert
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -137,6 +141,20 @@ export default function Sidebar({
       icon: <ClipboardCheck className="w-5 h-5" />
     },
     {
+      id: 'loans',
+      path: '/loans',
+      label: 'Loans & Repayments',
+      tooltip: 'SME Facilities, Statements & Repayment Gateway',
+      icon: <CreditCard className="w-5 h-5" />
+    },
+    {
+      id: 'financial-services',
+      path: '/financial-services',
+      label: 'Digital Financial Services',
+      tooltip: 'BNR Sandbox Digital Marketplace & Open Banking',
+      icon: <Sparkles className="w-5 h-5" />
+    },
+    {
       id: 'reports',
       path: '/reports',
       label: 'Financial Statements & Reports',
@@ -163,6 +181,13 @@ export default function Sidebar({
       label: 'Feedback & Admin Support',
       tooltip: 'Direct feedback & live chats with Admin',
       icon: <MessageSquare className="w-5 h-5" />
+    },
+    {
+      id: 'complaints',
+      path: '/complaints',
+      label: 'Complaints & Support',
+      tooltip: 'Report an issue or submit a complaint',
+      icon: <ShieldAlert className="w-5 h-5" />
     }
   ];
 
@@ -173,6 +198,13 @@ export default function Sidebar({
       label: 'Credit Institution Panel',
       tooltip: 'Banker Portfolio & Pipelines',
       icon: <Landmark className="w-5 h-5" />
+    },
+    {
+      id: 'banker-loans',
+      path: '/banker/loans',
+      label: 'Loan Portfolio & Disbursement',
+      tooltip: 'Underwriting, Interbank Disbursements & Audit Ledger',
+      icon: <CreditCard className="w-5 h-5" />
     },
     {
       id: 'applications',
@@ -189,11 +221,25 @@ export default function Sidebar({
       icon: <Megaphone className="w-5 h-5" />
     },
     {
+      id: 'banker-services',
+      path: '/banker/services',
+      label: 'Digital Services Publisher',
+      tooltip: 'Publish APIs, Merchant Tills & Reserve Products',
+      icon: <Sparkles className="w-5 h-5" />
+    },
+    {
       id: 'monitoring',
       path: '/banker/monitoring',
       label: 'SME Monitoring Matrix',
       tooltip: 'Borrower Risk & Health Surveillance',
       icon: <Activity className="w-5 h-5" />
+    },
+    {
+      id: 'banker-api-monitor',
+      path: '/banker/api-monitor',
+      label: 'API Integration Monitor',
+      tooltip: 'Regulatory Telemetry, Endpoints & JSON Handshakes',
+      icon: <Terminal className="w-5 h-5" />
     },
     {
       id: 'banker-training',
@@ -281,6 +327,13 @@ export default function Sidebar({
       label: 'Helpdesk & Live Feedback Chats',
       tooltip: 'Omnichannel live chats with SMEs & Institutions',
       icon: <MessageSquare className="w-5 h-5" />
+    },
+    {
+      id: 'admin-complaints',
+      path: '/admin/complaints',
+      label: 'Complaints Management',
+      tooltip: 'Review and resolve confidential complaints',
+      icon: <ShieldAlert className="w-5 h-5" />
     }
   ];
 

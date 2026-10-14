@@ -53,14 +53,17 @@ import {
   Phone,
   Globe,
   Share2,
+  Send,
   Sparkles,
   CheckCircle2
 } from 'lucide-react';
 import SelectOpportunityTypeModal, { OpportunityType as ModalOpportunityType } from '../assets/components/SelectOpportunityTypeModal';
 import PublishOpportunityForm from '../assets/components/PublishOpportunityForm';
 import ScheduleTrainingModal from '../assets/components/ScheduleTrainingModal';
-import FormattedText from '../assets/components/ui/FormattedText';
+import FormattedText, { stripFormattedText } from '../assets/components/ui/FormattedText';
 import VirtualTrainingDeliveryModal from '../assets/components/VirtualTrainingDeliveryModal';
+import VideoPreviewPlayer from '../assets/components/ui/VideoPreviewPlayer';
+import GuideDocumentCard from '../assets/components/ui/GuideDocumentCard';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -132,7 +135,7 @@ export default function OpportunityPublisher() {
 
   // Viewing Opportunity Details Modal State
   const [viewingOpportunity, setViewingOpportunity] = useState<Opportunity | null>(null);
-  const [viewModalTab, setViewModalTab] = useState<'overview' | 'terms' | 'eligibility' | 'docs' | 'matches'>('overview');
+  const [viewModalTab, setViewModalTab] = useState<'overview' | 'terms' | 'eligibility' | 'docs' | 'contact' | 'matches' | 'guide'>('overview');
 
   // Database-backed portfolio preview
   const portfolioCandidates = useMemo(() => smes.map((sme) => {
@@ -555,7 +558,7 @@ export default function OpportunityPublisher() {
                   <p className="text-[11px] text-[#5e5e5e] mt-0.5 font-medium">by {opp.institution}</p>
                   
                   <p className="text-[12px] text-[#5e5e5e] mt-2.5 line-clamp-2 leading-relaxed font-sans">
-                    {opp.description}
+                    {stripFormattedText(opp.description, `${opp.category} opportunity targeting growing local enterprises.`)}
                   </p>
                 </div>
 
@@ -587,7 +590,17 @@ export default function OpportunityPublisher() {
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                      {(opp.videoUrl || (opp.metadata as any)?.videoUrl) && (
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 text-[9px] flex items-center gap-1">
+                          <Video className="w-2.5 h-2.5" /> Video
+                        </span>
+                      )}
+                      {(opp.guideDocument || (opp.metadata as any)?.guideDocument) && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[9px] flex items-center gap-1">
+                          <FileText className="w-2.5 h-2.5" /> Guide
+                        </span>
+                      )}
                       <span className="px-2 py-0.5 rounded-full bg-[#2998d6]/10 text-[#2998d6] font-bold border border-[#2998d6]/20 text-[9px] flex items-center gap-1">
                         AI Matched
                       </span>
@@ -694,6 +707,22 @@ export default function OpportunityPublisher() {
                     <span>Readiness threshold:</span>
                     <span className="font-semibold text-[#2998d6] font-mono">{selectedOpp?.minReadinessScore || 60}%</span>
                   </div>
+
+                  {/* Resource Badges */}
+                  {Boolean(selectedOpp?.videoUrl || (selectedOpp?.metadata as any)?.videoUrl || selectedOpp?.guideDocument || (selectedOpp?.metadata as any)?.guideDocument) && (
+                    <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-slate-100">
+                      {(selectedOpp?.videoUrl || (selectedOpp?.metadata as any)?.videoUrl) && (
+                        <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 font-bold border border-indigo-200 text-[10px] flex items-center gap-1">
+                          <Video className="w-3 h-3" /> Includes Video Explainer
+                        </span>
+                      )}
+                      {(selectedOpp?.guideDocument || (selectedOpp?.metadata as any)?.guideDocument) && (
+                        <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px] flex items-center gap-1">
+                          <FileText className="w-3 h-3" /> Guide Doc Attached
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 pt-3.5">
@@ -1003,7 +1032,7 @@ export default function OpportunityPublisher() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-[#5e5e5e] line-clamp-1">{tr.description}</p>
+                    <p className="text-[11px] text-[#5e5e5e] line-clamp-1">{stripFormattedText(tr.description, 'Capacity building training session.')}</p>
                     <div className="flex items-center gap-3 text-[11px] text-[#717171] pt-1 font-sans">
                       <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5 text-[#8c8c8c]" /> {tr.date} ({tr.time})</span>
                       <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5 text-[#8c8c8c]" /> {tr.speaker}</span>
@@ -1164,6 +1193,11 @@ export default function OpportunityPublisher() {
                 { id: 'terms', label: 'Financial & Terms', icon: <Coins className="w-3.5 h-3.5" /> },
                 { id: 'eligibility', label: 'Underwriting Criteria', icon: <ShieldCheck className="w-3.5 h-3.5" /> },
                 { id: 'docs', label: `Required Documents (${(viewingOpportunity.requiredDocs || []).length})`, icon: <FileText className="w-3.5 h-3.5" /> },
+                {
+                  id: 'contact',
+                  label: `How to Apply & Contact${(viewingOpportunity.videoUrl || (viewingOpportunity.metadata as any)?.videoUrl || viewingOpportunity.guideDocument || (viewingOpportunity.metadata as any)?.guideDocument) ? ' (Guide Attached)' : ''}`,
+                  icon: <Building2 className="w-3.5 h-3.5" />
+                },
                 { id: 'matches', label: `Matched SMEs & Apps (${viewingOppMatchedSmes.filter(s => s.status === 'Highly Qualified').length})`, icon: <Users className="w-3.5 h-3.5" /> }
               ].map(tab => (
                 <button
@@ -1188,6 +1222,16 @@ export default function OpportunityPublisher() {
               {/* TAB 1: OVERVIEW & DESCRIPTION */}
               {viewModalTab === 'overview' && (
                 <div className="space-y-5">
+                  {((viewingOpportunity.metadata as any)?.bannerImage || (viewingOpportunity.metadata as any)?.imageUrl) && (
+                    <div className="w-full h-44 sm:h-56 rounded-xl overflow-hidden border border-slate-200/80 bg-slate-900 shadow-xs">
+                      <img
+                        src={(viewingOpportunity.metadata as any)?.bannerImage || (viewingOpportunity.metadata as any)?.imageUrl}
+                        alt={viewingOpportunity.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
                   <div>
                     <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-2 flex items-center gap-1.5">
                       <FileText className="w-4 h-4 text-[#2998d6]" />
@@ -1235,6 +1279,34 @@ export default function OpportunityPublisher() {
                       )}
                     </div>
                   </div>
+
+                  {/* Guide Accessories notification strip if present */}
+                  {Boolean(
+                    viewingOpportunity.videoUrl ||
+                    (viewingOpportunity.metadata as any)?.videoUrl ||
+                    viewingOpportunity.guideDocument ||
+                    (viewingOpportunity.metadata as any)?.guideDocument
+                  ) && (
+                    <div className="p-3.5 rounded-xl bg-gradient-to-r from-sky-50 via-indigo-50/40 to-slate-50 border border-sky-200/80 flex items-center justify-between gap-3 shadow-2xs">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-[#2998d6]/10 text-[#2998d6] flex items-center justify-center font-bold shrink-0 border border-[#2998d6]/20">
+                          <Sparkles className="w-4 h-4 text-[#2998d6]" />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-800 text-xs">Official Guide Accessories Attached</p>
+                          <p className="text-[11px] text-slate-500">Video walkthrough and preparation documentation available in the dedicated tab.</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setViewModalTab('guide')}
+                        className="px-3 py-1.5 text-xs font-bold text-white bg-[#2998d6] hover:bg-[#1f85be] rounded-lg transition-colors cursor-pointer shrink-0 shadow-2xs flex items-center gap-1"
+                      >
+                        <span>View Guide Tab</span>
+                        <ChevronRight className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1284,12 +1356,18 @@ export default function OpportunityPublisher() {
                           {viewingOpportunity.loanGrace ? `${viewingOpportunity.loanGrace} Months` : 'Standard Grace Period'}
                         </span>
                       </div>
-                      <div className="flex justify-between items-center py-1">
+                      <div className="flex justify-between items-start py-1">
                         <span className="text-slate-500">Collateral Required:</span>
-                        <span className={`font-bold ${viewingOpportunity.collateralRequired ? 'text-amber-700' : 'text-emerald-700'}`}>
-                          {viewingOpportunity.collateralRequired ? `Yes (${viewingOpportunity.collateralType || 'Physical / Guarantee'})` : 'No Collateral Required'}
+                        <span className={`font-bold text-right ${viewingOpportunity.collateralRequired ? 'text-amber-700' : 'text-emerald-700'}`}>
+                          {viewingOpportunity.collateralRequired ? 'Required' : 'No Collateral Required'}
                         </span>
                       </div>
+                      {viewingOpportunity.collateralRequired && ((viewingOpportunity.metadata as any)?.collateralDescription || viewingOpportunity.collateralType) && (
+                        <div className="bg-white p-2.5 rounded-lg border border-slate-200 text-xs text-slate-700 mt-1">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block mb-0.5">Collateral Terms:</span>
+                          <p className="leading-relaxed">{(viewingOpportunity.metadata as any)?.collateralDescription || viewingOpportunity.collateralType}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1387,6 +1465,168 @@ export default function OpportunityPublisher() {
                 </div>
               )}
 
+              {/* TAB 5: HOW TO APPLY & CONTACT (INCLUDING GUIDE ACCESSORIES) */}
+              {viewModalTab === 'contact' && (
+                <div className="space-y-5 animate-in fade-in duration-150">
+                  {/* Official Guidance Video & Document (if attached) */}
+                  {(() => {
+                    const videoUrl = viewingOpportunity.videoUrl || (viewingOpportunity.metadata as any)?.videoUrl;
+                    const guideDoc = viewingOpportunity.guideDocument || (viewingOpportunity.metadata as any)?.guideDocument;
+
+                    if (!videoUrl && !guideDoc) return null;
+
+                    return (
+                      <div className="space-y-4">
+                        {/* Header Banner */}
+                        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-sky-50 via-indigo-50/40 to-white border border-sky-200/80 shadow-2xs">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-xl bg-[#2998d6]/10 text-[#2998d6] flex items-center justify-center font-bold border border-[#2998d6]/20 shrink-0">
+                                <Sparkles className="w-5 h-5 text-[#2998d6]" />
+                              </div>
+                              <div>
+                                <h3 className="text-sm font-bold text-slate-900">
+                                  Official Applicant Guidance &amp; Explainer Resources
+                                </h3>
+                                <p className="text-xs text-slate-500">
+                                  Preparation materials provided by {viewingOpportunity.institution || 'the issuing institution'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 self-start sm:self-auto flex-wrap">
+                              {guideDoc && (
+                                <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-white text-emerald-700 border border-emerald-200 shadow-2xs flex items-center gap-1.5">
+                                  <FileText className="w-3.5 h-3.5 text-emerald-600" /> Guide Document
+                                </span>
+                              )}
+                              {videoUrl && (
+                                <span className="px-2.5 py-1 rounded-md text-[11px] font-bold bg-white text-indigo-700 border border-indigo-200 shadow-2xs flex items-center gap-1.5">
+                                  <Video className="w-3.5 h-3.5 text-indigo-600" /> Video Explainer
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Interactive Video Preview Player */}
+                        {videoUrl && (
+                          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <Video className="w-4 h-4 text-indigo-600" />
+                              <span>Program Video Walkthrough</span>
+                            </span>
+                            <VideoPreviewPlayer
+                              url={videoUrl}
+                              title={`${viewingOpportunity.title} - Video Walkthrough`}
+                            />
+                          </div>
+                        )}
+
+                        {/* Guide Document Card */}
+                        {guideDoc && (
+                          <div className="p-4 sm:p-5 rounded-2xl bg-white border border-slate-200 space-y-2.5 shadow-2xs">
+                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <FileText className="w-4 h-4 text-[#2998d6]" />
+                              <span>Downloadable Guidelines &amp; Documentation</span>
+                            </span>
+                            <GuideDocumentCard
+                              document={guideDoc}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+
+                  {/* Application Method & Delivery Channel Box */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-sky-50/60 border border-sky-200/80 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                        <Send className="w-4 h-4 text-[#2998d6]" />
+                        <span>Application Delivery Channel</span>
+                      </span>
+                      <span className="px-3 py-1 rounded text-[10px] font-mono font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
+                        {((viewingOpportunity.metadata as any)?.applicationMethod || 'elevata').toUpperCase()}
+                      </span>
+                    </div>
+
+                    {(viewingOpportunity.metadata as any)?.applicationInstructions && (
+                      <div className="p-3.5 bg-white rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-xs">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Publisher Instructions:</span>
+                        <FormattedText text={(viewingOpportunity.metadata as any).applicationInstructions} />
+                      </div>
+                    )}
+
+                    {(viewingOpportunity.metadata as any)?.externalApplicationUrl && (
+                      <div className="p-3.5 bg-white rounded-xl border border-sky-100 flex items-center justify-between gap-3 flex-wrap">
+                        <div className="min-w-0">
+                          <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Application Portal:</span>
+                          <span className="text-xs font-mono text-slate-800 truncate block">{(viewingOpportunity.metadata as any).externalApplicationUrl}</span>
+                        </div>
+                        <a
+                          href={(viewingOpportunity.metadata as any).externalApplicationUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+                        >
+                          <span>Open External Link</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Financial Institution & Desk Profile */}
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
+                    <span className="text-xs font-bold text-slate-900 uppercase tracking-wider block border-b border-slate-200 pb-2">
+                      Publishing Institution &amp; Officer Desk
+                    </span>
+
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold text-slate-900">{viewingOpportunity.publisher?.institutionName || viewingOpportunity.institution}</p>
+                      {viewingOpportunity.publisher?.representativeName && (
+                        <p className="text-xs text-slate-600">Lead Officer / Desk: <strong className="text-slate-800">{viewingOpportunity.publisher.representativeName}</strong></p>
+                      )}
+                      {viewingOpportunity.publisher?.operatingScope && (
+                        <p className="text-xs text-slate-500">Operating Scope: {viewingOpportunity.publisher.operatingScope}</p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200/80">
+                      {viewingOpportunity.publisher?.phone && (
+                        <a
+                          href={`tel:${viewingOpportunity.publisher.phone}`}
+                          className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+                        >
+                          <Phone className="h-3.5 w-3.5 text-[#2998d6]" />
+                          <span>{viewingOpportunity.publisher.phone}</span>
+                        </a>
+                      )}
+                      {viewingOpportunity.publisher?.email && (
+                        <a
+                          href={`mailto:${viewingOpportunity.publisher.email}`}
+                          className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+                        >
+                          <Mail className="h-3.5 w-3.5 text-[#2998d6]" />
+                          <span>Email Officer</span>
+                        </a>
+                      )}
+                      {viewingOpportunity.publisher?.website && (
+                        <a
+                          href={viewingOpportunity.publisher.website}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="flex items-center gap-1.5 rounded-lg bg-white border border-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+                        >
+                          <Globe className="h-3.5 w-3.5 text-[#2998d6]" />
+                          <span>Web Portal</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* TAB 5: MATCHED SMES & APPLICATIONS */}
               {viewModalTab === 'matches' && (
                 <div className="space-y-5">
@@ -1478,16 +1718,6 @@ export default function OpportunityPublisher() {
                   <span>Schedule Masterclass</span>
                 </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerToast(`Sent invite notifications to all qualified SMEs for "${viewingOpportunity.title}".`);
-                  }}
-                  className="px-4 py-2 bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 text-xs font-semibold rounded-full transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
-                >
-                  <Users className="w-4 h-4 text-emerald-600" />
-                  <span>Invite Qualified SMEs</span>
-                </button>
               </div>
 
               <button
