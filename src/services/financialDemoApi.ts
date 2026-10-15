@@ -62,7 +62,7 @@ export interface DemoLoan {
   monthlyInstallment: number;
   totalAmountDueNow: number;
   nextRepaymentDueDate: string;
-  status: 'Active' | 'Approved - Ready for Disbursement' | 'Fully Repaid' | 'In Arrears';
+  status: 'Active' | 'Disbursed' | 'Approved - Ready for Disbursement' | 'Fully Repaid' | 'In Arrears';
   disbursedAt: string | null;
   maturityDate: string;
   disbursementChannel: string | null;
@@ -110,7 +110,7 @@ export interface DemoApplication {
   termMonths: number;
   interestRate: number;
   purpose: string;
-  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected';
+  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected' | 'Disbursed';
   smeHealthScore: number;
   smeReadinessScore: number;
   contactPhone: string;
@@ -211,6 +211,12 @@ export const financialDemoApi = {
   async getFiApplications(fiId?: string): Promise<DemoApplication[]> {
     const query = fiId ? `?fiId=${encodeURIComponent(fiId)}` : '';
     const res = await apiRequest(`/financial-demo/fi/applications${query}`);
+    return res.data;
+  },
+
+  async getFiLoans(fiId?: string): Promise<DemoLoan[]> {
+    const query = fiId ? `?fiId=${encodeURIComponent(fiId)}` : '';
+    const res = await apiRequest(`/financial-demo/fi/loans${query}`);
     return res.data;
   },
 

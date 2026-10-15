@@ -82,7 +82,7 @@ export interface Application {
   smeSector: string;
   smeReadiness: number;
   smeHealth: number;
-  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected' | 'Pending' | 'Completed';
+  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected' | 'Disbursed' | 'Pending' | 'Completed';
   appliedAt: string;
   feedback: string;
   aiSuggestions: string[];
@@ -91,6 +91,11 @@ export interface Application {
   termMonths?: number;
   contactPhone?: string;
   contactEmail?: string;
+  receivingAccountType?: 'bank' | 'mobile_money';
+  receivingBank?: string;
+  receivingAccountNumber?: string;
+  receivingMobileProvider?: 'MTN Mobile Money' | 'Airtel Money';
+  receivingMobileNumber?: string;
   notes?: string;
   documents?: ApplicationDocument[];
 }
@@ -105,6 +110,18 @@ export interface ApplicationDocument {
   uploadedAt: string;
   downloadUrl: string;
 }
+
+export const normalizeApplicationStatus = (status?: string): Application['status'] => {
+  const raw = (status || '').toString().trim();
+  const lower = raw.toLowerCase();
+
+  if (!raw) return 'Under Review';
+  if (['submitted', 'pending', 'under review', 'under_review', 'in progress', 'review'].includes(lower)) return 'Under Review';
+  if (['approved', 'completed'].includes(lower)) return 'Approved';
+  if (lower === 'disbursed') return 'Disbursed';
+  if (['rejected', 'declined', 'denied'].includes(lower)) return 'Rejected';
+  return 'Under Review';
+};
 
 export interface TrainingAttendee {
   id: string;
@@ -249,6 +266,8 @@ interface AppContextType {
   refreshTrainings: (smeId?: string) => Promise<void>;
   bookmarkedOpportunities: string[];
   publishOpportunity: (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => Promise<Opportunity>;
+  updateOpportunity: (id: string, data: Partial<Opportunity>) => Promise<Opportunity>;
+  deleteOpportunity: (id: string) => Promise<void>;
   applyForOpportunity: (data: {
     opportunityId: string;
     requestedAmount: number;
@@ -256,6 +275,11 @@ interface AppContextType {
     termMonths: number;
     contactPhone: string;
     contactEmail: string;
+    receivingAccountType: 'bank' | 'mobile_money';
+    receivingBank?: string;
+    receivingAccountNumber?: string;
+    receivingMobileProvider?: 'MTN Mobile Money' | 'Airtel Money';
+    receivingMobileNumber?: string;
     notes?: string;
     documents: Record<string, File>;
   }) => Promise<Application>;
@@ -317,6 +341,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (res?.success && Array.isArray(res.data)) {
         setApplications(res.data.map((application: any) => ({
           ...application,
+          status: normalizeApplicationStatus(application.status),
           institution: application.institution || application.opportunity?.institution || '',
           smeReadiness: application.smeReadiness ?? 0,
           smeHealth: application.smeHealth ?? 0,
@@ -983,10 +1008,23 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   };
 
   const publishOpportunity = async (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => {
-    const res = await apiRequest('/opportunities', {
-      method: 'POST',
-      body: JSON.stringify(opp)
-    });
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 30000);
+    let res;
+    try {
+      res = await apiRequest('/opportunities', {
+        method: 'POST',
+        body: JSON.stringify(opp),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Publishing timed out. Please check that the backend is running and try again.');
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
     if (!res?.success || !res.data?.id) {
       throw new Error('Opportunity publishing did not return a persisted opportunity.');
     }
@@ -1002,6 +1040,45 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return createdOpp;
   };
 
+  const updateOpportunity = async (id: string, data: Partial<Opportunity>) => {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 30000);
+    let res;
+    try {
+      res = await apiRequest(`/opportunities/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify(data),
+        signal: controller.signal
+      });
+    } catch (error) {
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        throw new Error('Saving timed out. Please check that the backend is running and try again.');
+      }
+      throw error;
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+    if (!res?.success || !res.data?.id) {
+      throw new Error('Opportunity update did not return a persisted opportunity.');
+    }
+
+    const updatedOpportunity: Opportunity = {
+      ...res.data,
+      sectors: Array.isArray(res.data.sectors) ? res.data.sectors : [],
+      requiredDocs: Array.isArray(res.data.requiredDocs) ? res.data.requiredDocs : [],
+      guideDocument: res.data.guideDocument || (res.data.metadata as any)?.guideDocument || null,
+      videoUrl: res.data.videoUrl || (res.data.metadata as any)?.videoUrl || null
+    };
+    setOpportunities(prev => prev.map(opportunity => opportunity.id === id ? updatedOpportunity : opportunity));
+    return updatedOpportunity;
+  };
+
+  const deleteOpportunity = async (id: string) => {
+    const res = await apiRequest(`/opportunities/${id}`, { method: 'DELETE' });
+    if (!res?.success) throw new Error('Unable to delete this opportunity.');
+    setOpportunities(prev => prev.filter(opportunity => opportunity.id !== id));
+  };
+
   const applyForOpportunity = async (data: {
     opportunityId: string;
     requestedAmount: number;
@@ -1009,6 +1086,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     termMonths: number;
     contactPhone: string;
     contactEmail: string;
+    receivingAccountType: 'bank' | 'mobile_money';
+    receivingBank?: string;
+    receivingAccountNumber?: string;
+    receivingMobileProvider?: 'MTN Mobile Money' | 'Airtel Money';
+    receivingMobileNumber?: string;
     notes?: string;
     documents: Record<string, File>;
   }): Promise<Application> => {
@@ -1019,6 +1101,11 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     form.append('termMonths', String(data.termMonths));
     form.append('contactPhone', data.contactPhone);
     form.append('contactEmail', data.contactEmail);
+    form.append('receivingAccountType', data.receivingAccountType);
+    form.append('receivingBank', data.receivingBank || '');
+    form.append('receivingAccountNumber', data.receivingAccountNumber || '');
+    form.append('receivingMobileProvider', data.receivingMobileProvider || '');
+    form.append('receivingMobileNumber', data.receivingMobileNumber || '');
     form.append('notes', data.notes || '');
 
     const entries = Object.entries(data.documents);
@@ -1026,31 +1113,38 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     entries.forEach(([, file]) => form.append('documents', file));
 
     const res = await apiRequest('/applications', { method: 'POST', body: form });
+    const appData = res?.data || res;
     const created: Application = {
-      ...res.data,
-      smeReadiness: res.data.smeReadiness ?? Math.round(activeSme.healthScore * 1.05),
-      smeHealth: res.data.smeHealth ?? activeSme.healthScore,
-      aiSuggestions: res.data.aiSuggestions || []
+      ...appData,
+      status: normalizeApplicationStatus(appData?.status),
+      institution: appData?.institution || appData?.opportunity?.institution || '',
+      smeReadiness: appData?.smeReadiness ?? Math.round((activeSme?.healthScore || 75) * 1.05),
+      smeHealth: appData?.smeHealth ?? activeSme?.healthScore ?? 75,
+      aiSuggestions: appData?.aiSuggestions || []
     };
     setApplications(prev => [created, ...prev.filter(app => app.id !== created.id)]);
     setOpportunities(prev => prev.map(opportunity => (
       opportunity.id === data.opportunityId
-        ? { ...opportunity, applicationsCount: opportunity.applicationsCount + 1 }
+        ? { ...opportunity, applicationsCount: (opportunity.applicationsCount || 0) + 1 }
         : opportunity
     )));
+    // Trigger background synchronization to fetch canonical server records
+    refreshApplications().catch(() => {});
     return created;
   };
 
   const updateApplicationStatus = async (appId: string, status: Application['status'], feedback?: string) => {
+    const normalizedStatus = normalizeApplicationStatus(status);
     const res = await apiRequest(`/applications/${appId}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, feedback })
+      body: JSON.stringify({ status: normalizedStatus, feedback })
     });
     setApplications(prev => prev.map(app => (
       app.id === appId
         ? {
             ...app,
             ...res.data,
+            status: normalizeApplicationStatus(res.data?.status ?? normalizedStatus),
             smeReadiness: res.data.smeReadiness ?? app.smeReadiness,
             smeHealth: res.data.smeHealth ?? app.smeHealth,
             aiSuggestions: res.data.aiSuggestions || app.aiSuggestions
@@ -1433,6 +1527,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       refreshTrainings,
       bookmarkedOpportunities,
       publishOpportunity,
+      updateOpportunity,
+      deleteOpportunity,
       applyForOpportunity,
       updateApplicationStatus,
       uploadApplicationDocument,

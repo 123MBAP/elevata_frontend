@@ -13,6 +13,7 @@ import {
   TrendingUp,
   Search,
   ChevronRight,
+  ChevronDown,
   Loader2,
   Info,
   Landmark,
@@ -56,6 +57,7 @@ import {
   Send,
   Sparkles,
   CheckCircle2
+  ,Trash2
 } from 'lucide-react';
 import SelectOpportunityTypeModal, { OpportunityType as ModalOpportunityType } from '../assets/components/SelectOpportunityTypeModal';
 import PublishOpportunityForm from '../assets/components/PublishOpportunityForm';
@@ -98,6 +100,8 @@ export default function OpportunityPublisher() {
     trainings,
     smes,
     publishOpportunity,
+    updateOpportunity,
+    deleteOpportunity,
     createTraining
   } = useApp();
 
@@ -171,6 +175,14 @@ export default function OpportunityPublisher() {
 
   // Selected Opportunity for detailed view/analytics
   const [selectedOppId, setSelectedOppId] = useState<string>('');
+  const [editingOpportunity, setEditingOpportunity] = useState<Opportunity | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [editDeadline, setEditDeadline] = useState('');
+  const [editMaxFunding, setEditMaxFunding] = useState('');
+  const [editStatus, setEditStatus] = useState<'Active' | 'Closed'>('Active');
+  const [isSavingOpportunity, setIsSavingOpportunity] = useState(false);
+  const [openActionMenuId, setOpenActionMenuId] = useState<string | null>(null);
 
   // Toast / notification state
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'info' } | null>(null);
@@ -178,6 +190,49 @@ export default function OpportunityPublisher() {
   const triggerToast = (message: string, type: 'success' | 'info' = 'success') => {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  const handleOpenEditOpportunity = (opportunity: Opportunity) => {
+    setEditingOpportunity(opportunity);
+    setSelectedOppType((opportunity.category || 'Loan').toLowerCase() as ModalOpportunityType);
+    setSelectedOppCategory(opportunity.category || 'Loan');
+    setViewMode('create_form');
+  };
+
+  const handleSaveOpportunity = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!editingOpportunity || !editTitle.trim() || !editDeadline.trim()) return;
+
+    setIsSavingOpportunity(true);
+    try {
+      const updated = await updateOpportunity(editingOpportunity.id, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+        deadline: editDeadline.trim(),
+        maxFunding: editMaxFunding.trim() || 'Flexible',
+        status: editStatus
+      });
+      setViewingOpportunity(updated);
+      setEditingOpportunity(null);
+      triggerToast(`"${updated.title}" updated successfully.`);
+    } catch (error) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to update this opportunity.', 'info');
+    } finally {
+      setIsSavingOpportunity(false);
+    }
+  };
+
+  const handleDeleteOpportunity = async (opportunity: Opportunity) => {
+    if (!window.confirm(`Delete "${opportunity.title}"? This cannot be undone.`)) return;
+
+    try {
+      await deleteOpportunity(opportunity.id);
+      if (viewingOpportunity?.id === opportunity.id) setViewingOpportunity(null);
+      if (selectedOppId === opportunity.id) setSelectedOppId('');
+      triggerToast(`"${opportunity.title}" deleted successfully.`);
+    } catch (error) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to delete this opportunity.', 'info');
+    }
   };
 
   const selectedOpp = useMemo(() => {
@@ -359,15 +414,22 @@ export default function OpportunityPublisher() {
         <PublishOpportunityForm
           oppType={selectedOppType}
           oppCategory={selectedOppCategory}
-          onCancel={() => setViewMode('dashboard')}
+          initialOpportunity={editingOpportunity}
+          onCancel={() => {
+            setEditingOpportunity(null);
+            setViewMode('dashboard');
+          }}
           onPublish={async (data) => {
             try {
-              const created = await publishOpportunity(data);
-              triggerToast(`"${data.title}" published successfully.`);
+              const saved = editingOpportunity
+                ? await updateOpportunity(editingOpportunity.id, data)
+                : await publishOpportunity(data);
+              triggerToast(`"${data.title}" ${editingOpportunity ? 'updated' : 'published'} successfully.`);
+              setEditingOpportunity(null);
               setViewMode('dashboard');
-              if (created && created.id) {
-                setSelectedOppId(created.id);
-                setViewingOpportunity(created);
+              if (saved && saved.id) {
+                setSelectedOppId(saved.id);
+                setViewingOpportunity(saved);
                 setViewModalTab('overview');
               }
             } catch (error) {
@@ -607,52 +669,92 @@ export default function OpportunityPublisher() {
                     </div>
                   </div>
 
-                  {/* 3-Button Action Row with View Details */}
-                  <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-[#f3f2f0] mt-1">
+                  {/* Published Opportunity Actions */}
+                  <div className="relative flex justify-end pt-2 border-t border-[#f3f2f0] mt-1">
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedOppId(opp.id);
-                        setViewingOpportunity(opp);
-                        setViewModalTab('overview');
+                        setOpenActionMenuId(openActionMenuId === opp.id ? null : opp.id);
                       }}
-                      className="py-1.5 px-2 bg-sky-50 hover:bg-sky-100 text-[#0284c7] text-[11px] font-bold rounded-full transition-colors flex items-center justify-center gap-1 text-center border border-sky-200 cursor-pointer"
-                      title="View Published Opportunity Details"
+                      className="inline-flex items-center justify-center gap-1.5 rounded-full border border-[#2998d6] bg-[#2998d6] px-4 py-1.5 text-[11px] font-bold text-white shadow-2xs transition-colors hover:bg-[#1f85be]"
+                      aria-expanded={openActionMenuId === opp.id}
+                      aria-haspopup="menu"
                     >
-                      <Eye className="w-3.5 h-3.5 shrink-0" />
-                      <span>View</span>
+                      <span>Actions</span>
+                      <ChevronDown className={`h-3.5 w-3.5 transition-transform ${openActionMenuId === opp.id ? 'rotate-180' : ''}`} />
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedOppId(opp.id);
-                        handleCreateTrainingForOpp(opp);
-                      }}
-                      className="py-1.5 px-2 bg-white hover:bg-[#f3f2f0] border border-[#666666] text-[11px] font-semibold text-[#181818] rounded-full transition-colors flex items-center justify-center gap-1 text-center cursor-pointer"
-                      title="Schedule Masterclass"
-                    >
-                      <GraduationCap className="w-3.5 h-3.5 text-[#5e5e5e] shrink-0" />
-                      <span>Training</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedOppId(opp.id);
-                        setTimeout(() => {
-                          document.getElementById('eligible-table')?.scrollIntoView({ behavior: 'smooth' });
-                        }, 50);
-                      }}
-                      className="py-1.5 px-2 bg-[#2998d6] hover:bg-[#1f85be] text-[11px] font-bold text-white rounded-full transition-colors flex items-center justify-center gap-1 text-center border-none shadow-2xs cursor-pointer"
-                      title="Match & Invite SMEs"
-                    >
-                      <Target className="w-3.5 h-3.5 text-white shrink-0" />
-                      <span>Matches</span>
-                    </button>
+                    {openActionMenuId === opp.id && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-11 z-30 w-44 rounded-lg border border-slate-200 bg-white p-1.5 shadow-xl"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenuId(null);
+                            setSelectedOppId(opp.id);
+                            setViewingOpportunity(opp);
+                            setViewModalTab('overview');
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-sky-700 hover:bg-sky-50"
+                          role="menuitem"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> View details
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenuId(null);
+                            handleOpenEditOpportunity(opp);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-amber-700 hover:bg-amber-50"
+                          role="menuitem"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" /> Edit opportunity
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenuId(null);
+                            void handleDeleteOpportunity(opp);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-rose-700 hover:bg-rose-50"
+                          role="menuitem"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Delete opportunity
+                        </button>
+                        <div className="my-1 border-t border-slate-100" />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenuId(null);
+                            setSelectedOppId(opp.id);
+                            handleCreateTrainingForOpp(opp);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          role="menuitem"
+                        >
+                          <GraduationCap className="h-3.5 w-3.5" /> Schedule training
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOpenActionMenuId(null);
+                            setSelectedOppId(opp.id);
+                            setTimeout(() => {
+                              document.getElementById('eligible-table')?.scrollIntoView({ behavior: 'smooth' });
+                            }, 50);
+                          }}
+                          className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-xs font-semibold text-[#1f85be] hover:bg-sky-50"
+                          role="menuitem"
+                        >
+                          <Target className="h-3.5 w-3.5" /> View matches
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1102,6 +1204,104 @@ export default function OpportunityPublisher() {
       </div>
 
       {/* ========================================================================= */}
+      {/* EDIT PUBLISHED OPPORTUNITY MODAL */}
+      {editingOpportunity && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <form
+            onSubmit={handleSaveOpportunity}
+            className="w-full max-w-xl space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-2xl"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-slate-200 pb-3">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Edit Published Opportunity</span>
+                <h2 className="mt-1 text-lg font-bold text-slate-900">Update programme details</h2>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingOpportunity(null)}
+                className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close edit opportunity dialog"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="mb-1 block font-bold uppercase tracking-wider text-slate-600">Opportunity title</label>
+                <input
+                  value={editTitle}
+                  onChange={event => setEditTitle(event.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block font-bold uppercase tracking-wider text-slate-600">Description</label>
+                <textarea
+                  value={editDescription}
+                  onChange={event => setEditDescription(event.target.value)}
+                  rows={4}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block font-bold uppercase tracking-wider text-slate-600">Maximum funding</label>
+                  <input
+                    value={editMaxFunding}
+                    onChange={event => setEditMaxFunding(event.target.value)}
+                    placeholder="e.g. 25,000,000 FRW"
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 font-mono text-xs text-slate-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-bold uppercase tracking-wider text-slate-600">Closing date</label>
+                  <input
+                    type="date"
+                    value={editDeadline}
+                    onChange={event => setEditDeadline(event.target.value)}
+                    className="w-full rounded-md border border-slate-300 px-3 py-2 text-xs text-slate-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block font-bold uppercase tracking-wider text-slate-600">Publication status</label>
+                  <select
+                    value={editStatus}
+                    onChange={event => setEditStatus(event.target.value as 'Active' | 'Closed')}
+                    className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-xs text-slate-900 outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Closed">Closed</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 border-t border-slate-200 pt-3">
+              <button
+                type="button"
+                onClick={() => setEditingOpportunity(null)}
+                className="rounded-md border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isSavingOpportunity}
+                className="inline-flex items-center gap-2 rounded-md bg-sky-600 px-4 py-2 text-xs font-bold text-white hover:bg-sky-700 disabled:opacity-60"
+              >
+                {isSavingOpportunity && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Save Changes
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* DETAILED PUBLISHED OPPORTUNITY VIEW MODAL (INSPECT PUBLISHED OPPORTUNITIES) */}
       {/* ========================================================================= */}
       {viewingOpportunity && (
@@ -1539,42 +1739,57 @@ export default function OpportunityPublisher() {
                   })()}
 
                   {/* Application Method & Delivery Channel Box */}
-                  <div className="p-4 sm:p-5 rounded-2xl bg-sky-50/60 border border-sky-200/80 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                        <Send className="w-4 h-4 text-[#2998d6]" />
-                        <span>Application Delivery Channel</span>
-                      </span>
-                      <span className="px-3 py-1 rounded text-[10px] font-mono font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
-                        {((viewingOpportunity.metadata as any)?.applicationMethod || 'elevata').toUpperCase()}
-                      </span>
-                    </div>
+                  {(() => {
+                    const appMethodRaw = (viewingOpportunity.metadata as any)?.applicationMethod;
+                    const appMethod = typeof appMethodRaw === 'object' && appMethodRaw !== null
+                      ? (appMethodRaw.type || 'elevata')
+                      : (typeof appMethodRaw === 'string' && appMethodRaw ? appMethodRaw : 'elevata');
+                    
+                    const appInstructions = (typeof appMethodRaw === 'object' && appMethodRaw?.instructions)
+                      || (viewingOpportunity.metadata as any)?.applicationInstructions;
+                    
+                    const appExternalUrl = (typeof appMethodRaw === 'object' && appMethodRaw?.externalUrl)
+                      || (viewingOpportunity.metadata as any)?.externalApplicationUrl;
 
-                    {(viewingOpportunity.metadata as any)?.applicationInstructions && (
-                      <div className="p-3.5 bg-white rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-xs">
-                        <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Publisher Instructions:</span>
-                        <FormattedText text={(viewingOpportunity.metadata as any).applicationInstructions} />
-                      </div>
-                    )}
-
-                    {(viewingOpportunity.metadata as any)?.externalApplicationUrl && (
-                      <div className="p-3.5 bg-white rounded-xl border border-sky-100 flex items-center justify-between gap-3 flex-wrap">
-                        <div className="min-w-0">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Application Portal:</span>
-                          <span className="text-xs font-mono text-slate-800 truncate block">{(viewingOpportunity.metadata as any).externalApplicationUrl}</span>
+                    return (
+                      <div className="p-4 sm:p-5 rounded-2xl bg-sky-50/60 border border-sky-200/80 space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <Send className="w-4 h-4 text-[#2998d6]" />
+                            <span>Application Delivery Channel</span>
+                          </span>
+                          <span className="px-3 py-1 rounded text-[10px] font-mono font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
+                            {String(appMethod || 'elevata').toUpperCase()}
+                          </span>
                         </div>
-                        <a
-                          href={(viewingOpportunity.metadata as any).externalApplicationUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 shadow-2xs"
-                        >
-                          <span>Open External Link</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
-                        </a>
+
+                        {Boolean(appInstructions) && (
+                          <div className="p-3.5 bg-white rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-xs">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Publisher Instructions:</span>
+                            <FormattedText text={appInstructions} />
+                          </div>
+                        )}
+
+                        {Boolean(appExternalUrl) && (
+                          <div className="p-3.5 bg-white rounded-xl border border-sky-100 flex items-center justify-between gap-3 flex-wrap">
+                            <div className="min-w-0">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Application Portal:</span>
+                              <span className="text-xs font-mono text-slate-800 truncate block">{appExternalUrl}</span>
+                            </div>
+                            <a
+                              href={appExternalUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+                            >
+                              <span>Open External Link</span>
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    );
+                  })()}
 
                   {/* Financial Institution & Desk Profile */}
                   <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">

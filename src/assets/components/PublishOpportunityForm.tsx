@@ -39,6 +39,7 @@ import {
   Play
 } from 'lucide-react';
 import { OpportunityType } from './SelectOpportunityTypeModal';
+import { Opportunity } from '../../context/AppContext';
 import { useAuth } from '../../context/AuthContext';
 import FormattedText from './ui/FormattedText';
 import VideoPreviewPlayer from './ui/VideoPreviewPlayer';
@@ -49,6 +50,7 @@ interface PublishOpportunityFormProps {
   oppCategory: string;
   onCancel: () => void;
   onPublish: (data: any) => Promise<void>;
+  initialOpportunity?: Opportunity | null;
   onChangeType: () => void;
   availableCategories: { id: string; businessType: string }[];
   simulatedCandidates: {
@@ -171,6 +173,7 @@ export default function PublishOpportunityForm({
   oppCategory,
   onCancel,
   onPublish,
+  initialOpportunity = null,
   onChangeType,
   availableCategories,
   formatRWF
@@ -541,6 +544,31 @@ export default function PublishOpportunityForm({
   const [branchInstructions, setBranchInstructions] = useState('');
   const [applicationInstructions, setApplicationInstructions] = useState('');
 
+  const isEditMode = Boolean(initialOpportunity);
+
+  useEffect(() => {
+    if (!initialOpportunity) return;
+
+    const metadata = (initialOpportunity.metadata || {}) as Record<string, any>;
+    setTitle(initialOpportunity.title || '');
+    setProvider(initialOpportunity.institution || user?.financialInstitution?.institutionName || user?.name || '');
+    setDescription(initialOpportunity.description || '');
+    setDeadline(initialOpportunity.deadline || '');
+    setIsRollingDeadline(false);
+    setMaxAmount(metadata.loanMaxAmt ? String(metadata.loanMaxAmt) : initialOpportunity.maxFunding || '');
+    setSelectedSectors(initialOpportunity.sectors || []);
+    setMinOperatingAge(String(initialOpportunity.minAge || 0));
+    setMinHealthScore(String(initialOpportunity.minHealthScore || 0));
+    setMinReadinessScore(String(initialOpportunity.minReadinessScore || 0));
+    setDocumentDossier((initialOpportunity.requiredDocs || []).map((name, index) => ({
+      id: `existing-${index}`,
+      name,
+      status: 'Required'
+    })));
+    setGuideDoc(initialOpportunity.guideDocument || metadata.guideDocument || null);
+    setVideoUrlInput(initialOpportunity.videoUrl || metadata.videoUrl || '');
+  }, [initialOpportunity, user]);
+
   // Auto-populate default description if empty
   useEffect(() => {
     if (!description) {
@@ -589,9 +617,9 @@ export default function PublishOpportunityForm({
         if (parsed.collateralRequirement) setCollateralRequirement(parsed.collateralRequirement);
         if (parsed.collateralDescription) setCollateralDescription(parsed.collateralDescription);
         if (parsed.turnoverAmount) setTurnoverAmount(parsed.turnoverAmount);
-        if (parsed.documentDossier) setDocumentDossier(parsed.documentDossier);
-        if (parsed.applicationMethod) setApplicationMethod(parsed.applicationMethod);
-        if (parsed.guideDoc) setGuideDoc(parsed.guideDoc);
+        if (parsed.applicationMethod) {
+          setApplicationMethod(typeof parsed.applicationMethod === 'object' ? parsed.applicationMethod.type || 'elevata' : parsed.applicationMethod);
+        }
         if (parsed.guideDocUrlInput) setGuideDocUrlInput(parsed.guideDocUrlInput);
         if (parsed.guideDocNameInput) setGuideDocNameInput(parsed.guideDocNameInput);
         if (parsed.videoUrlInput) setVideoUrlInput(parsed.videoUrlInput);
@@ -995,7 +1023,7 @@ export default function PublishOpportunityForm({
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-sm sm:text-base font-bold text-[#181818]">
-                  Publish Loan Opportunity
+                  {isEditMode ? 'Edit Published Opportunity' : 'Publish Loan Opportunity'}
                 </h1>
                 <span className="hidden sm:inline-flex text-[11px] font-semibold px-2 py-0.5 rounded-full bg-sky-50 text-[#2998d6] border border-sky-200">
                   {oppCategory || 'Loan'}
@@ -3244,12 +3272,12 @@ export default function PublishOpportunityForm({
                 {isSubmitting ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Publishing Opportunity...</span>
+                    <span>{isEditMode ? 'Saving Changes...' : 'Publishing Opportunity...'}</span>
                   </>
                 ) : (
                   <>
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>Publish Loan Opportunity</span>
+                    <span>{isEditMode ? 'Save Opportunity Changes' : 'Publish Loan Opportunity'}</span>
                   </>
                 )}
               </button>

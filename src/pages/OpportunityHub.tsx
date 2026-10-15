@@ -24,6 +24,8 @@ import {
   User,
   X,
   Building2,
+  Landmark,
+  Smartphone,
   ShieldCheck,
   Trash2,
   AlertCircle,
@@ -344,6 +346,11 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
   const [applyPhone, setApplyPhone] = useState<string>('');
   const [applyEmail, setApplyEmail] = useState<string>(activeSme.email || '');
   const [applyNotes, setApplyNotes] = useState<string>('');
+  const [receivingAccountType, setReceivingAccountType] = useState<'bank' | 'mobile_money'>('bank');
+  const [receivingBank, setReceivingBank] = useState('Bank of Kigali');
+  const [receivingAccountNumber, setReceivingAccountNumber] = useState('');
+  const [receivingMobileProvider, setReceivingMobileProvider] = useState<'MTN Mobile Money' | 'Airtel Money'>('MTN Mobile Money');
+  const [receivingMobileNumber, setReceivingMobileNumber] = useState('');
   const [applyAgreed, setApplyAgreed] = useState<boolean>(true);
   const [uploadedDocs, setUploadedDocs] = useState<Record<string, { file: File; fileName: string; fileSize: string; uploadedAt: string }>>({});
   const [isSubmittingApp, setIsSubmittingApp] = useState<boolean>(false);
@@ -423,6 +430,14 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
       newErrors.applyEmail = 'Contact email is required.';
     }
 
+    if (receivingAccountType === 'bank' && !receivingAccountNumber.trim()) {
+      newErrors.receivingAccountNumber = 'Receiving bank account number is required.';
+    }
+
+    if (receivingAccountType === 'mobile_money' && !receivingMobileNumber.trim()) {
+      newErrors.receivingMobileNumber = 'Receiving mobile-money number is required.';
+    }
+
     if (!applyAgreed) {
       newErrors.applyAgreed = 'You must certify the accuracy of provided information.';
     }
@@ -440,6 +455,7 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
     }
 
     setIsSubmittingApp(true);
+    setApplyErrors({});
     try {
       await applyForOpportunity({
         opportunityId: applyingOpp.id,
@@ -449,20 +465,25 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
         contactPhone: applyPhone,
         contactEmail: applyEmail,
         notes: applyNotes,
+        receivingAccountType,
+        receivingBank: receivingAccountType === 'bank' ? receivingBank : undefined,
+        receivingAccountNumber: receivingAccountType === 'bank' ? receivingAccountNumber : undefined,
+        receivingMobileProvider: receivingAccountType === 'mobile_money' ? receivingMobileProvider : undefined,
+        receivingMobileNumber: receivingAccountType === 'mobile_money' ? receivingMobileNumber : undefined,
         documents: Object.fromEntries(
           Object.entries(uploadedDocs).map(([documentType, upload]) => [documentType, upload.file])
         )
       });
-      setIsSubmittingApp(false);
       const title = applyingOpp.title;
       setApplyingOpp(null);
       triggerToast(`Application submitted successfully for "${title}"!`);
       switchTab('applications');
     } catch (error: unknown) {
-      setIsSubmittingApp(false);
       const message = error instanceof Error ? error.message : 'Unable to submit the application.';
       setApplyErrors({ submit: message });
       triggerToast(message);
+    } finally {
+      setIsSubmittingApp(false);
     }
   };
 
@@ -2894,44 +2915,59 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
                     })()}
 
                     {/* Application Method & Delivery Channel Box */}
-                    <div className="p-4 sm:p-5 rounded-2xl bg-sky-50/60 border border-sky-200/80 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-                          <Send className="w-4 h-4 text-[#2998d6]" />
-                          <span>Application Mode &amp; Delivery Channel</span>
-                        </span>
-                        <span className="px-3 py-1 rounded text-[10px] font-mono font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
-                          {((selectedOpp.metadata as any)?.applicationMethod || 'elevata').toUpperCase()}
-                        </span>
-                      </div>
+                    {(() => {
+                      const appMethodRaw = (selectedOpp.metadata as any)?.applicationMethod;
+                      const appMethod = typeof appMethodRaw === 'object' && appMethodRaw !== null
+                        ? (appMethodRaw.type || 'elevata')
+                        : (typeof appMethodRaw === 'string' && appMethodRaw ? appMethodRaw : 'elevata');
+                      
+                      const appInstructions = (typeof appMethodRaw === 'object' && appMethodRaw?.instructions)
+                        || (selectedOpp.metadata as any)?.applicationInstructions;
+                      
+                      const appExternalUrl = (typeof appMethodRaw === 'object' && appMethodRaw?.externalUrl)
+                        || (selectedOpp.metadata as any)?.externalApplicationUrl;
 
-                      {/* Special Instructions if provided */}
-                      {(selectedOpp.metadata as any)?.applicationInstructions && (
-                        <div className="p-3.5 bg-white rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-xs">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Publisher Instructions:</span>
-                          <FormattedText text={(selectedOpp.metadata as any).applicationInstructions} />
-                        </div>
-                      )}
-
-                      {/* External Portal / Direct Link */}
-                      {(selectedOpp.metadata as any)?.externalApplicationUrl && (
-                        <div className="p-3.5 bg-white rounded-xl border border-sky-100 flex items-center justify-between gap-3 flex-wrap">
-                          <div className="min-w-0">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Application Portal:</span>
-                            <span className="text-xs font-mono text-slate-800 truncate block">{(selectedOpp.metadata as any).externalApplicationUrl}</span>
+                      return (
+                        <div className="p-4 sm:p-5 rounded-2xl bg-sky-50/60 border border-sky-200/80 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <Send className="w-4 h-4 text-[#2998d6]" />
+                              <span>Application Mode &amp; Delivery Channel</span>
+                            </span>
+                            <span className="px-3 py-1 rounded text-[10px] font-mono font-bold bg-white text-slate-800 border border-slate-200 shadow-2xs">
+                              {String(appMethod || 'elevata').toUpperCase()}
+                            </span>
                           </div>
-                          <a
-                            href={(selectedOpp.metadata as any).externalApplicationUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 shadow-2xs"
-                          >
-                            <span>Open External Link</span>
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
+
+                          {/* Special Instructions if provided */}
+                          {Boolean(appInstructions) && (
+                            <div className="p-3.5 bg-white rounded-xl border border-sky-100 text-slate-700 leading-relaxed text-xs">
+                              <span className="text-[10px] font-bold text-slate-400 uppercase block mb-1">Publisher Instructions:</span>
+                              <FormattedText text={appInstructions} />
+                            </div>
+                          )}
+
+                          {/* External Portal / Direct Link */}
+                          {Boolean(appExternalUrl) && (
+                            <div className="p-3.5 bg-white rounded-xl border border-sky-100 flex items-center justify-between gap-3 flex-wrap">
+                              <div className="min-w-0">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase block">Official Application Portal:</span>
+                                <span className="text-xs font-mono text-slate-800 truncate block">{appExternalUrl}</span>
+                              </div>
+                              <a
+                                href={appExternalUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="px-3.5 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white text-xs font-bold rounded-lg transition flex items-center gap-1.5 shrink-0 shadow-2xs"
+                              >
+                                <span>Open External Link</span>
+                                <ExternalLink className="w-3.5 h-3.5" />
+                              </a>
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
+                      );
+                    })()}
 
                     {/* Financial Institution & Desk Profile */}
                     <div className="p-4 sm:p-5 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
@@ -3004,9 +3040,9 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
                     Close
                   </button>
                   
-                  {(selectedOpp.metadata as any)?.externalApplicationUrl && (
+                  {Boolean((selectedOpp.metadata as any)?.externalApplicationUrl || (typeof (selectedOpp.metadata as any)?.applicationMethod === 'object' && (selectedOpp.metadata as any)?.applicationMethod?.externalUrl)) && (
                     <a
-                      href={(selectedOpp.metadata as any).externalApplicationUrl}
+                      href={(selectedOpp.metadata as any)?.externalApplicationUrl || (selectedOpp.metadata as any)?.applicationMethod?.externalUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-bold rounded-lg transition-colors cursor-pointer flex items-center gap-1.5 shadow-2xs"
@@ -3211,6 +3247,97 @@ export default function OpportunityHub({ initialTab }: OpportunityHubProps = {})
                       required
                     />
                   </div>
+                </div>
+
+                <div className="space-y-3 rounded-lg border border-sky-200 bg-sky-50/60 p-3.5">
+                  <div className="flex items-start gap-2 border-b border-sky-200 pb-2">
+                    <Landmark className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wider text-sky-900">Receiving Account for Approved Funds</span>
+                      <p className="mt-0.5 text-[9.5px] text-sky-800">Choose where the financial institution should send the approved facility.</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setReceivingAccountType('bank')}
+                      className={`rounded-md border px-3 py-2 text-left text-[11px] font-bold transition ${receivingAccountType === 'bank' ? 'border-sky-500 bg-white text-sky-800 shadow-sm' : 'border-sky-200 bg-sky-50 text-slate-600'}`}
+                    >
+                      <Landmark className="mb-1 h-4 w-4" />
+                      Bank Account
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setReceivingAccountType('mobile_money')}
+                      className={`rounded-md border px-3 py-2 text-left text-[11px] font-bold transition ${receivingAccountType === 'mobile_money' ? 'border-emerald-500 bg-white text-emerald-800 shadow-sm' : 'border-sky-200 bg-sky-50 text-slate-600'}`}
+                    >
+                      <Smartphone className="mb-1 h-4 w-4" />
+                      Mobile Money
+                    </button>
+                  </div>
+
+                  {receivingAccountType === 'bank' ? (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="accounting-label">Receiving Bank <span className="text-rose-500">*</span></label>
+                        <select
+                          value={receivingBank}
+                          onChange={e => setReceivingBank(e.target.value)}
+                          className="accounting-select w-full"
+                          required
+                        >
+                          <option>Bank of Kigali</option>
+                          <option>Equity Bank Rwanda</option>
+                          <option>I&amp;M Bank Rwanda</option>
+                          <option>BPR Bank Rwanda</option>
+                          <option>Cogebanque</option>
+                          <option>Access Bank Rwanda</option>
+                          <option>Ecobank Rwanda</option>
+                          <option>NCBA Bank Rwanda</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="accounting-label">Receiving Account Number <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          value={receivingAccountNumber}
+                          onChange={e => setReceivingAccountNumber(e.target.value)}
+                          placeholder="e.g. 40032918451"
+                          className={`accounting-input w-full font-mono ${applyErrors.receivingAccountNumber ? 'border-rose-500' : ''}`}
+                          required
+                        />
+                        {applyErrors.receivingAccountNumber && <p className="text-[9.5px] font-bold text-rose-600">{applyErrors.receivingAccountNumber}</p>}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <label className="accounting-label">Mobile Money Provider <span className="text-rose-500">*</span></label>
+                        <select
+                          value={receivingMobileProvider}
+                          onChange={e => setReceivingMobileProvider(e.target.value as 'MTN Mobile Money' | 'Airtel Money')}
+                          className="accounting-select w-full"
+                          required
+                        >
+                          <option>MTN Mobile Money</option>
+                          <option>Airtel Money</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1">
+                        <label className="accounting-label">Mobile Money Number <span className="text-rose-500">*</span></label>
+                        <input
+                          type="text"
+                          value={receivingMobileNumber}
+                          onChange={e => setReceivingMobileNumber(e.target.value)}
+                          placeholder="+250 788 000 000"
+                          className={`accounting-input w-full font-mono ${applyErrors.receivingMobileNumber ? 'border-rose-500' : ''}`}
+                          required
+                        />
+                        {applyErrors.receivingMobileNumber && <p className="text-[9.5px] font-bold text-rose-600">{applyErrors.receivingMobileNumber}</p>}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 

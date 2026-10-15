@@ -147,13 +147,13 @@ export default function Sidebar({
       tooltip: 'SME Facilities, Statements & Repayment Gateway',
       icon: <CreditCard className="w-5 h-5" />
     },
-    {
-      id: 'financial-services',
-      path: '/financial-services',
-      label: 'Digital Financial Services',
-      tooltip: 'BNR Sandbox Digital Marketplace & Open Banking',
-      icon: <Sparkles className="w-5 h-5" />
-    },
+    // {
+    //   id: 'financial-services',
+    //   path: '/financial-services',
+    //   label: 'Digital Financial Services',
+    //   tooltip: 'BNR Sandbox Digital Marketplace & Open Banking',
+    //   icon: <Sparkles className="w-5 h-5" />
+    // },
     {
       id: 'reports',
       path: '/reports',
@@ -220,13 +220,13 @@ export default function Sidebar({
       tooltip: 'Publish Loans, Grants & Products',
       icon: <Megaphone className="w-5 h-5" />
     },
-    {
-      id: 'banker-services',
-      path: '/banker/services',
-      label: 'Digital Services Publisher',
-      tooltip: 'Publish APIs, Merchant Tills & Reserve Products',
-      icon: <Sparkles className="w-5 h-5" />
-    },
+    // {
+    //   id: 'banker-services',
+    //   path: '/banker/services',
+    //   label: 'Digital Services Publisher',
+    //   tooltip: 'Publish APIs, Merchant Tills & Reserve Products',
+    //   icon: <Sparkles className="w-5 h-5" />
+    // },
     {
       id: 'monitoring',
       path: '/banker/monitoring',
@@ -234,13 +234,13 @@ export default function Sidebar({
       tooltip: 'Borrower Risk & Health Surveillance',
       icon: <Activity className="w-5 h-5" />
     },
-    {
-      id: 'banker-api-monitor',
-      path: '/banker/api-monitor',
-      label: 'API Integration Monitor',
-      tooltip: 'Regulatory Telemetry, Endpoints & JSON Handshakes',
-      icon: <Terminal className="w-5 h-5" />
-    },
+    // {
+    //   id: 'banker-api-monitor',
+    //   path: '/banker/api-monitor',
+    //   label: 'API Integration Monitor',
+    //   tooltip: 'Regulatory Telemetry, Endpoints & JSON Handshakes',
+    //   icon: <Terminal className="w-5 h-5" />
+    // },
     {
       id: 'banker-training',
       path: '/banker/trainings',

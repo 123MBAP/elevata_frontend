@@ -53,9 +53,9 @@ const formatFileSize = (bytes?: number) => {
 const getAppStatusCategory = (status: string): 'pending' | 'under_review' | 'completed' | 'rejected' => {
   const s = (status || '').toLowerCase().trim();
   if (s === 'approved' || s === 'completed') return 'completed';
-  if (s === 'under review' || s === 'in progress' || s === 'review' || s === 'under_review') return 'under_review';
+  if (['under review', 'in progress', 'review', 'under_review', 'submitted', 'pending'].includes(s)) return 'under_review';
   if (s === 'rejected' || s === 'declined' || s === 'denied') return 'rejected';
-  return 'pending';
+  return 'under_review';
 };
 
 const getStatusBadge = (status: string) => {
@@ -102,6 +102,7 @@ export default function MyApplications() {
   // Filter & Search State
   const [appStatusFilter, setAppStatusFilter] = useState<'all' | 'pending' | 'under_review' | 'completed' | 'rejected'>('all');
   const [appSearchTerm, setAppSearchTerm] = useState('');
+  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
 
   // Modal State
   const [uploadModalApp, setUploadModalApp] = useState<Application | null>(null);
@@ -406,8 +407,8 @@ export default function MyApplications() {
           const matchedOpp = opportunities.find(o => o.id === app.opportunityId);
           const statusCategory = getAppStatusCategory(app.status);
           const statusBadge = getStatusBadge(app.status);
+          const isExpanded = expandedAppId === app.id;
 
-          // Derive requirements list
           const requiredDocList = (matchedOpp?.requiredDocs && matchedOpp.requiredDocs.length > 0)
             ? matchedOpp.requiredDocs
             : [
@@ -417,7 +418,6 @@ export default function MyApplications() {
                 'Bank Statement (Last 3 Months)'
               ];
 
-          // Check missing docs
           const missingDocsCount = requiredDocList.filter(reqDoc => {
             const reqLower = reqDoc.toLowerCase();
             return !(app.documents || []).some(d => {
@@ -426,7 +426,6 @@ export default function MyApplications() {
             });
           }).length;
 
-          // Extra uploaded docs not in the required checklist
           const extraUploadedDocs = (app.documents || []).filter(doc => {
             const docTypeLower = doc.documentType.toLowerCase();
             return !requiredDocList.some(reqDoc => {
@@ -438,472 +437,421 @@ export default function MyApplications() {
           return (
             <div
               key={app.id}
-              className="accounting-card p-5 sm:p-7 space-y-6 border-[#cbd5e1] hover:border-[#2998d6] transition-all duration-150 shadow-sm"
+              className={`accounting-card overflow-hidden transition-all duration-150 ${
+                isExpanded ? 'border-[#2998d6] shadow-md' : 'border-[#cbd5e1] hover:border-[#2998d6] shadow-sm'
+              }`}
             >
-              {/* Top Row: Title, Institution, Badges, Application ID */}
-              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-4 border-b border-slate-150">
-                <div className="space-y-1.5">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-bold bg-[#1a2332] text-white px-2.5 py-0.5 rounded uppercase tracking-wider font-mono">
-                      {matchedOpp?.category || 'Financing Facility'}
-                    </span>
-                    <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-wider border ${statusBadge.bg}`}>
-                      {statusBadge.icon}
-                      <span>{statusBadge.label}</span>
-                    </span>
-                    <span className="text-[10.5px] font-mono text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
-                      Ref: #{app.id.slice(0, 8).toUpperCase()}
-                    </span>
-                  </div>
-
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug font-heading">
-                    {app.opportunityTitle}
-                  </h3>
-
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 font-sans">
-                    <span className="flex items-center gap-1 font-semibold text-slate-800">
-                      <Building2 className="w-3.5 h-3.5 text-[#2998d6]" />
-                      <span>{app.institution || matchedOpp?.institution || 'Credit Institution'}</span>
-                    </span>
-                    <span>·</span>
-                    <span className="flex items-center gap-1 text-slate-500">
-                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                      <span>Applied on: <strong className="text-slate-700 font-mono">{app.appliedAt}</strong></span>
-                    </span>
-                    {missingDocsCount > 0 ? (
-                      <>
-                        <span>·</span>
-                        <span className="text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10.5px] flex items-center gap-1">
-                          <AlertTriangle className="w-3 h-3 text-amber-600" />
-                          {missingDocsCount} requirement{missingDocsCount === 1 ? '' : 's'} pending
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <span>·</span>
-                        <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10.5px] flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                          All requirements supplied
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </div>
-
-                {/* Financial Request Terms Pill */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-3.5 shrink-0 flex items-center gap-5 text-xs font-mono">
-                  <div>
-                    <span className="text-[9px] text-slate-400 uppercase font-semibold block">Requested Funding</span>
-                    <strong className="text-sm sm:text-base font-bold text-slate-900 block mt-0.5">
-                      {app.requestedAmount ? formatRWF(app.requestedAmount) : (matchedOpp?.maxFunding || 'Discretionary')}
-                    </strong>
-                  </div>
-                  <div className="border-l border-slate-200 pl-5">
-                    <span className="text-[9px] text-slate-400 uppercase font-semibold block">Facility Term</span>
-                    <strong className="text-sm sm:text-base font-bold text-slate-700 block mt-0.5">
-                      {app.termMonths ? `${app.termMonths} Months` : (matchedOpp?.loanTerm ? `${matchedOpp.loanTerm} Months` : '24 Months')}
-                    </strong>
-                  </div>
-                </div>
-              </div>
-
-              {/* 4-STAGE AUDIT TIMELINE PROGRESS TRACKER */}
-              <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 space-y-2">
-                <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 uppercase tracking-wider">
-                  <span className="flex items-center gap-1.5">
-                    <Activity className="w-3.5 h-3.5 text-[#2998d6]" />
-                    Underwriting Audit Pipeline Progress
-                  </span>
-                  <span className="text-[10px] text-slate-500 font-mono font-medium">
-                    {statusCategory === 'completed'
-                      ? '100% Completed'
-                      : statusCategory === 'under_review'
-                      ? '65% In Committee Audit'
-                      : statusCategory === 'rejected'
-                      ? 'Evaluation Concluded'
-                      : '30% Intake Screening'}
-                  </span>
-                </div>
-
-                {/* Stepper Dots & Line */}
-                <div className="grid grid-cols-4 gap-2 pt-2 relative">
-                  {/* Stage 1: Submitted */}
-                  <div className="flex flex-col items-center text-center space-y-1">
-                    <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs font-bold text-xs ring-4 ring-emerald-100">
-                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+              <button
+                type="button"
+                onClick={() => setExpandedAppId(isExpanded ? null : app.id)}
+                className="w-full text-left p-4 sm:p-5 cursor-pointer"
+              >
+                <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-bold bg-[#1a2332] text-white px-2.5 py-0.5 rounded uppercase tracking-wider font-mono">
+                        {matchedOpp?.category || 'Financing Facility'}
+                      </span>
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10.5px] font-bold uppercase tracking-wider border ${statusBadge.bg}`}>
+                        {statusBadge.icon}
+                        <span>{statusBadge.label}</span>
+                      </span>
+                      <span className="text-[10.5px] font-mono text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded border border-slate-200">
+                        Ref: #{app.id.slice(0, 8).toUpperCase()}
+                      </span>
                     </div>
-                    <span className="text-[10.5px] font-bold text-slate-900 leading-tight">1. Lodged</span>
-                    <span className="text-[9px] text-slate-400 font-mono hidden sm:block">Application Received</span>
-                  </div>
 
-                  {/* Stage 2: Desk Intake Screening */}
-                  <div className="flex flex-col items-center text-center space-y-1">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-xs transition-all ${
-                      statusCategory === 'pending'
-                        ? 'bg-amber-500 text-white ring-4 ring-amber-100 animate-pulse'
-                        : 'bg-emerald-600 text-white ring-4 ring-emerald-100'
-                    }`}>
-                      {statusCategory === 'pending' ? <Clock className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                    <div className="mt-3 flex flex-col sm:flex-row sm:items-center gap-2">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug font-heading truncate">
+                        {app.opportunityTitle}
+                      </h3>
+                      <ChevronRight className={`w-4 h-4 shrink-0 text-slate-400 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
                     </div>
-                    <span className={`text-[10.5px] font-bold leading-tight ${statusCategory === 'pending' ? 'text-amber-700' : 'text-slate-900'}`}>
-                      2. Desk Intake
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-mono hidden sm:block">
-                      {statusCategory === 'pending' ? 'Screening Active' : 'Verified'}
-                    </span>
-                  </div>
 
-                  {/* Stage 3: Risk & Requirements Audit */}
-                  <div className="flex flex-col items-center text-center space-y-1">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-xs transition-all ${
-                      statusCategory === 'under_review'
-                        ? 'bg-[#2998d6] text-white ring-4 ring-sky-100 animate-pulse'
-                        : statusCategory === 'completed'
-                        ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
-                        : statusCategory === 'rejected'
-                        ? 'bg-rose-500 text-white ring-4 ring-rose-100'
-                        : 'bg-slate-200 text-slate-400'
-                    }`}>
-                      {statusCategory === 'under_review' ? (
-                        <Activity className="w-3.5 h-3.5" />
-                      ) : statusCategory === 'completed' ? (
-                        <Check className="w-3.5 h-3.5 stroke-[3]" />
-                      ) : statusCategory === 'rejected' ? (
-                        <AlertCircle className="w-3.5 h-3.5" />
-                      ) : (
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
-                      )}
-                    </div>
-                    <span className={`text-[10.5px] font-bold leading-tight ${
-                      statusCategory === 'under_review' ? 'text-[#0284c7]' : statusCategory === 'rejected' ? 'text-rose-700' : 'text-slate-900'
-                    }`}>
-                      3. Risk Audit
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-mono hidden sm:block">
-                      {statusCategory === 'under_review' ? 'Under Review' : statusCategory === 'rejected' ? 'Findings Raised' : 'Committee Audit'}
-                    </span>
-                  </div>
-
-                  {/* Stage 4: Decision */}
-                  <div className="flex flex-col items-center text-center space-y-1">
-                    <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-xs transition-all ${
-                      statusCategory === 'completed'
-                        ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
-                        : statusCategory === 'rejected'
-                        ? 'bg-rose-600 text-white ring-4 ring-rose-100'
-                        : 'bg-slate-200 text-slate-400'
-                    }`}>
-                      {statusCategory === 'completed' ? (
-                        <CheckCircle2 className="w-4 h-4" />
-                      ) : statusCategory === 'rejected' ? (
-                        <XCircle className="w-4 h-4" />
-                      ) : (
-                        <Lock className="w-3 h-3 text-slate-400" />
-                      )}
-                    </div>
-                    <span className={`text-[10.5px] font-bold leading-tight ${
-                      statusCategory === 'completed' ? 'text-emerald-700' : statusCategory === 'rejected' ? 'text-rose-700' : 'text-slate-400'
-                    }`}>
-                      4. Decision
-                    </span>
-                    <span className="text-[9px] text-slate-400 font-mono hidden sm:block">
-                      {statusCategory === 'completed' ? 'Completed & Approved' : statusCategory === 'rejected' ? 'Declined' : 'Pending Review'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* REQUIREMENTS REQUIRED & COMPLIANCE CHECKLIST */}
-              <div className="space-y-3.5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                  <div>
-                    <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 font-sans">
-                      <ShieldCheck className="w-4 h-4 text-[#2998d6]" />
-                      Program Requirements &amp; Verification Documents Checklist
-                    </h4>
-                    <p className="text-[10.5px] text-slate-500 font-sans mt-0.5">
-                      Mandatory conditions verified against your SME submission.
-                    </p>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => openUploadDocModal(app)}
-                    className="accounting-btn-secondary !h-7 !text-[11px] !px-2.5 self-start sm:self-auto flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <FilePlus className="w-3.5 h-3.5 text-[#2998d6]" />
-                    <span>Upload Additional File</span>
-                  </button>
-                </div>
-
-                {/* Required Documents Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {requiredDocList.map((reqDoc, idx) => {
-                    const reqLower = reqDoc.toLowerCase();
-                    const matchedUploadedDoc = (app.documents || []).find(d => {
-                      const dLower = d.documentType.toLowerCase();
-                      return dLower === reqLower || reqLower.includes(dLower) || dLower.includes(reqLower);
-                    });
-
-                    const isProvided = !!matchedUploadedDoc;
-
-                    return (
-                      <div
-                        key={idx}
-                        className={`p-3.5 rounded-lg border transition-all flex flex-col justify-between space-y-2.5 ${
-                          isProvided
-                            ? 'bg-emerald-50/30 border-emerald-200'
-                            : 'bg-amber-50/40 border-amber-200'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-start gap-2.5">
-                            <div className="mt-0.5">
-                              {isProvided ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                              ) : (
-                                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
-                              )}
-                            </div>
-                            <div>
-                              <h5 className="text-xs font-bold text-slate-900 leading-tight">
-                                {reqDoc}
-                              </h5>
-                              {isProvided ? (
-                                <div className="mt-1 text-[10px] text-slate-500 font-mono space-y-0.5">
-                                  <p className="truncate text-slate-700 font-semibold max-w-[240px]">
-                                    {matchedUploadedDoc.fileName}
-                                  </p>
-                                  <p className="text-slate-400">
-                                    {formatFileSize(matchedUploadedDoc.sizeBytes)} · Uploaded: {new Date(matchedUploadedDoc.uploadedAt || Date.now()).toLocaleDateString()}
-                                  </p>
-                                </div>
-                              ) : (
-                                <p className="text-[10.5px] text-amber-700 mt-1">
-                                  Mandatory underwriting requirement pending submission.
-                                </p>
-                              )}
-                            </div>
-                          </div>
-
-                          <div>
-                            {isProvided ? (
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                Submitted
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
-                                Required
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
-                          <span className="text-[9.5px] text-slate-400 font-mono">
-                            {isProvided ? 'Verified Format' : 'Accepted: PDF, Office, Img (<=10MB)'}
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] text-slate-500 font-sans">
+                      <span className="flex items-center gap-1 font-semibold text-slate-800">
+                        <Building2 className="w-3.5 h-3.5 text-[#2998d6]" />
+                        <span>{app.institution || matchedOpp?.institution || 'Credit Institution'}</span>
+                      </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                        <span>{app.appliedAt}</span>
+                      </span>
+                      {missingDocsCount > 0 ? (
+                        <>
+                          <span>•</span>
+                          <span className="text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[10px] flex items-center gap-1">
+                            <AlertTriangle className="w-3 h-3 text-amber-600" />
+                            {missingDocsCount} required
                           </span>
+                        </>
+                      ) : (
+                        <>
+                          <span>•</span>
+                          <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 text-[10px] flex items-center gap-1">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                            Complete
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
 
-                          {isProvided ? (
-                            <button
-                              type="button"
-                              onClick={() => handleDownloadDoc(matchedUploadedDoc)}
-                              className="px-2.5 py-1 text-[10.5px] font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 rounded transition flex items-center gap-1 cursor-pointer"
-                            >
-                              <Download className="w-3 h-3 text-[#2998d6]" />
-                              <span>Download</span>
-                            </button>
+                  <div className="flex flex-wrap items-center gap-3 xl:justify-end">
+                    <div className="min-w-[124px]">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold block">Requested</span>
+                      <strong className="text-sm font-bold text-slate-900 block mt-0.5 font-mono">
+                        {app.requestedAmount ? formatRWF(app.requestedAmount) : (matchedOpp?.maxFunding || 'Discretionary')}
+                      </strong>
+                    </div>
+                    <div className="min-w-[110px]">
+                      <span className="text-[9px] text-slate-400 uppercase font-semibold block">Term</span>
+                      <strong className="text-sm font-bold text-slate-700 block mt-0.5 font-mono">
+                        {app.termMonths ? `${app.termMonths}M` : (matchedOpp?.loanTerm ? `${matchedOpp.loanTerm}M` : '24M')}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </button>
+
+              {isExpanded && (
+                <div className="px-4 pb-5 sm:px-5 sm:pb-6 space-y-6 border-t border-slate-150 pt-5">
+                  <div className="bg-slate-50/70 border border-slate-200 rounded-lg p-4 space-y-2">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 uppercase tracking-wider">
+                      <span className="flex items-center gap-1.5">
+                        <Activity className="w-3.5 h-3.5 text-[#2998d6]" />
+                        Underwriting Audit Pipeline
+                      </span>
+                      <span className="text-[10px] text-slate-500 font-mono font-medium">
+                        {statusCategory === 'completed'
+                          ? '100% Completed'
+                          : statusCategory === 'under_review'
+                          ? '65% In Committee Audit'
+                          : statusCategory === 'rejected'
+                          ? 'Evaluation Concluded'
+                          : '30% Intake Screening'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-4 gap-2 pt-2">
+                      <div className="flex flex-col items-center text-center space-y-1">
+                        <div className="w-7 h-7 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs font-bold text-xs ring-4 ring-emerald-100">
+                          <Check className="w-3.5 h-3.5 stroke-[3]" />
+                        </div>
+                        <span className="text-[10.5px] font-bold text-slate-900 leading-tight">1. Lodged</span>
+                        <span className="text-[9px] text-slate-400 font-mono hidden sm:block">Application Received</span>
+                      </div>
+
+                      <div className="flex flex-col items-center text-center space-y-1">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-xs transition-all ${
+                          statusCategory === 'pending'
+                            ? 'bg-amber-500 text-white ring-4 ring-amber-100 animate-pulse'
+                            : 'bg-emerald-600 text-white ring-4 ring-emerald-100'
+                        }`}>
+                          {statusCategory === 'pending' ? <Clock className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                        </div>
+                        <span className={`text-[10.5px] font-bold leading-tight ${statusCategory === 'pending' ? 'text-amber-700' : 'text-slate-900'}`}>
+                          2. Intake
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-mono hidden sm:block">
+                          {statusCategory === 'pending' ? 'Screening Active' : 'Verified'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-center text-center space-y-1">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-xs transition-all ${
+                          statusCategory === 'under_review'
+                            ? 'bg-[#2998d6] text-white ring-4 ring-sky-100 animate-pulse'
+                            : statusCategory === 'completed'
+                            ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
+                            : statusCategory === 'rejected'
+                            ? 'bg-rose-500 text-white ring-4 ring-rose-100'
+                            : 'bg-slate-200 text-slate-400'
+                        }`}>
+                          {statusCategory === 'under_review' ? (
+                            <Activity className="w-3.5 h-3.5" />
+                          ) : statusCategory === 'completed' ? (
+                            <Check className="w-3.5 h-3.5 stroke-[3]" />
+                          ) : statusCategory === 'rejected' ? (
+                            <AlertCircle className="w-3.5 h-3.5" />
                           ) : (
-                            <button
-                              type="button"
-                              onClick={() => openUploadDocModal(app, reqDoc)}
-                              className="px-2.5 py-1 text-[10.5px] font-bold text-white bg-[#2998d6] hover:bg-[#1f85be] rounded shadow-2xs transition flex items-center gap-1 cursor-pointer"
-                            >
-                              <UploadCloud className="w-3 h-3" />
-                              <span>Upload Now</span>
-                            </button>
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
                           )}
                         </div>
+                        <span className={`text-[10.5px] font-bold leading-tight ${
+                          statusCategory === 'under_review' ? 'text-[#0284c7]' : statusCategory === 'rejected' ? 'text-rose-700' : 'text-slate-900'
+                        }`}>
+                          3. Risk Audit
+                        </span>
+                        <span className="text-[9px] text-slate-400 font-mono hidden sm:block">
+                          {statusCategory === 'under_review' ? 'Under Review' : statusCategory === 'rejected' ? 'Findings Raised' : 'Committee Audit'}
+                        </span>
                       </div>
-                    );
-                  })}
-                </div>
 
-                {/* Extra Uploaded Documents (if any) */}
-                {extraUploadedDocs.length > 0 && (
-                  <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
-                    <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
-                      <Paperclip className="w-3.5 h-3.5 text-slate-400" />
-                      Additional Supporting Attachments ({extraUploadedDocs.length})
-                    </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {extraUploadedDocs.map((extraDoc, idx) => (
-                        <div key={idx} className="p-2.5 bg-white rounded border border-slate-200 flex items-center justify-between text-xs">
-                          <div className="truncate mr-2">
-                            <strong className="block text-[11px] text-slate-800 font-semibold truncate">{extraDoc.documentType}</strong>
-                            <span className="text-[9.5px] text-slate-400 font-mono">{extraDoc.fileName} · {formatFileSize(extraDoc.sizeBytes)}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleDownloadDoc(extraDoc)}
-                            className="px-2.5 py-1 text-[10.5px] font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 rounded border border-slate-200 shrink-0 flex items-center gap-1 cursor-pointer"
-                          >
-                            <Download className="w-3 h-3 text-[#2998d6]" />
-                            <span>Download</span>
-                          </button>
+                      <div className="flex flex-col items-center text-center space-y-1">
+                        <div className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shadow-xs transition-all ${
+                          statusCategory === 'completed'
+                            ? 'bg-emerald-600 text-white ring-4 ring-emerald-100'
+                            : statusCategory === 'rejected'
+                            ? 'bg-rose-600 text-white ring-4 ring-rose-100'
+                            : 'bg-slate-200 text-slate-400'
+                        }`}>
+                          {statusCategory === 'completed' ? (
+                            <CheckCircle2 className="w-4 h-4" />
+                          ) : statusCategory === 'rejected' ? (
+                            <XCircle className="w-4 h-4" />
+                          ) : (
+                            <Lock className="w-3 h-3 text-slate-400" />
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Financial & Underwriting Criteria Compliance Breakdown */}
-                <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-lg space-y-2">
-                  <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block font-sans">
-                    SME Profile Underwriting Standard Matching
-                  </span>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                    {/* Health Score */}
-                    <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
-                      <span className="text-[9px] text-slate-400 block uppercase font-semibold">Min Health Score</span>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800 font-mono">{matchedOpp?.minHealthScore || 60}% Req</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
-                          (app.smeHealth || activeSme.healthScore) >= (matchedOpp?.minHealthScore || 60)
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        <span className={`text-[10.5px] font-bold leading-tight ${
+                          statusCategory === 'completed' ? 'text-emerald-700' : statusCategory === 'rejected' ? 'text-rose-700' : 'text-slate-400'
                         }`}>
-                          {app.smeHealth || activeSme.healthScore}% Actual
+                          4. Decision
                         </span>
-                      </div>
-                    </div>
-
-                    {/* Readiness Score */}
-                    <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
-                      <span className="text-[9px] text-slate-400 block uppercase font-semibold">Loan Readiness</span>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800 font-mono">{matchedOpp?.minReadinessScore || 65}% Req</span>
-                        <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
-                          (app.smeReadiness || calculatedReadiness) >= (matchedOpp?.minReadinessScore || 65)
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-sky-50 text-[#0284c7] border border-sky-200'
-                        }`}>
-                          {app.smeReadiness || calculatedReadiness}% Index
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Regulatory Registration */}
-                    <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
-                      <span className="text-[9px] text-slate-400 block uppercase font-semibold">RDB / Tax Status</span>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800 text-[11px] truncate">
-                          {matchedOpp?.taxCompliance ? 'RRA Clearance' : 'Registered SME'}
-                        </span>
-                        <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-mono">
-                          Pass
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Collateral Security */}
-                    <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
-                      <span className="text-[9px] text-slate-400 block uppercase font-semibold">Security Structure</span>
-                      <div className="flex items-center justify-between">
-                        <span className="font-bold text-slate-800 text-[11px] truncate" title={matchedOpp?.collateralRequired ? (matchedOpp.collateralType || 'Asset Pledge') : 'Unsecured'}>
-                          {matchedOpp?.collateralRequired ? (matchedOpp.collateralType || 'Asset Pledge') : 'No Collateral'}
-                        </span>
-                        <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded font-mono">
-                          Standard
+                        <span className="text-[9px] text-slate-400 font-mono hidden sm:block">
+                          {statusCategory === 'completed' ? 'Completed & Approved' : statusCategory === 'rejected' ? 'Declined' : 'Pending Review'}
                         </span>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* REVIEW FEEDBACK & AI ACCELERATOR ADVISORY */}
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
-                <div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest flex items-center gap-1.5 font-sans">
-                      <Building2 className="w-3.5 h-3.5 text-[#2998d6]" />
-                      Financial Institution Review Decision &amp; Remarks
-                    </span>
-                    <span className="text-[9px] font-mono text-slate-400">
-                      Desk: {app.institution || matchedOpp?.institution || 'Credit Desk'}
-                    </span>
+                  <div className="space-y-3.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5 font-sans">
+                          <ShieldCheck className="w-4 h-4 text-[#2998d6]" />
+                          Program Requirements &amp; Verification Documents
+                        </h4>
+                        <p className="text-[10.5px] text-slate-500 font-sans mt-0.5">
+                          Mandatory conditions verified against your SME submission.
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => openUploadDocModal(app)}
+                        className="accounting-btn-secondary !h-7 !text-[11px] !px-2.5 self-start sm:self-auto flex items-center gap-1.5 cursor-pointer"
+                      >
+                        <FilePlus className="w-3.5 h-3.5 text-[#2998d6]" />
+                        <span>Upload Additional File</span>
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {requiredDocList.map((reqDoc, idx) => {
+                        const reqLower = reqDoc.toLowerCase();
+                        const matchedUploadedDoc = (app.documents || []).find(d => {
+                          const dLower = d.documentType.toLowerCase();
+                          return dLower === reqLower || reqLower.includes(dLower) || dLower.includes(reqLower);
+                        });
+                        const isProvided = !!matchedUploadedDoc;
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`p-3.5 rounded-lg border transition-all flex flex-col justify-between space-y-2.5 ${
+                              isProvided ? 'bg-emerald-50/30 border-emerald-200' : 'bg-amber-50/40 border-amber-200'
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex items-start gap-2.5">
+                                <div className="mt-0.5">
+                                  {isProvided ? (
+                                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                                  ) : (
+                                    <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 animate-pulse" />
+                                  )}
+                                </div>
+                                <div>
+                                  <h5 className="text-xs font-bold text-slate-900 leading-tight">{reqDoc}</h5>
+                                  {isProvided ? (
+                                    <div className="mt-1 text-[10px] text-slate-500 font-mono space-y-0.5">
+                                      <p className="truncate text-slate-700 font-semibold max-w-[240px]">{matchedUploadedDoc.fileName}</p>
+                                      <p className="text-slate-400">
+                                        {formatFileSize(matchedUploadedDoc.sizeBytes)} · Uploaded: {new Date(matchedUploadedDoc.uploadedAt || Date.now()).toLocaleDateString()}
+                                      </p>
+                                    </div>
+                                  ) : (
+                                    <p className="text-[10.5px] text-amber-700 mt-1">Mandatory underwriting requirement pending submission.</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div>
+                                {isProvided ? (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    Submitted
+                                  </span>
+                                ) : (
+                                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold font-mono uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                                    Required
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="pt-2 border-t border-slate-200/60 flex items-center justify-between">
+                              <span className="text-[9.5px] text-slate-400 font-mono">
+                                {isProvided ? 'Verified Format' : 'Accepted: PDF, Office, Img (<=10MB)'}
+                              </span>
+
+                              {isProvided ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleDownloadDoc(matchedUploadedDoc)}
+                                  className="px-2.5 py-1 text-[10.5px] font-semibold text-slate-700 hover:text-slate-900 bg-white border border-slate-200 hover:bg-slate-50 rounded transition flex items-center gap-1 cursor-pointer"
+                                >
+                                  <Download className="w-3 h-3 text-[#2998d6]" />
+                                  <span>Download</span>
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => openUploadDocModal(app, reqDoc)}
+                                  className="px-2.5 py-1 text-[10.5px] font-bold text-white bg-[#2998d6] hover:bg-[#1f85be] rounded shadow-2xs transition flex items-center gap-1 cursor-pointer"
+                                >
+                                  <UploadCloud className="w-3 h-3" />
+                                  <span>Upload Now</span>
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {extraUploadedDocs.length > 0 && (
+                      <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 space-y-2">
+                        <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider flex items-center gap-1">
+                          <Paperclip className="w-3.5 h-3.5 text-slate-400" />
+                          Additional Supporting Attachments ({extraUploadedDocs.length})
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {extraUploadedDocs.map((extraDoc, idx) => (
+                            <div key={idx} className="p-2.5 bg-white rounded border border-slate-200 flex items-center justify-between text-xs">
+                              <div className="truncate mr-2">
+                                <strong className="block text-[11px] text-slate-800 font-semibold truncate">{extraDoc.documentType}</strong>
+                                <span className="text-[9.5px] text-slate-400 font-mono">{extraDoc.fileName} · {formatFileSize(extraDoc.sizeBytes)}</span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => handleDownloadDoc(extraDoc)}
+                                className="px-2.5 py-1 text-[10.5px] font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 rounded border border-slate-200 shrink-0 flex items-center gap-1 cursor-pointer"
+                              >
+                                <Download className="w-3 h-3 text-[#2998d6]" />
+                                <span>Download</span>
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="p-3.5 bg-slate-50/80 border border-slate-200 rounded-lg space-y-2">
+                      <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider block font-sans">
+                        SME Profile Underwriting Standard Matching
+                      </span>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                        <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Min Health Score</span>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800 font-mono">{matchedOpp?.minHealthScore || 60}% Req</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                              (app.smeHealth || activeSme.healthScore) >= (matchedOpp?.minHealthScore || 60)
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}>
+                              {app.smeHealth || activeSme.healthScore}% Actual
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Loan Readiness</span>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800 font-mono">{matchedOpp?.minReadinessScore || 65}% Req</span>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded font-mono ${
+                              (app.smeReadiness || calculatedReadiness) >= (matchedOpp?.minReadinessScore || 65)
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-sky-50 text-[#0284c7] border border-sky-200'
+                            }`}>
+                              {app.smeReadiness || calculatedReadiness}% Index
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">RDB / Tax Status</span>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800 text-[11px] truncate">
+                              {matchedOpp?.taxCompliance ? 'RRA Clearance' : 'Registered SME'}
+                            </span>
+                            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.2 rounded font-mono">
+                              Pass
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="p-2.5 bg-white rounded border border-slate-200 space-y-0.5">
+                          <span className="text-[9px] text-slate-400 block uppercase font-semibold">Security Structure</span>
+                          <div className="flex items-center justify-between">
+                            <span className="font-bold text-slate-800 text-[11px] truncate" title={matchedOpp?.collateralRequired ? (matchedOpp.collateralType || 'Asset Pledge') : 'Unsecured'}>
+                              {matchedOpp?.collateralRequired ? (matchedOpp.collateralType || 'Asset Pledge') : 'No Collateral'}
+                            </span>
+                            <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.2 rounded font-mono">
+                              Standard
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div className="mt-1.5 p-3 bg-white border border-slate-200 rounded text-xs text-slate-700 leading-relaxed font-sans shadow-2xs">
-                    {app.feedback || 'Application received and placed in credit intake pool. Awaiting underwriter inspection of submitted trading books.'}
+
+                  <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-700 uppercase tracking-widest flex items-center gap-1.5 font-sans">
+                          <Building2 className="w-3.5 h-3.5 text-[#2998d6]" />
+                          Financial Institution Review Decision &amp; Remarks
+                        </span>
+                        <span className="text-[9px] font-mono text-slate-400">
+                          Desk: {app.institution || matchedOpp?.institution || 'Credit Desk'}
+                        </span>
+                      </div>
+                      <div className="mt-1.5 p-3 bg-white border border-slate-200 rounded text-xs text-slate-700 leading-relaxed font-sans shadow-2xs">
+                        {app.feedback || 'Application received and placed in credit intake pool. Awaiting underwriter inspection of submitted trading books.'}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-slate-200 space-y-1.5 text-xs">
+                      <span className="text-[10px] font-bold text-[#0284c7] uppercase tracking-widest flex items-center gap-1 font-sans">
+                        <Sparkles className="w-3.5 h-3.5 text-[#2998d6]" />
+                        Elevata AI Fast-Track Recommendation
+                      </span>
+                      {app.aiSuggestions && app.aiSuggestions.length > 0 ? (
+                        <ul className="list-disc pl-4 space-y-1 text-slate-600 text-[11px]">
+                          {app.aiSuggestions.map((suggestion, sIdx) => (
+                            <li key={sIdx}>{suggestion}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-[11px] text-slate-600 leading-relaxed">
+                          {statusCategory === 'pending'
+                            ? 'Your file is in the initial desk screening queue. Continue recording daily sales and inventory in the ledger to maintain positive momentum.'
+                            : statusCategory === 'under_review'
+                            ? 'Credit committee is analyzing debt-to-revenue ratio. Ensure all required compliance documents above are verified and up-to-date.'
+                            : statusCategory === 'completed'
+                            ? 'Credit facility has been successfully approved! Reach out to the institution representative to arrange loan facility disbursement.'
+                            : 'Review the underwriter remarks above, update any missing documents, and re-apply once requirements are satisfied.'}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
-
-                {/* AI Copilot Guidance */}
-                <div className="pt-2 border-t border-slate-200 space-y-1.5 text-xs">
-                  <span className="text-[10px] font-bold text-[#0284c7] uppercase tracking-widest flex items-center gap-1 font-sans">
-                    <Sparkles className="w-3.5 h-3.5 text-[#2998d6]" />
-                    Elevata AI Fast-Track Recommendation
-                  </span>
-                  {app.aiSuggestions && app.aiSuggestions.length > 0 ? (
-                    <ul className="list-disc pl-4 space-y-1 text-slate-600 text-[11px]">
-                      {app.aiSuggestions.map((suggestion, sIdx) => (
-                        <li key={sIdx}>{suggestion}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-[11px] text-slate-600 leading-relaxed">
-                      {statusCategory === 'pending'
-                        ? 'Your file is in the initial desk screening queue. Continue recording daily sales and inventory in the ledger to maintain positive momentum.'
-                        : statusCategory === 'under_review'
-                        ? 'Credit committee is analyzing debt-to-revenue ratio. Ensure all required compliance documents above are verified and up-to-date.'
-                        : statusCategory === 'completed'
-                        ? 'Credit facility has been successfully approved! Reach out to the institution representative to arrange loan facility disbursement.'
-                        : 'Review the underwriter remarks above, update any missing documents, and re-apply once requirements are satisfied.'}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Bottom Card Footer Actions */}
-              <div className="pt-3 border-t border-slate-150 flex flex-wrap items-center justify-between gap-2 text-xs">
-                <div className="text-[11px] text-slate-500 font-sans">
-                  Need assistance with this facility? Contact the underwriter directly:
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  {statusCategory === 'completed' && (
-                    <Link
-                      to="/loans"
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-2xs transition"
-                    >
-                      <CreditCard className="w-3.5 h-3.5" />
-                      <span>Track &amp; Repay Loan</span>
-                    </Link>
-                  )}
-
-                  {matchedOpp && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedOppId(matchedOpp.id)}
-                      className="accounting-btn-secondary !h-8 !text-xs !px-3 flex items-center gap-1 cursor-pointer"
-                    >
-                      <Eye className="w-3.5 h-3.5 text-slate-500" />
-                      <span>View Program Terms</span>
-                    </button>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => openUploadDocModal(app)}
-                    className="accounting-btn-primary !h-8 !text-xs !px-3.5 flex items-center gap-1.5 cursor-pointer"
-                  >
-                    <UploadCloud className="w-3.5 h-3.5" />
-                    <span>Submit Requirement File</span>
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
           );
         })}

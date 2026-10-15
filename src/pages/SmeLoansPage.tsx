@@ -3,7 +3,6 @@ import {
   financialDemoApi,
   DemoLoan,
   SmeOverviewData,
-  StatementEntry,
   DemoSme
 } from '../services/financialDemoApi';
 import { formatRWF } from '../lib/mockData';
@@ -16,19 +15,19 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
-  RotateCcw,
   ShieldCheck,
   Calendar,
   Search,
   FileText,
   X,
   Sparkles,
-  Send,
   Building2,
-  Download,
-  Info
+  Check,
 } from 'lucide-react';
 import LoanEngine from './LoanEngine';
+import mobileMoneyImg from '../assets/images/Mobile_money.png';
+import airtelMoneyImg from '../assets/images/airtel_money.png';
+import bankTransferImg from '../assets/images/bank_transfer.png';
 
 export default function SmeLoansPage() {
   const [activeTab, setActiveTab] = useState<'loans' | 'engine'>('loans');
@@ -46,14 +45,15 @@ export default function SmeLoansPage() {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Repayment Modal State
+  // Repayment Modal State (Payment Methods: Mobile Money, Airtel Money, Bank)
   const [isRepayModalOpen, setIsRepayModalOpen] = useState(false);
   const [repayLoanId, setRepayLoanId] = useState<string>('');
   const [repayAmount, setRepayAmount] = useState<string>('');
-  const [repayChannel, setRepayChannel] = useState<'Mobile Money' | 'Bank Transfer'>('Mobile Money');
-  const [repayProvider, setRepayProvider] = useState<string>('MTN Mobile Money Rwanda');
-  const [repayPhoneNumber, setRepayPhoneNumber] = useState<string>('+250 788 412 890');
-  const [repayBankAccount, setRepayBankAccount] = useState<string>('40032918451');
-  const [repayDebitBank, setRepayDebitBank] = useState<string>('Bank of Kigali');
+  const [paymentSource, setPaymentSource] = useState<'momo' | 'airtel' | 'bank'>('momo');
+  const [momoPhoneNumber, setMomoPhoneNumber] = useState<string>('+250 788 412 890');
+  const [airtelPhoneNumber, setAirtelPhoneNumber] = useState<string>('+250 733 892 104');
+  const [bankAccount, setBankAccount] = useState<string>('40032918451');
+  const [selectedBank, setSelectedBank] = useState<string>('Bank of Kigali');
   const [repayOutcome, setRepayOutcome] = useState<'success' | 'pending' | 'failure'>('success');
   const [isProcessingRepay, setIsProcessingRepay] = useState(false);
   const [repayResult, setRepayResult] = useState<any | null>(null);
@@ -91,6 +91,19 @@ export default function SmeLoansPage() {
 
   useEffect(() => {
     loadData(currentSmeId);
+  }, [currentSmeId]);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') loadData(currentSmeId);
+    };
+
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
   }, [currentSmeId]);
 
   // Selected loan for repayment
@@ -151,21 +164,52 @@ export default function SmeLoansPage() {
       return;
     }
 
+    if (paymentSource === 'momo' && !momoPhoneNumber.trim()) {
+      showToast('warning', 'Please provide a valid MTN Mobile Money phone number.');
+      return;
+    }
+    if (paymentSource === 'airtel' && !airtelPhoneNumber.trim()) {
+      showToast('warning', 'Please provide a valid Airtel Money phone number.');
+      return;
+    }
+    if (paymentSource === 'bank' && !bankAccount.trim()) {
+      showToast('warning', 'Please provide a valid bank account number.');
+      return;
+    }
+
     setIsProcessingRepay(true);
     setRepayStep('processing');
 
     try {
       const idempotencyKey = `IDEMP-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       
-      // Destination bank is automatically loanToRepay.institutionName
-      const paymentDetails = repayChannel === 'Mobile Money'
-        ? { provider: repayProvider, phoneNumber: repayPhoneNumber }
-        : { bankName: repayDebitBank, accountNumber: repayBankAccount };
+      let channel: 'Mobile Money' | 'Bank Transfer' = 'Mobile Money';
+      let paymentDetails: any = {};
+
+      if (paymentSource === 'momo') {
+        channel = 'Mobile Money';
+        paymentDetails = {
+          provider: 'MTN Mobile Money Rwanda',
+          phoneNumber: momoPhoneNumber
+        };
+      } else if (paymentSource === 'airtel') {
+        channel = 'Mobile Money';
+        paymentDetails = {
+          provider: 'Airtel Money Rwanda',
+          phoneNumber: airtelPhoneNumber
+        };
+      } else {
+        channel = 'Bank Transfer';
+        paymentDetails = {
+          bankName: selectedBank,
+          accountNumber: bankAccount
+        };
+      }
 
       const result = await financialDemoApi.repayLoan({
         loanId: loanToRepay.id,
         amount: amountNum,
-        channel: repayChannel,
+        channel,
         paymentDetails,
         idempotencyKey,
         simulateOutcome: repayOutcome
@@ -418,6 +462,11 @@ export default function SmeLoansPage() {
                           }`}>
                             {loan.status}
                           </span>
+                          {loan.disbursementStatus === 'Completed' && (
+                            <span className="px-2.5 py-1 rounded-full text-[10px] font-bold font-mono bg-sky-50 text-sky-700 border border-sky-200">
+                              Funds credited
+                            </span>
+                          )}
                         </div>
                       </div>
 
@@ -491,6 +540,13 @@ export default function SmeLoansPage() {
                             </>
                           )}
                         </div>
+
+                        {loan.disbursementStatus === 'Completed' && loan.disbursementReference && (
+                          <div className="text-[10px] text-sky-700 font-mono">
+                            Disbursed {loan.disbursedAt ? new Date(loan.disbursedAt).toLocaleDateString() : ''}
+                            {' • Ref: '}{loan.disbursementReference}
+                          </div>
+                        )}
 
                         <div className="flex items-center gap-2.5">
                           {/* View Details Button */}
@@ -793,55 +849,56 @@ export default function SmeLoansPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-lg w-full overflow-hidden my-6"
+              className="bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-hidden my-6 flex flex-col"
             >
               {/* Header */}
-              <div className="p-5 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
-                    <Send className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-slate-900">
-                      Make Loan Repayment
-                    </h3>
-                    <p className="text-[11px] text-slate-500">
-                      Direct repayment service
-                    </p>
-                  </div>
+              <div className="p-4 sm:p-5 bg-white border-b border-slate-100 flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                    Payment Methods
+                  </h3>
+                  <p className="text-[11px] text-slate-500">
+                    Select payment source sender to repay facility
+                  </p>
                 </div>
 
-                <button
-                  onClick={() => setIsRepayModalOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg transition cursor-pointer"
-                >
-                  <X className="w-5 h-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full border border-indigo-200 bg-indigo-50/70 flex items-center justify-center text-indigo-500">
+                    <CreditCard className="w-4 h-4" />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsRepayModalOpen(false)}
+                    className="p-1.5 text-slate-400 hover:text-slate-700 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
               </div>
 
               {/* Body */}
-              <div className="p-5 space-y-4">
+              <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
                 {repayStep === 'form' && (
                   <form onSubmit={handleExecuteRepayment} className="space-y-4">
-                    {/* AUTOMATIC DESTINATION FINANCIAL INSTITUTION (NO SELECTION NEEDED) */}
-                    <div className="p-3.5 bg-sky-50/80 border border-sky-200 rounded-xl flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold shrink-0">
-                          <Building2 className="w-5 h-5" />
+                    {/* AUTOMATIC DESTINATION FINANCIAL INSTITUTION */}
+                    <div className="p-3 bg-sky-50/70 border border-sky-200/80 rounded-xl flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center font-bold shrink-0">
+                          <Building2 className="w-4 h-4" />
                         </div>
-                        <div>
-                          <span className="text-[10px] uppercase font-mono font-bold text-sky-800 block">
+                        <div className="min-w-0">
+                          <span className="text-[9.5px] uppercase font-mono font-bold text-sky-800 block truncate">
                             Destination Lender (Beneficiary)
                           </span>
-                          <h4 className="text-sm font-bold text-slate-900">
+                          <h4 className="text-xs font-bold text-slate-900 truncate">
                             {targetRepayLoan.institutionName}
                           </h4>
-                          <span className="text-[11px] text-slate-600 font-mono">
+                          <span className="text-[10px] text-slate-500 font-mono block truncate">
                             {targetRepayLoan.productName} ({targetRepayLoan.referenceNumber})
                           </span>
                         </div>
                       </div>
-                      <span className="px-2 py-1 bg-sky-100 text-sky-800 text-[10px] font-mono font-bold rounded border border-sky-200 shrink-0">
+                      <span className="px-2 py-0.5 bg-sky-100 text-sky-800 text-[10px] font-mono font-bold rounded border border-sky-200 shrink-0">
                         Auto-Routed
                       </span>
                     </div>
@@ -863,201 +920,296 @@ export default function SmeLoansPage() {
                         value={repayAmount}
                         onChange={(e) => setRepayAmount(e.target.value)}
                         placeholder="e.g. 500000"
-                        className="w-full p-2.5 border border-slate-200 rounded-lg text-sm font-mono font-bold focus:outline-none focus:border-sky-500"
+                        className="w-full p-2.5 bg-white border border-slate-300 rounded-lg text-sm font-mono font-bold focus:outline-none focus:border-teal-500 text-slate-900"
                         required
                       />
 
                       {/* Quick presets */}
-                      <div className="flex gap-2 mt-1.5">
+                      <div className="flex gap-1.5 mt-1.5">
                         <button
                           type="button"
                           onClick={() => setRepayAmount(String(targetRepayLoan.monthlyInstallment))}
-                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold cursor-pointer"
+                          className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold cursor-pointer transition"
                         >
                           Due ({formatRWF(targetRepayLoan.monthlyInstallment)})
                         </button>
                         <button
                           type="button"
                           onClick={() => setRepayAmount(String(Math.round(targetRepayLoan.outstandingPrincipal * 0.5)))}
-                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold cursor-pointer"
+                          className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold cursor-pointer transition"
                         >
                           50% Balance
                         </button>
                         <button
                           type="button"
                           onClick={() => setRepayAmount(String(targetRepayLoan.outstandingPrincipal))}
-                          className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold cursor-pointer"
+                          className="px-2 py-1 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 rounded text-[10px] font-mono font-bold cursor-pointer transition"
                         >
-                          Full Balance ({formatRWF(targetRepayLoan.outstandingPrincipal)})
+                          Full ({formatRWF(targetRepayLoan.outstandingPrincipal)})
                         </button>
                       </div>
                     </div>
 
-                    {/* SME Debit Channel (Source of Funds) */}
-                    <div>
-                      <label className="text-xs font-bold text-slate-700 block mb-1">
-                        SME Payment Source (Debit Channel)
-                      </label>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setRepayChannel('Mobile Money')}
-                          className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition cursor-pointer ${
-                            repayChannel === 'Mobile Money'
-                              ? 'bg-sky-50/80 border-sky-500 text-sky-900 shadow-xs'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                    {/* MAIN PAYMENT METHODS CARD CONTAINER (MATCHING IMAGE) */}
+                    <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm space-y-3.5">
+                    
+
+                      {/* Payment Methods List */}
+                      <div className="space-y-2.5">
+                        {/* 1. Mobile Money (MTN) */}
+                        <div
+                          onClick={() => setPaymentSource('momo')}
+                          className={`relative rounded-xl transition-all cursor-pointer border ${
+                            paymentSource === 'momo'
+                              ? 'bg-slate-100/90 border-slate-300 shadow-xs'
+                              : 'bg-white hover:bg-slate-50/80 border-slate-200'
                           }`}
                         >
-                          <Smartphone className="w-4 h-4 text-sky-600" />
-                          <div>
-                            <div className="text-xs font-bold">Mobile Money</div>
-                            <div className="text-[10px] text-slate-500">MTN MoMo / Airtel</div>
+                          {paymentSource === 'momo' && (
+                            <div className="absolute -top-2 left-3 z-10 bg-amber-400 text-slate-900 font-black text-[9px] px-2 py-0.5 rounded shadow-xs uppercase tracking-wider font-mono">
+                              Default
+                            </div>
+                          )}
+
+                          <div className="p-3 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              {/* Payment method image logo */}
+                              <div className="w-14 h-9 sm:w-16 sm:h-10 rounded-md bg-white p-1 flex items-center justify-center shadow-xs border border-slate-200 shrink-0 overflow-hidden">
+                                <img
+                                  src={mobileMoneyImg}
+                                  alt="MTN Mobile Money"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+
+                              <div>
+                                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                                  MTN Mobile Money
+                                </h4>
+                                <p className="text-[11px] text-slate-500">
+                                  Phone: {momoPhoneNumber}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Check indicator - NO EDIT BUTTON */}
+                            <div className="shrink-0 flex items-center">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${
+                                paymentSource === 'momo'
+                                  ? 'border-teal-600 bg-teal-600 text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}>
+                                {paymentSource === 'momo' && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </div>
                           </div>
-                        </button>
 
-                        <button
-                          type="button"
-                          onClick={() => setRepayChannel('Bank Transfer')}
-                          className={`p-3 rounded-xl border text-left flex items-center gap-2.5 transition cursor-pointer ${
-                            repayChannel === 'Bank Transfer'
-                              ? 'bg-sky-50/80 border-sky-500 text-sky-900 shadow-xs'
-                              : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+                          {/* Expanded detail input for Phone Number */}
+                          {paymentSource === 'momo' && (
+                            <div className="px-3 pb-3 pt-2 border-t border-slate-200/80 bg-slate-50/70 rounded-b-xl space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                              <label className="text-[10px] font-bold text-slate-600 uppercase font-mono block">
+                                MTN Rwanda Registered Phone Number
+                              </label>
+                              <div className="relative">
+                                <Smartphone className="w-3.5 h-3.5 text-amber-500 absolute left-2.5 top-2.5" />
+                                <input
+                                  type="text"
+                                  value={momoPhoneNumber}
+                                  onChange={(e) => setMomoPhoneNumber(e.target.value)}
+                                  placeholder="+250 788 412 890"
+                                  className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-teal-500"
+                                  required
+                                />
+                              </div>
+                              <p className="text-[10px] text-slate-500 font-mono">
+                                USSD prompt will be dispatched to *182# on this mobile number.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 2. Airtel Money */}
+                        <div
+                          onClick={() => setPaymentSource('airtel')}
+                          className={`relative rounded-xl transition-all cursor-pointer border ${
+                            paymentSource === 'airtel'
+                              ? 'bg-slate-100/90 border-slate-300 shadow-xs'
+                              : 'bg-white hover:bg-slate-50/80 border-slate-200'
                           }`}
                         >
-                          <Landmark className="w-4 h-4 text-emerald-600" />
-                          <div>
-                            <div className="text-xs font-bold">Bank Account</div>
-                            <div className="text-[10px] text-slate-500">Direct Account Debit</div>
+                          {paymentSource === 'airtel' && (
+                            <div className="absolute -top-2 left-3 z-10 bg-amber-400 text-slate-900 font-black text-[9px] px-2 py-0.5 rounded shadow-xs uppercase tracking-wider font-mono">
+                              Default
+                            </div>
+                          )}
+
+                          <div className="p-3 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              {/* Payment method image logo */}
+                              <div className="w-14 h-9 sm:w-16 sm:h-10 rounded-md bg-white p-1 flex items-center justify-center shadow-xs border border-slate-200 shrink-0 overflow-hidden">
+                                <img
+                                  src={airtelMoneyImg}
+                                  alt="Airtel Money"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+
+                              <div>
+                                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                                  Airtel Money
+                                </h4>
+                                <p className="text-[11px] text-slate-500">
+                                  Phone: {airtelPhoneNumber}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Check indicator - NO EDIT BUTTON */}
+                            <div className="shrink-0 flex items-center">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${
+                                paymentSource === 'airtel'
+                                  ? 'border-teal-600 bg-teal-600 text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}>
+                                {paymentSource === 'airtel' && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </div>
                           </div>
-                        </button>
+
+                          {/* Expanded detail input for Phone Number */}
+                          {paymentSource === 'airtel' && (
+                            <div className="px-3 pb-3 pt-2 border-t border-slate-200/80 bg-slate-50/70 rounded-b-xl space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                              <label className="text-[10px] font-bold text-slate-600 uppercase font-mono block">
+                                Airtel Rwanda Registered Phone Number
+                              </label>
+                              <div className="relative">
+                                <Smartphone className="w-3.5 h-3.5 text-red-500 absolute left-2.5 top-2.5" />
+                                <input
+                                  type="text"
+                                  value={airtelPhoneNumber}
+                                  onChange={(e) => setAirtelPhoneNumber(e.target.value)}
+                                  placeholder="+250 733 892 104"
+                                  className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-teal-500"
+                                  required
+                                />
+                              </div>
+                              <p className="text-[10px] text-slate-500 font-mono">
+                                USSD push authorization will be dispatched to *500# on Airtel Rwanda.
+                              </p>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* 3. Bank Account */}
+                        <div
+                          onClick={() => setPaymentSource('bank')}
+                          className={`relative rounded-xl transition-all cursor-pointer border ${
+                            paymentSource === 'bank'
+                              ? 'bg-slate-100/90 border-slate-300 shadow-xs'
+                              : 'bg-white hover:bg-slate-50/80 border-slate-200'
+                          }`}
+                        >
+                          {paymentSource === 'bank' && (
+                            <div className="absolute -top-2 left-3 z-10 bg-amber-400 text-slate-900 font-black text-[9px] px-2 py-0.5 rounded shadow-xs uppercase tracking-wider font-mono">
+                              Default
+                            </div>
+                          )}
+
+                          <div className="p-3 flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                              {/* Payment method image logo */}
+                              <div className="w-14 h-9 sm:w-16 sm:h-10 rounded-md bg-white p-1 flex items-center justify-center shadow-xs border border-slate-200 shrink-0 overflow-hidden">
+                                <img
+                                  src={bankTransferImg}
+                                  alt="Bank Transfer"
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+
+                              <div>
+                                <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                                  Bank Account
+                                </h4>
+                                <p className="text-[11px] text-slate-500">
+                                  {selectedBank} • Ending in ...{bankAccount.slice(-4) || '8451'}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Check indicator - NO EDIT BUTTON */}
+                            <div className="shrink-0 flex items-center">
+                              <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition ${
+                                paymentSource === 'bank'
+                                  ? 'border-teal-600 bg-teal-600 text-white'
+                                  : 'border-slate-300 bg-white'
+                              }`}>
+                                {paymentSource === 'bank' && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Expanded detail input for Bank Selection and Account Number */}
+                          {paymentSource === 'bank' && (
+                            <div className="px-3 pb-3 pt-2 border-t border-slate-200/80 bg-slate-50/70 rounded-b-xl space-y-2.5" onClick={(e) => e.stopPropagation()}>
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-600 uppercase font-mono block mb-1">
+                                  Select Bank
+                                </label>
+                                <select
+                                  value={selectedBank}
+                                  onChange={(e) => setSelectedBank(e.target.value)}
+                                  className="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-semibold text-slate-800 focus:outline-none focus:border-teal-500"
+                                >
+                                  <option value="Bank of Kigali">Bank of Kigali (BK)</option>
+                                  <option value="Equity Bank Rwanda">Equity Bank Rwanda</option>
+                                  <option value="I&M Bank Rwanda">I&M Bank Rwanda</option>
+                                  <option value="BPR Bank Rwanda">BPR Bank Rwanda</option>
+                                  <option value="Cogebanque">Cogebanque</option>
+                                  <option value="Access Bank Rwanda">Access Bank Rwanda</option>
+                                  <option value="Ecobank Rwanda">Ecobank Rwanda</option>
+                                  <option value="NCBA Bank Rwanda">NCBA Bank Rwanda</option>
+                                </select>
+                              </div>
+
+                              <div>
+                                <label className="text-[10px] font-bold text-slate-600 uppercase font-mono block mb-1">
+                                  Bank Account Number
+                                </label>
+                                <div className="relative">
+                                  <Landmark className="w-3.5 h-3.5 text-blue-600 absolute left-2.5 top-2.5" />
+                                  <input
+                                    type="text"
+                                    value={bankAccount}
+                                    onChange={(e) => setBankAccount(e.target.value)}
+                                    placeholder="e.g. 40032918451"
+                                    className="w-full pl-8 pr-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-teal-500"
+                                    required
+                                  />
+                                </div>
+                                <p className="text-[10px] text-slate-500 font-mono mt-1">
+                                  Direct debit authorization will be dispatched via National Payment System (ACH/RTGS).
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
 
-                    {/* Channel Specific Inputs */}
-                    {repayChannel === 'Mobile Money' ? (
-                      <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1 font-mono">
-                            PSP Provider
-                          </label>
-                          <select
-                            value={repayProvider}
-                            onChange={(e) => setRepayProvider(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:outline-none"
-                          >
-                            <option value="MTN Mobile Money Rwanda">MTN Mobile Money (*182#)</option>
-                            <option value="Airtel Money Rwanda">Airtel Money (*500#)</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1 font-mono">
-                            Registered MSISDN
-                          </label>
-                          <input
-                            type="text"
-                            value={repayPhoneNumber}
-                            onChange={(e) => setRepayPhoneNumber(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono focus:outline-none"
-                            placeholder="+250 788 123 456"
-                            required
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1 font-mono">
-                            SME Debit Account Bank
-                          </label>
-                          <select
-                            value={repayDebitBank}
-                            onChange={(e) => setRepayDebitBank(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs focus:outline-none"
-                          >
-                            <option value="Bank of Kigali">Bank of Kigali (BK)</option>
-                            <option value="Equity Bank Rwanda">Equity Bank Rwanda</option>
-                            <option value="I&M Bank Rwanda">I&M Bank Rwanda</option>
-                          </select>
-                        </div>
-                        <div>
-                          <label className="text-[10px] font-bold text-slate-500 uppercase block mb-1 font-mono">
-                            Debit Account #
-                          </label>
-                          <input
-                            type="text"
-                            value={repayBankAccount}
-                            onChange={(e) => setRepayBankAccount(e.target.value)}
-                            className="w-full p-2 bg-white border border-slate-200 rounded text-xs font-mono focus:outline-none"
-                            placeholder="40032918451"
-                            required
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {/* REGULATORY SANDBOX TEST CONTROLLER */}
-                    <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] font-bold text-amber-900 uppercase font-mono flex items-center gap-1">
-                          <AlertCircle className="w-3.5 h-3.5 text-amber-600" />
-                          Provider response
-                        </span>
-                      </div>
-                      <p className="text-[10.5px] text-amber-700 mb-2">
-                        Review the expected payment response before submitting this repayment:
-                      </p>
-                      <div className="grid grid-cols-3 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setRepayOutcome('success')}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-bold font-mono transition border cursor-pointer ${
-                            repayOutcome === 'success'
-                              ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
-                              : 'bg-white text-emerald-800 border-emerald-200 hover:bg-emerald-50'
-                          }`}
-                        >
-                          Success
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRepayOutcome('pending')}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-bold font-mono transition border cursor-pointer ${
-                            repayOutcome === 'pending'
-                              ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                              : 'bg-white text-amber-800 border-amber-200 hover:bg-amber-50'
-                          }`}
-                        >
-                          Pending
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setRepayOutcome('failure')}
-                          className={`py-1.5 px-2 rounded-lg text-xs font-bold font-mono transition border cursor-pointer ${
-                            repayOutcome === 'failure'
-                              ? 'bg-rose-600 text-white border-rose-600 shadow-xs'
-                              : 'bg-white text-rose-800 border-rose-200 hover:bg-rose-50'
-                          }`}
-                        >
-                          Failed
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Submit Actions */}
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
-                      <button
-                        type="button"
-                        onClick={() => setIsRepayModalOpen(false)}
-                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl transition cursor-pointer"
-                      >
-                        Cancel
-                      </button>
+                  
+                    {/* PAY NOW BUTTON (MATCHING IMAGE VIBRANT TEAL) */}
+                    <div className="pt-1">
                       <button
                         type="submit"
-                        className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition flex items-center gap-1.5 cursor-pointer"
+                        disabled={isProcessingRepay}
+                        className="w-full py-3.5 bg-[#009688] hover:bg-[#008375] active:scale-[0.99] text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg transition cursor-pointer flex items-center justify-center gap-2"
                       >
-                        <CheckCircle2 className="w-4 h-4" />
-                        <span>Confirm Repayment</span>
+                        <span>Pay Now</span>
+                        {repayAmount && Number(repayAmount) > 0 && (
+                          <span className="opacity-95 font-mono font-medium">
+                            • {formatRWF(Number(repayAmount))}
+                          </span>
+                        )}
                       </button>
                     </div>
                   </form>

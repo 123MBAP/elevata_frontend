@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { useApp, Application } from '../context/AppContext';
+import { useApp, Application, normalizeApplicationStatus } from '../context/AppContext';
 import { formatRWF } from '../lib/mockData';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Button } from '../assets/components/ui/button';
@@ -17,6 +17,7 @@ import {
   Sparkles,
   TrendingUp,
   Building2,
+  Landmark,
   ShieldCheck,
   Eye,
   Download,
@@ -29,6 +30,7 @@ import {
 } from 'lucide-react';
 import { apiFile } from '../lib/api';
 import { openBlankViewerTab, writeDocumentViewer } from '../lib/documentViewer';
+import { financialDemoApi, DemoApplication, DemoLoan } from '../services/financialDemoApi';
 
 interface DocumentDetail {
   id: string;
@@ -49,30 +51,33 @@ interface DocumentDetail {
 }
 
 type ApplicationStatus = Application['status'];
+type DisplayApplicationStatus = ApplicationStatus | 'Disbursed';
 
-function getStatusStyle(status: ApplicationStatus): string {
-  switch (status) {
+function getStatusStyle(status: DisplayApplicationStatus): string {
+  if (status === 'Disbursed') return 'bg-indigo-100 text-indigo-800 border-indigo-300 shadow-sm';
+  switch (normalizeApplicationStatus(status)) {
     case 'Approved':
-      return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      return 'bg-emerald-100 text-emerald-800 border-emerald-300 shadow-sm';
     case 'Rejected':
-      return 'bg-rose-50 text-rose-700 border-rose-200';
+      return 'bg-rose-100 text-rose-800 border-rose-300 shadow-sm';
     case 'Under Review':
-      return 'bg-sky-50 text-[#1f85be] border-sky-200';
+      return 'bg-sky-100 text-sky-800 border-sky-300 shadow-sm';
     default:
-      return 'bg-amber-50 text-amber-700 border-amber-200';
+      return 'bg-amber-100 text-amber-800 border-amber-300 shadow-sm';
   }
 }
 
-function getStatusIcon(status: ApplicationStatus) {
-  switch (status) {
+function getStatusIcon(status: DisplayApplicationStatus) {
+  if (status === 'Disbursed') return <CheckCircle className="w-3.5 h-3.5 text-indigo-700 shrink-0" />;
+  switch (normalizeApplicationStatus(status)) {
     case 'Approved':
-      return <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />;
+      return <CheckCircle className="w-3.5 h-3.5 text-emerald-700 shrink-0" />;
     case 'Rejected':
-      return <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />;
+      return <XCircle className="w-3.5 h-3.5 text-rose-700 shrink-0" />;
     case 'Under Review':
-      return <Clock className="w-3.5 h-3.5 text-[#2998d6] shrink-0" />;
+      return <Clock className="w-3.5 h-3.5 text-sky-700 shrink-0" />;
     default:
-      return <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />;
+      return <AlertCircle className="w-3.5 h-3.5 text-amber-700 shrink-0" />;
   }
 }
 
@@ -116,6 +121,11 @@ export default function BankerApplications() {
   const [reviewStatus, setReviewStatus] = useState<ApplicationStatus>('Under Review');
   const [reviewFeedback, setReviewFeedback] = useState('');
   const [documentLoading, setDocumentLoading] = useState(false);
+  const [financialApplications, setFinancialApplications] = useState<DemoApplication[]>([]);
+  const [financialLoans, setFinancialLoans] = useState<DemoLoan[]>([]);
+  const [isDisbursingApplicationId, setIsDisbursingApplicationId] = useState<string | null>(null);
+  const [disbursedApplicationIds, setDisbursedApplicationIds] = useState<string[]>([]);
+  const [isDisbursementModalOpen, setIsDisbursementModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -139,6 +149,52 @@ export default function BankerApplications() {
     return opportunities.find(o => o.id === selectedApp.opportunityId) || null;
   }, [selectedApp, opportunities]);
 
+  const selectedFinancialApplication = useMemo(() => {
+    if (!selectedApp) return null;
+    return financialApplications.find(financialApp => financialApp.id === selectedApp.id)
+      || financialApplications.find(financialApp => (
+        financialApp.smeId === selectedApp.smeId
+        && financialApp.productName === selectedApp.opportunityTitle
+      ))
+      || null;
+  }, [financialApplications, selectedApp]);
+
+  const linkedLoanForApplication = (applicationId: string) => {
+    const application = applications.find(item => item.id === applicationId);
+    const financialApplication = financialApplications.find(item => item.id === applicationId)
+      || financialApplications.find(item => (
+        item.smeId === application?.smeId
+        && item.productName === application?.opportunityTitle
+      ));
+    return financialLoans.find(loan => loan.applicationId === applicationId || loan.id === financialApplication?.associatedLoanId) || null;
+  };
+
+  const getApplicationDisplayStatus = (application: Application): DisplayApplicationStatus => {
+    const linkedLoan = linkedLoanForApplication(application.id);
+    return linkedLoan?.disbursementStatus === 'Completed' || Boolean(linkedLoan?.disbursedAt)
+      ? 'Disbursed'
+      : normalizeApplicationStatus(application.status);
+  };
+
+  const selectedStatus: DisplayApplicationStatus | null = selectedApp ? getApplicationDisplayStatus(selectedApp) : null;
+
+  useEffect(() => {
+    const loadFinancialRecords = async () => {
+      try {
+        const records = await financialDemoApi.getFiApplications();
+        setFinancialApplications(records);
+        const smeIds = [...new Set(records.map(record => record.smeId))];
+        const loanSets = await Promise.all(smeIds.map(smeId => financialDemoApi.getSmeLoans(smeId)));
+        setFinancialLoans(loanSets.flat());
+      } catch {
+        setFinancialApplications([]);
+        setFinancialLoans([]);
+      }
+    };
+
+    loadFinancialRecords();
+  }, []);
+
   // Open review helper
   const handleOpenReview = (app: Application) => {
     setSelectedAppId(app.id);
@@ -154,6 +210,13 @@ export default function BankerApplications() {
 
     try {
       await updateApplicationStatus(selectedAppId, reviewStatus, reviewFeedback);
+      if (reviewStatus === 'Approved' && selectedFinancialApplication && !selectedFinancialApplication.canDisburse) {
+        await financialDemoApi.underwriteApplication(selectedFinancialApplication.id, {
+          decision: 'Approved',
+          feedback: reviewFeedback
+        });
+        setFinancialApplications(await financialDemoApi.getFiApplications());
+      }
     } catch (error: unknown) {
       triggerToast(error instanceof Error ? error.message : 'Unable to save this decision.');
       return;
@@ -161,6 +224,60 @@ export default function BankerApplications() {
 
     triggerToast(`Application #${selectedApp.id} updated to "${reviewStatus}" successfully.`);
     setSelectedAppId(null);
+  };
+
+  const handleDisburseApprovedLoan = async () => {
+    if (!selectedApp) return;
+
+    setIsDisbursingApplicationId(selectedApp.id);
+    try {
+      if (!selectedFinancialApplication?.associatedLoanId) {
+        await updateApplicationStatus(
+          selectedApp.id,
+          'Disbursed',
+          'Funds released to the SME receiving account and disbursement instruction recorded.'
+        );
+        setDisbursedApplicationIds(previous => [...new Set([...previous, selectedApp.id])]);
+        setIsDisbursementModalOpen(false);
+        triggerToast(`Disbursement instruction for ${formatRWF(selectedApp.requestedAmount || 0)} recorded for ${selectedApp.smeName}.`);
+        return;
+      }
+
+      const isMobileMoneyDestination = selectedApp.receivingAccountType === 'mobile_money';
+      const destinationAccount = isMobileMoneyDestination
+        ? selectedApp.receivingMobileNumber
+        : selectedApp.receivingAccountNumber;
+
+      const result = await financialDemoApi.disburseLoan(selectedFinancialApplication.associatedLoanId, {
+        channel: isMobileMoneyDestination ? 'Mobile Money' : 'Bank Transfer',
+        destinationAccount,
+        simulateOutcome: 'success'
+      });
+
+      if (!result.success) {
+        triggerToast(result.isPending
+          ? `Disbursement pending settlement. Reference: ${result.disbursementReference}`
+          : 'Disbursement was not completed by the payment provider.');
+        return;
+      }
+
+      await updateApplicationStatus(
+        selectedApp.id,
+        'Disbursed',
+        `Funds released to the SME receiving account. Disbursement reference: ${result.disbursementReference}.`
+      );
+
+      setDisbursedApplicationIds(previous => [...new Set([...previous, selectedApp.id])]);
+      const refreshedLoan = await financialDemoApi.getLoanDetails(selectedFinancialApplication.associatedLoanId);
+      setFinancialLoans(previous => [...previous.filter(loan => loan.id !== refreshedLoan.id), refreshedLoan]);
+      setFinancialApplications(await financialDemoApi.getFiApplications());
+      setIsDisbursementModalOpen(false);
+      triggerToast(`Disbursement of ${formatRWF(result.disbursedAmount)} completed. Reference: ${result.disbursementReference}`);
+    } catch (error: unknown) {
+      triggerToast(error instanceof Error ? error.message : 'Unable to disburse this approved facility.');
+    } finally {
+      setIsDisbursingApplicationId(null);
+    }
   };
 
   const isTextDocumentType = (mimeType?: string | null) =>
@@ -308,11 +425,12 @@ official business records submitted for commercial credit assessment.
   // Filter application list
   const filteredApplications = useMemo(() => {
     return applications.filter(app => {
+      const normalizedStatus = normalizeApplicationStatus(app.status);
       const matchesSearch = app.smeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             app.opportunityTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             app.smeSector.toLowerCase().includes(searchTerm.toLowerCase()) ||
                             app.id.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'All' || app.status === statusFilter;
+      const matchesStatus = statusFilter === 'All' || normalizedStatus === statusFilter;
       return matchesSearch && matchesStatus;
     });
   }, [applications, searchTerm, statusFilter]);
@@ -320,10 +438,10 @@ official business records submitted for commercial credit assessment.
   // Calculations for summary stats
   const stats = useMemo(() => {
     const total = applications.length;
-    const submitted = applications.filter(a => a.status === 'Submitted').length;
-    const review = applications.filter(a => a.status === 'Under Review').length;
-    const approved = applications.filter(a => a.status === 'Approved').length;
-    const rejected = applications.filter(a => a.status === 'Rejected').length;
+    const submitted = applications.filter(a => normalizeApplicationStatus(a.status) === 'Under Review').length;
+    const review = applications.filter(a => normalizeApplicationStatus(a.status) === 'Under Review').length;
+    const approved = applications.filter(a => normalizeApplicationStatus(a.status) === 'Approved').length;
+    const rejected = applications.filter(a => normalizeApplicationStatus(a.status) === 'Rejected').length;
 
     return { total, submitted, review, approved, rejected };
   }, [applications]);
@@ -491,143 +609,113 @@ official business records submitted for commercial credit assessment.
               className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-xs focus:ring-1 focus:ring-[#2998d6] focus:border-[#2998d6] focus:outline-none bg-white text-slate-700 font-medium"
             >
               <option value="All">All Application Statuses</option>
-              <option value="Submitted">Submitted (Pending Review)</option>
               <option value="Under Review">Under Review (In Progress)</option>
               <option value="Approved">Approved</option>
+              <option value="Disbursed">Disbursed</option>
               <option value="Rejected">Rejected</option>
             </select>
           </div>
         </CardContent>
       </Card>
 
-      {/* Applications Table Card */}
-      <Card className="bg-white border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200 uppercase tracking-wider text-[9.5px]">
-                <th className="py-3 px-4 font-semibold text-center w-12">No.</th>
-                <th className="py-3 px-4 font-semibold">Applicant SME</th>
-                <th className="py-3 px-4 font-semibold">Applied Program &amp; Facility</th>
-                <th className="py-3 px-4 font-semibold w-36">Health &amp; Readiness</th>
-                <th className="py-3 px-4 font-semibold w-32">Applied Date</th>
-                <th className="py-3 px-4 font-semibold w-48">Submitted Documents</th>
-                <th className="py-3 px-4 font-semibold w-32">Status</th>
-                <th className="py-3 px-4 font-semibold text-center w-28">Underwrite</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredApplications.map((app, index) => {
-                const matchedSme = smes.find(s => s.id === app.smeId);
-                const matchedOpp = opportunities.find(o => o.id === app.opportunityId);
-                const docs = getSubmittedDocuments(app);
+      {/* Applications List / Row Summary */}
+      <div className="space-y-3">
+        {filteredApplications.map((app, index) => {
+          const matchedSme = smes.find(s => s.id === app.smeId);
+          const matchedOpp = opportunities.find(o => o.id === app.opportunityId);
+          const docs = getSubmittedDocuments(app);
+          const displayStatus = getApplicationDisplayStatus(app);
 
-                return (
-                  <tr key={app.id} className="hover:bg-slate-50/70 transition">
-                    <td className="py-3 px-4 text-center font-mono font-bold text-slate-400">{index + 1}</td>
-                    
-                    {/* SME Name & Sector */}
-                    <td className="py-3 px-4">
-                      <div className="space-y-0.5">
-                        <span className="block font-bold text-slate-900 font-heading text-xs">{app.smeName}</span>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
-                          <span className="font-semibold">{app.smeSector}</span>
-                          <span>•</span>
-                          <span className="font-mono text-slate-400">Ref: {app.id}</span>
-                        </div>
+          return (
+            <div
+              key={app.id}
+              onClick={() => handleOpenReview(app)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') handleOpenReview(app);
+              }}
+              className="w-full text-left bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md hover:border-[#2998d6] transition-all duration-150 overflow-hidden cursor-pointer"
+            >
+              <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-4 p-4 sm:p-5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-bold bg-slate-900 text-white px-2 py-0.5 rounded uppercase tracking-wider font-mono">
+                      #{index + 1}
+                    </span>
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${getStatusStyle(displayStatus)}`}>
+                      {getStatusIcon(displayStatus)}
+                      {displayStatus}
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                      Ref: {app.id.slice(0, 9).toUpperCase()}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 flex flex-col lg:flex-row lg:items-center gap-2 lg:gap-4">
+                    <div className="min-w-0">
+                      <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading truncate">
+                        {app.smeName}
+                      </h3>
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 mt-1">
+                        <span className="font-semibold text-slate-700">{app.smeSector}</span>
+                        <span>•</span>
+                        <span>{app.opportunityTitle}</span>
                       </div>
-                    </td>
+                    </div>
+                    <div className="flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 font-semibold">
+                      <ShieldCheck className="w-3 h-3 text-emerald-600" />
+                      {matchedSme?.riskRating || 'Moderate'} Risk
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Program Title & Facility Info */}
-                    <td className="py-3 px-4">
-                      <div className="space-y-0.5">
-                        <span className="block font-bold text-slate-800 text-[11px]">{app.opportunityTitle}</span>
-                        <span className="text-[9.5px] font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold border border-emerald-100 inline-block">
-                          {matchedOpp?.maxFunding || 'Flexible Funding'}
-                        </span>
-                      </div>
-                    </td>
-
-                    {/* Health & Readiness Scores */}
-                    <td className="py-3 px-4">
-                      <div className="space-y-1">
-                        <div className="flex justify-between items-center text-[9.5px] font-mono">
-                          <span className="text-slate-500">Readiness:</span>
-                          <span className="font-bold text-emerald-600">{app.smeReadiness}%</span>
-                        </div>
-                        <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full"
-                            style={{ width: `${app.smeReadiness}%` }}
-                          ></div>
-                        </div>
-                        <div className="flex justify-between items-center text-[9px] text-slate-400 font-mono">
-                          <span>Health Score:</span>
-                          <span className="font-semibold text-slate-700">{app.smeHealth}%</span>
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Submission Date */}
-                    <td className="py-3 px-4 font-mono text-slate-600 font-semibold text-[10px]">
-                      {app.appliedAt}
-                    </td>
-
-                    {/* Submitted Documents Badges */}
-                    <td className="py-3 px-4">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1 text-[9.5px] font-bold text-emerald-700">
-                          <CheckSquare className="w-3 h-3 text-emerald-600 shrink-0" />
-                          <span>{docs.length} Docs Submitted</span>
-                        </div>
-                        <div className="flex flex-wrap gap-1">
-                          {docs.slice(0, 2).map((d, i) => (
-                            <span key={i} className="px-1.5 py-0.5 rounded bg-slate-100 border border-slate-200 text-slate-600 text-[8px] font-bold truncate max-w-[110px]" title={d.name}>
-                              {d.name}
-                            </span>
-                          ))}
-                          {docs.length > 2 && (
-                            <span className="px-1 py-0.5 rounded bg-slate-100 text-slate-500 text-[8px] font-bold">
-                              +{docs.length - 2} more
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-
-                    {/* Status Badge */}
-                    <td className="py-3 px-4">
-                      <span className={`inline-flex items-center gap-1 px-2.5 py-1 border rounded-full text-[9px] font-extrabold uppercase tracking-wider ${getStatusStyle(app.status)}`}>
-                        {getStatusIcon(app.status)}
-                        {app.status}
-                      </span>
-                    </td>
-
-                    {/* Action Button */}
-                    <td className="py-3 px-4 text-center">
-                      <button
-                        onClick={() => handleOpenReview(app)}
-                        className="inline-flex items-center justify-center gap-1 px-3 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold rounded-lg text-[10.5px] shadow-xs transition"
-                      >
-                        <span>Review File</span>
-                        <ChevronRight className="w-3 h-3" />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 min-w-0 xl:min-w-[520px]">
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold">Requested</span>
+                    <span className="block mt-1 text-sm font-bold text-slate-900 font-mono">{app.requestedAmount ? formatRWF(app.requestedAmount) : (matchedOpp?.maxFunding || 'Flexible')}</span>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold">Readiness</span>
+                    <span className="block mt-1 text-sm font-bold text-emerald-600 font-mono">{app.smeReadiness}%</span>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold">Docs</span>
+                    <span className="block mt-1 text-sm font-bold text-slate-900 font-mono">{docs.length}</span>
+                  </div>
+                  <div className="rounded-lg bg-slate-50 border border-slate-200 px-3 py-2">
+                    <span className="block text-[9px] uppercase tracking-wider text-slate-400 font-bold">Applied</span>
+                    <span className="block mt-1 text-sm font-bold text-slate-900 font-mono">{app.appliedAt}</span>
+                  </div>
+                  {displayStatus === 'Approved'
+                    && !disbursedApplicationIds.includes(app.id) && (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setSelectedAppId(app.id);
+                        setIsDisbursementModalOpen(true);
+                      }}
+                      className="col-span-2 inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-extrabold text-white shadow-sm transition hover:bg-emerald-700 sm:col-span-2 xl:col-span-4"
+                    >
+                      <Coins className="h-4 w-4" />
+                      Disburse Funds
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
 
         {filteredApplications.length === 0 && (
-          <div className="py-14 text-center text-xs text-slate-400 flex flex-col items-center justify-center space-y-2">
+          <div className="py-14 text-center text-xs text-slate-400 flex flex-col items-center justify-center space-y-2 bg-white border border-dashed border-slate-200 rounded-xl">
             <FileText className="w-9 h-9 text-slate-300" />
             <span className="font-semibold text-slate-600">No loan or facility applications match your search query.</span>
             <span className="text-[10px] text-slate-400">Try changing the status filter or search term above.</span>
           </div>
         )}
-      </Card>
+      </div>
       {/* COMPREHENSIVE UNDERWRITING REVIEW MODAL / DRAWER (DESIGNED LIKE BUSINESSACTIVITIES.TSX) */}
       <AnimatePresence>
         {selectedAppId && selectedApp && selectedSme && (
@@ -645,9 +733,9 @@ official business records submitted for commercial credit assessment.
                   <span className="bg-[#2998d6] text-white text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-[4px] font-mono tracking-wider">
                     Application Dossier #{selectedApp.id}
                   </span>
-                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${getStatusStyle(selectedApp.status)}`}>
-                    {getStatusIcon(selectedApp.status)}
-                    {selectedApp.status}
+                  <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider border ${getStatusStyle(selectedStatus || selectedApp.status)}`}>
+                    {getStatusIcon(selectedStatus || selectedApp.status)}
+                    {selectedStatus}
                   </span>
                   <span className="text-xs font-semibold text-slate-100 truncate">
                     {selectedSme.name}
@@ -662,6 +750,18 @@ official business records submitted for commercial credit assessment.
                   <span className="text-[11px] font-mono text-slate-300 hidden md:inline">
                     Applied: <strong className="text-white">{selectedApp.appliedAt}</strong>
                   </span>
+                  {selectedStatus === 'Approved'
+                    && !disbursedApplicationIds.includes(selectedApp.id) && (
+                    <button
+                      type="button"
+                      onClick={() => setIsDisbursementModalOpen(true)}
+                      disabled={isDisbursingApplicationId === selectedApp.id}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-60 text-white rounded-[4px] text-[10px] font-bold transition cursor-pointer"
+                    >
+                      <Coins className="w-3.5 h-3.5" />
+                      {isDisbursingApplicationId === selectedApp.id ? 'Disbursing...' : 'Disburse Funds'}
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => setSelectedAppId(null)}
@@ -738,6 +838,37 @@ official business records submitted for commercial credit assessment.
                       <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> KYC Verified
                     </span>
                   </div>
+                </div>
+
+                <div className={`mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-lg border px-4 py-3 ${
+                  selectedStatus === 'Approved'
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-900'
+                    : selectedStatus === 'Rejected'
+                    ? 'bg-rose-50 border-rose-300 text-rose-900'
+                    : 'bg-sky-50 border-sky-300 text-sky-900'
+                }`}>
+                  <div className="flex items-center gap-3">
+                    <div className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                      selectedStatus === 'Approved'
+                        ? 'bg-emerald-600 text-white'
+                        : selectedStatus === 'Rejected'
+                        ? 'bg-rose-600 text-white'
+                        : 'bg-sky-600 text-white'
+                    }`}>
+                      {selectedStatus === 'Approved' && <CheckCircle className="w-5 h-5" />}
+                      {selectedStatus === 'Rejected' && <XCircle className="w-5 h-5" />}
+                      {selectedStatus === 'Under Review' && <Clock className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <span className="block text-[10px] font-bold uppercase tracking-wider opacity-70">Underwriting Decision</span>
+                      <strong className="block text-base font-extrabold tracking-tight">{selectedStatus}</strong>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-medium sm:text-right">
+                    {selectedStatus === 'Approved' && 'Credit approved and eligible for funds release.'}
+                    {selectedStatus === 'Rejected' && 'Application declined under the current credit policy.'}
+                    {selectedStatus === 'Under Review' && 'Credit assessment is still in progress.'}
+                  </span>
                 </div>
 
                 {/* Tab Content Areas */}
@@ -827,6 +958,41 @@ official business records submitted for commercial credit assessment.
                             Working Capital &amp; Inventory Bulk Restocking. Applicant intends to purchase inventory directly from registered wholesale cooperatives to support rising market demand.
                           </p>
                         </div>
+                      </div>
+
+                      <div className="p-4 bg-sky-50/70 border border-sky-200 rounded-[6px] space-y-3">
+                        <div className="flex items-center justify-between border-b border-sky-200 pb-2">
+                          <span className="accounting-label flex items-center gap-1 !mb-0 font-bold text-sky-900 uppercase">
+                            <Landmark className="w-3.5 h-3.5 text-sky-700" />
+                            Funds Receiving Instructions
+                          </span>
+                          <span className="text-[10px] font-bold uppercase text-sky-700 bg-white px-2 py-0.5 rounded border border-sky-200">
+                            SME submitted
+                          </span>
+                        </div>
+                        {selectedApp.receivingAccountType === 'mobile_money' ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <span className="accounting-label text-slate-500 text-[10px]">Receiving Channel</span>
+                              <strong className="text-slate-900 block font-bold">Mobile Money</strong>
+                            </div>
+                            <div>
+                              <span className="accounting-label text-slate-500 text-[10px]">Provider &amp; Number</span>
+                              <strong className="text-slate-900 block font-mono">{selectedApp.receivingMobileProvider || 'Mobile Money'} · {selectedApp.receivingMobileNumber || 'Not provided'}</strong>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                            <div>
+                              <span className="accounting-label text-slate-500 text-[10px]">Receiving Channel</span>
+                              <strong className="text-slate-900 block font-bold">Bank Account</strong>
+                            </div>
+                            <div>
+                              <span className="accounting-label text-slate-500 text-[10px]">Bank &amp; Account Number</span>
+                              <strong className="text-slate-900 block font-mono">{selectedApp.receivingBank || 'Bank not provided'} · {selectedApp.receivingAccountNumber || 'Not provided'}</strong>
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {/* Program Benefits and Key Conditions */}
@@ -1170,6 +1336,7 @@ official business records submitted for commercial credit assessment.
                 </div>
 
                 {/* REVIEW UNDERWRITING DECISION FOOTER (FORM) */}
+                {selectedStatus !== 'Approved' && selectedStatus !== 'Disbursed' && (
                 <form onSubmit={handleSubmitReview} className="mt-8 pt-5 border-t border-[#e2e8f0] bg-[#f8fafc] -mx-5 -mb-5 sm:-mx-7 sm:-mb-7 p-5 sm:p-7 rounded-b-[6px] space-y-4">
                   {/* Quick Presets Buttons */}
                   <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
@@ -1219,7 +1386,7 @@ official business records submitted for commercial credit assessment.
 
                       {reviewStatus === 'Approved' && (
                         <p className="pt-1 text-[11px] text-amber-700 font-medium">
-                          This records the application decision only. Disbursement is handled in bank core system.
+                          Save the approval first, then use Disburse Funds in the approved dossier to release the facility to the SME.
                         </p>
                       )}
                     </div>
@@ -1256,8 +1423,111 @@ official business records submitted for commercial credit assessment.
                     </button>
                   </div>
                 </form>
+                )}
               </div>
             </motion.div>
+
+            <AnimatePresence>
+              {isDisbursementModalOpen && selectedApp && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-xs"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="disbursement-title"
+                >
+                  <motion.div
+                    initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 12, scale: 0.97 }}
+                    className="w-full max-w-lg overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl"
+                  >
+                    <div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-900 px-5 py-4 text-white">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500">
+                          <Coins className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 id="disbursement-title" className="text-base font-bold">Authorize Facility Disbursement</h3>
+                          <p className="mt-0.5 text-[11px] text-slate-300">Final funds release instruction</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsDisbursementModalOpen(false)}
+                        className="rounded-md p-1.5 text-slate-400 transition hover:bg-white/10 hover:text-white"
+                        aria-label="Close disbursement confirmation"
+                      >
+                        <X className="h-5 w-5" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4 p-5">
+                      <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-center">
+                        <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-700">Amount to be disbursed</span>
+                        <strong className="mt-1 block font-mono text-2xl font-extrabold text-emerald-900">
+                          {formatRWF(selectedFinancialApplication?.requestedAmount || selectedApp.requestedAmount || 0)}
+                        </strong>
+                      </div>
+
+                      <div className="overflow-hidden rounded-lg border border-slate-200">
+                        <div className="grid grid-cols-1 divide-y divide-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                          <div className="p-3.5">
+                            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Beneficiary SME</span>
+                            <strong className="mt-1 block text-sm text-slate-900">{selectedFinancialApplication?.smeName || selectedApp.smeName}</strong>
+                            <span className="mt-0.5 block text-[11px] text-slate-500">{selectedFinancialApplication?.contactEmail || selectedApp.contactEmail || 'Verified SME beneficiary'}</span>
+                          </div>
+                          <div className="p-3.5">
+                            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Destination Account</span>
+                            <strong className="mt-1 block font-mono text-sm text-slate-900">
+                              {selectedApp.receivingAccountType === 'mobile_money' ? 'Mobile Money Wallet' : (selectedApp.receivingBank || 'Receiving bank')}
+                            </strong>
+                            <span className="mt-0.5 block font-mono text-[11px] text-slate-500">
+                              {selectedApp.receivingAccountType === 'mobile_money'
+                                ? `${selectedApp.receivingMobileProvider || 'Mobile Money'} · ${selectedApp.receivingMobileNumber || 'Number not provided'}`
+                                : `Account ${selectedApp.receivingAccountNumber || 'number not provided'}`}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-1 divide-y divide-slate-200 border-t border-slate-200 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+                          <div className="p-3.5">
+                            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Destination Institution</span>
+                            <strong className="mt-1 block text-sm text-slate-900">{selectedFinancialApplication?.institutionName || selectedOpp?.institution || selectedApp.institution || 'Financial Institution'}</strong>
+                          </div>
+                          <div className="p-3.5">
+                            <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Transfer Channel</span>
+                            <strong className="mt-1 block text-sm text-slate-900">{selectedApp.receivingAccountType === 'mobile_money' ? 'Mobile Money' : 'Bank Transfer'}</strong>
+                            <span className="mt-0.5 block text-[11px] text-slate-500">SME submitted destination</span>
+                          </div>
+                        </div>
+                      </div>
+
+           
+                      <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setIsDisbursementModalOpen(false)}
+                          className="accounting-btn-secondary justify-center"
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDisburseApprovedLoan}
+                          disabled={isDisbursingApplicationId === selectedApp.id}
+                          className="accounting-btn-primary justify-center !bg-emerald-600 hover:!bg-emerald-700 disabled:opacity-60"
+                        >
+                          <Coins className="h-4 w-4" />
+                          {isDisbursingApplicationId === selectedApp.id ? 'Releasing Funds...' : 'Confirm Disbursement'}
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
       </AnimatePresence>

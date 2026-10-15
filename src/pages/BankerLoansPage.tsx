@@ -8,6 +8,7 @@ import {
   DemoSme
 } from '../services/financialDemoApi';
 import { formatRWF } from '../lib/mockData';
+import { apiRequest } from '../lib/api';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -80,17 +81,80 @@ export default function BankerLoansPage() {
   const loadData = async (fiId = selectedFiId) => {
     setLoading(true);
     try {
-      const [meta, overviewData, appsData, loansData] = await Promise.all([
-        financialDemoApi.getDemoMeta(),
-        financialDemoApi.getFiOverview(fiId),
-        financialDemoApi.getFiApplications(fiId),
-        financialDemoApi.getSmeLoans('sme-1') // Fetch loans from shared store
-      ]);
-      setInstitutions(meta.financialInstitutions || []);
-      setDemoSmes(meta.demoSmes || []);
-      setOverview(overviewData);
-      setApplications(appsData);
-      setLoans(loansData);
+      const appsResponse = await apiRequest('/applications');
+      const databaseApplications = Array.isArray(appsResponse?.data) ? appsResponse.data : [];
+      const filteredApplications = databaseApplications;
+      const databaseLoans: DemoLoan[] = filteredApplications
+        .filter((application: any) => application.status === 'Disbursed' || application.status === 'Approved')
+        .map((application: any) => ({
+          id: `DB-${application.id}`,
+          applicationId: application.id,
+          smeId: application.smeId,
+          smeName: application.smeName,
+          smeSector: application.smeSector,
+          institutionId: fiId,
+          institutionName: application.institution || 'Financial Institution',
+          productName: application.opportunityTitle,
+          referenceNumber: application.id,
+          totalBorrowed: application.requestedAmount || 0,
+          originalPrincipal: application.requestedAmount || 0,
+          outstandingPrincipal: application.requestedAmount || 0,
+          totalRepaymentsMade: 0,
+          interestRate: 0,
+          termMonths: application.termMonths || 0,
+          repaymentFrequency: 'Monthly',
+          monthlyInstallment: 0,
+          totalAmountDueNow: 0,
+          nextRepaymentDueDate: '',
+          status: application.status === 'Disbursed' ? 'Disbursed' : 'Approved - Ready for Disbursement',
+          disbursedAt: application.status === 'Disbursed' ? application.submittedAt : null,
+          maturityDate: '',
+          disbursementChannel: application.receivingAccountType === 'mobile_money' ? 'Mobile Money' : 'Bank Transfer',
+          disbursementReference: null,
+          disbursementStatus: application.status === 'Disbursed' ? 'Completed' : 'Pending Disbursement',
+          statement: []
+        }));
+      const disbursedLoans = databaseLoans.filter(loan => loan.status === 'Disbursed');
+      const databaseOverview = {
+        fiId,
+        totalDisbursed: disbursedLoans.reduce((total, loan) => total + loan.totalBorrowed, 0),
+        totalOutstanding: disbursedLoans.reduce((total, loan) => total + loan.outstandingPrincipal, 0),
+        totalRepaymentsCollected: 0,
+        activeLoansCount: disbursedLoans.length,
+        pendingDisbursements: databaseLoans.filter(loan => loan.status === 'Approved - Ready for Disbursement').length,
+        pendingApplications: filteredApplications.filter((application: any) => application.status === 'Under Review').length,
+        publishedServicesCount: 0,
+        demoMode: false
+      };
+      setInstitutions([]);
+      setDemoSmes([]);
+      setOverview(databaseOverview);
+      setApplications(filteredApplications.map((application: any) => ({
+        id: application.id,
+        smeId: application.smeId,
+        smeName: application.smeName,
+        smeSector: application.smeSector,
+        productName: application.opportunityTitle,
+        institutionId: fiId,
+        institutionName: application.institution || 'Financial Institution',
+        requestedAmount: application.requestedAmount || 0,
+        termMonths: application.termMonths || 0,
+        interestRate: 0,
+        purpose: application.purpose || '',
+        status: application.status,
+        smeHealthScore: application.smeHealth || 0,
+        smeReadinessScore: application.smeReadiness || 0,
+        contactPhone: application.contactPhone || '',
+        contactEmail: application.contactEmail || '',
+        notes: application.notes || '',
+        feedback: application.feedback || '',
+        appliedAt: application.appliedAt,
+        reviewedAt: null,
+        reviewedBy: null,
+        canDisburse: application.status === 'Approved',
+        associatedLoanId: null
+      })));
+      setLoans(databaseLoans);
     } catch (err: any) {
       console.error('Failed to load FI data:', err);
       showToast('danger', 'Unable to load FI data.');
@@ -120,18 +184,24 @@ export default function BankerLoansPage() {
 
     setIsSubmittingDecision(true);
     try {
-      const result = await financialDemoApi.underwriteApplication(underwriteApp.id, {
-        decision,
-        feedback: decisionFeedback,
-        configuredAmount: approvedAmount,
-        configuredRate: approvedRate,
-        configuredTerm: approvedTerm
-      });
+      const isDatabaseApplication = !underwriteApp.id.startsWith('APP-DEMO-');
+      const result = isDatabaseApplication
+        ? await apiRequest(`/applications/${underwriteApp.id}/status`, {
+            method: 'PATCH',
+            body: JSON.stringify({ status: decision, feedback: decisionFeedback })
+          })
+        : await financialDemoApi.underwriteApplication(underwriteApp.id, {
+            decision,
+            feedback: decisionFeedback,
+            configuredAmount: approvedAmount,
+            configuredRate: approvedRate,
+            configuredTerm: approvedTerm
+          });
 
       showToast(
         decision === 'Approved' ? 'success' : 'info',
         `Application ${underwriteApp.id} ${decision.toLowerCase()}. ${
-          result.createdLoan ? `New facility record ${result.createdLoan.referenceNumber} created for ${result.createdLoan.smeName}.` : ''
+          result.data?.status === 'Approved' || result.createdLoan ? 'Decision saved to the database.' : ''
         }`
       );
       setUnderwriteApp(null);
@@ -382,7 +452,10 @@ export default function BankerLoansPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {loans.map((loan) => {
-                  const isReadyForDisbursement = loan.status === 'Approved - Ready for Disbursement' || loan.disbursementStatus === 'Pending Disbursement';
+                  const isDatabaseLoan = loan.id.startsWith('DB-');
+                  const isReadyForDisbursement = !isDatabaseLoan && (loan.status === 'Approved - Ready for Disbursement' || loan.disbursementStatus === 'Pending Disbursement');
+                  const isDisbursed = loan.disbursementStatus === 'Completed' || Boolean(loan.disbursedAt);
+                  const portfolioStatus = isDisbursed ? 'Disbursed' : loan.status;
                   return (
                     <tr key={loan.id} className="hover:bg-slate-50 transition">
                       <td className="p-3 font-mono font-bold text-slate-900">
@@ -404,13 +477,25 @@ export default function BankerLoansPage() {
                       </td>
                       <td className="p-3 text-center">
                         <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-bold font-mono border ${
-                          loan.status === 'Active'
+                          isDisbursed
+                            ? 'bg-indigo-100 text-indigo-800 border-indigo-300'
+                            : loan.status === 'Active'
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : loan.status === 'Fully Repaid'
                             ? 'bg-slate-100 text-slate-700 border-slate-200'
                             : 'bg-amber-50 text-amber-700 border-amber-200'
                         }`}>
-                          {loan.status}
+                          {portfolioStatus}
+                          {isDisbursed && loan.disbursedAt && (
+                            <span className="block mt-0.5 text-[9px] font-normal text-indigo-600">
+                              {new Date(loan.disbursedAt).toLocaleDateString()}
+                            </span>
+                          )}
+                          {isDisbursed && loan.disbursementReference && (
+                            <span className="block text-[9px] font-normal text-slate-500" title={loan.disbursementReference}>
+                              Ref: {loan.disbursementReference}
+                            </span>
+                          )}
                         </span>
                       </td>
                       <td className="p-3 text-center">
