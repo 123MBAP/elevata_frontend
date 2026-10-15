@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useState, type ReactNode } from 'react';
 import {
   CheckCircle2,
   Mail,
@@ -15,7 +15,8 @@ import {
   RotateCcw,
   User,
   Tag,
-  MessageSquare
+  MessageSquare,
+  Paperclip
 } from 'lucide-react';
 import { apiRequest } from '../lib/api';
 
