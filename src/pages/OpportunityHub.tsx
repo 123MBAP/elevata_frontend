@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useApp, Training, Opportunity, Application } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';

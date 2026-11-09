@@ -21,6 +21,7 @@ import {
 import { Training, useApp } from '../context/AppContext';
 import ScheduleTrainingModal from '../assets/components/ScheduleTrainingModal';
 import VirtualTrainingDeliveryModal from '../assets/components/VirtualTrainingDeliveryModal';
+import { stripFormattedText } from '../assets/components/ui/FormattedText';
 
 export default function BankerTrainingManager() {
   const {
@@ -359,7 +360,7 @@ export default function BankerTrainingManager() {
                   </div>
 
                   <p className="text-xs text-[#5e5e5e] line-clamp-2 leading-relaxed">
-                    {training.description}
+                    {stripFormattedText(training.description, 'Capacity building training session.')}
                   </p>
 
                   {/* Schedule Details */}

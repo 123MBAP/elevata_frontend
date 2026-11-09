@@ -6,17 +6,39 @@ const selectedApiUrl = import.meta.env.PROD && configuredApiUrl?.includes('local
   : (configuredApiUrl || (import.meta.env.PROD ? productionApiUrl : developmentApiUrl));
 const BASE_URL = selectedApiUrl.endsWith('/api') ? selectedApiUrl : `${selectedApiUrl}/api`;
 
-let isRefreshing = false;
-let refreshSubscribers: ((token: string) => void)[] = [];
+let refreshPromise: Promise<string> | null = null;
 
-const subscribeTokenRefresh = (cb: (token: string) => void) => {
-  refreshSubscribers.push(cb);
-};
+async function requestTokenRefresh(): Promise<string> {
+  const refreshToken = localStorage.getItem('elevata_refresh_token');
+  if (!refreshToken) {
+    throw new Error('Session expired. Please log in again.');
+  }
 
-const onRefreshed = (token: string) => {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
-};
+  const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refreshToken })
+  });
+
+  if (!refreshRes.ok) {
+    throw new Error('Refresh request failed');
+  }
+
+  const refreshData = await refreshRes.json();
+  const rotatedAccessToken = refreshData?.data?.token || refreshData?.data?.accessToken;
+  const rotatedRefreshToken = refreshData?.data?.refreshToken;
+
+  if (!rotatedAccessToken) {
+    throw new Error('Failed to retrieve refreshed session token');
+  }
+
+  localStorage.setItem('elevata_access_token', rotatedAccessToken);
+  if (rotatedRefreshToken) {
+    localStorage.setItem('elevata_refresh_token', rotatedRefreshToken);
+  }
+
+  return rotatedAccessToken;
+}
 
 /**
  * Perform an authenticated or public HTTP API request.
@@ -41,70 +63,62 @@ export async function apiRequest(path: string, options: RequestInit = {}): Promi
     headers.set('Content-Type', 'application/json');
   }
 
+  // 3. Set up AbortController timeout if none provided (45s for file uploads/cold starts)
+  let timeoutId: any;
+  let signal = options.signal;
+  if (!signal && typeof AbortController !== 'undefined') {
+    const controller = new AbortController();
+    timeoutId = setTimeout(() => {
+      controller.abort();
+    }, 45000);
+    signal = controller.signal;
+  }
+
   const config: RequestInit = {
     ...options,
-    headers
+    headers,
+    signal
   };
 
   try {
     const response = await fetch(url, config);
 
-    // 3. Intercept 401 Unauthorized & rotate tokens
+    // 4. Intercept 401 Unauthorized & rotate tokens
     if (response.status === 401 && !path.includes('/auth/login') && !path.includes('/auth/register')) {
       if (path.includes('/auth/refresh')) {
-        // Refresh failed, clear and logout
         localStorage.removeItem('elevata_access_token');
         localStorage.removeItem('elevata_refresh_token');
         window.dispatchEvent(new Event('auth-logout'));
         throw new Error('Session expired');
       }
 
-      if (!isRefreshing) {
-        isRefreshing = true;
-        const refreshToken = localStorage.getItem('elevata_refresh_token');
-
-        try {
-          const refreshRes = await fetch(`${BASE_URL}/auth/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ refreshToken })
+      try {
+        if (!refreshPromise) {
+          refreshPromise = requestTokenRefresh().finally(() => {
+            refreshPromise = null;
           });
-
-          if (!refreshRes.ok) {
-            throw new Error('Refresh request failed');
-          }
-
-          const refreshData = await refreshRes.json();
-          const rotatedAccessToken = refreshData.data.token;
-          const rotatedRefreshToken = refreshData.data.refreshToken;
-
-          localStorage.setItem('elevata_access_token', rotatedAccessToken);
-          localStorage.setItem('elevata_refresh_token', rotatedRefreshToken);
-
-          isRefreshing = false;
-          onRefreshed(rotatedAccessToken);
-        } catch (refreshErr) {
-          isRefreshing = false;
-          localStorage.removeItem('elevata_access_token');
-          localStorage.removeItem('elevata_refresh_token');
-          window.dispatchEvent(new Event('auth-logout'));
-          throw refreshErr;
         }
-      }
+        const rotatedToken = await refreshPromise;
 
-      // Wait for refresh to complete and retry the original request
-      return new Promise((resolve, reject) => {
-        subscribeTokenRefresh((newToken) => {
-          headers.set('Authorization', `Bearer ${newToken}`);
-          fetch(url, { ...options, headers })
-            .then((res) => res.json())
-            .then((json) => {
-              if (json.success) resolve(json);
-              else reject(new Error(json.message || 'API Request failed after token refresh'));
-            })
-            .catch(reject);
-        });
-      });
+        // Retry the original request with the new access token
+        const retryHeaders = new Headers(options.headers || {});
+        retryHeaders.set('Authorization', `Bearer ${rotatedToken}`);
+        if (!retryHeaders.has('Content-Type') && !(options.body instanceof FormData)) {
+          retryHeaders.set('Content-Type', 'application/json');
+        }
+
+        const retryResponse = await fetch(url, { ...options, headers: retryHeaders, signal: options.signal });
+        const retryData = await retryResponse.json();
+        if (!retryResponse.ok) {
+          throw new Error(retryData.message || 'API Request failed after token refresh');
+        }
+        return retryData;
+      } catch (refreshErr) {
+        localStorage.removeItem('elevata_access_token');
+        localStorage.removeItem('elevata_refresh_token');
+        window.dispatchEvent(new Event('auth-logout'));
+        throw refreshErr;
+      }
     }
 
     const data = await response.json();
@@ -116,6 +130,8 @@ export async function apiRequest(path: string, options: RequestInit = {}): Promi
   } catch (error: any) {
     console.error(`🔴 API Client Error [${path}]:`, error.message);
     throw error;
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
   }
 }
 

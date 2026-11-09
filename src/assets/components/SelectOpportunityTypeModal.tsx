@@ -137,7 +137,7 @@ export default function SelectOpportunityTypeModal({
                 </div>
 
                 <div className="pt-3 mt-3 border-t border-[#f3f2f0] flex items-center justify-between text-xs font-semibold text-[#2998d6] group-hover:translate-x-0.5 transition-transform">
-                  <span>Configure Form</span>
+                  <span>Provide Details</span>
                   <ChevronRight className="w-4 h-4" />
                 </div>
               </div>

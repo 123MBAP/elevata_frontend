@@ -14,7 +14,9 @@ import {
   Radio,
   Clock,
   ShieldCheck,
-  Hand
+  Hand,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { Training, useApp } from '../../context/AppContext';
 import { apiRequest } from '../../lib/api';
@@ -192,6 +194,92 @@ export default function VirtualTrainingDeliveryModal({
   const [sessionSeconds, setSessionSeconds] = useState(0);
   const [isEnded, setIsEnded] = useState(false);
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+
+  // Fullscreen Stage State
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const stageContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNowFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isNowFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    const container = stageContainerRef.current;
+    if (!container) return;
+
+    const isCurrentlyFullscreen = !!(
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement ||
+      isFullscreen
+    );
+
+    if (!isCurrentlyFullscreen) {
+      try {
+        if (container.requestFullscreen) {
+          await container.requestFullscreen();
+        } else if ((container as any).webkitRequestFullscreen) {
+          await (container as any).webkitRequestFullscreen();
+        } else if ((container as any).mozRequestFullScreen) {
+          await (container as any).mozRequestFullScreen();
+        } else if ((container as any).msRequestFullscreen) {
+          await (container as any).msRequestFullscreen();
+        }
+      } catch (e) {
+        console.warn('[Presenter Stage] Fullscreen request error, using CSS fallback:', e);
+      }
+      setIsFullscreen(true);
+    } else {
+      try {
+        if (document.exitFullscreen && document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen && (document as any).webkitFullscreenElement) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen && (document as any).mozFullScreenElement) {
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen && (document as any).msFullscreenElement) {
+          await (document as any).msExitFullscreen();
+        }
+      } catch (e) {
+        console.warn('[Presenter Stage] Exit fullscreen error:', e);
+      }
+      setIsFullscreen(false);
+    }
+  };
 
   // Initialize session timer
   useEffect(() => {
@@ -965,7 +1053,35 @@ export default function VirtualTrainingDeliveryModal({
         <main className="flex min-h-[min(70dvh,44rem)] flex-1 flex-col justify-between overflow-hidden bg-[#060911] p-2.5 relative sm:p-4 lg:min-h-0">
           
           {/* Main Stage Viewport */}
-          <div className="relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-xl border border-[#1e293b] bg-[#0d1322] shadow-2xl">
+          <div
+            ref={stageContainerRef}
+            className={`${
+              isFullscreen
+                ? 'fixed inset-0 z-[100] flex h-screen w-screen flex-col overflow-hidden bg-black'
+                : 'relative flex min-h-0 flex-1 flex-col items-center justify-center overflow-hidden rounded-xl border border-[#1e293b] bg-[#0d1322] shadow-2xl'
+            }`}
+          >
+            {/* Top Right Fullscreen Toggle Bar */}
+            <div className="absolute top-3 right-3 z-30 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className="px-2.5 py-1.5 bg-slate-950/85 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700/80 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 shadow-lg backdrop-blur-md"
+                title={isFullscreen ? 'Minimise Full Screen (Esc)' : 'Maximise Full Screen'}
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <span className="hidden sm:inline">Minimise</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <span className="hidden sm:inline">Full Screen</span>
+                  </>
+                )}
+              </button>
+            </div>
             
             {/* Case A: Screen Share Video Stream */}
             {isScreenSharing && screenStream ? (
@@ -1067,6 +1183,59 @@ export default function VirtualTrainingDeliveryModal({
                 </div>
               </div>
             )}
+
+            {/* Floating Fullscreen Controls for Presenter when Maximized */}
+            {isFullscreen && (
+              <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-slate-950/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/80 shadow-2xl">
+                <button
+                  type="button"
+                  onClick={handleToggleMic}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                    isMicOn ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-red-600 text-white'
+                  }`}
+                  title={isMicOn ? 'Mute Microphone' : 'Unmute Microphone'}
+                >
+                  {isMicOn ? <Mic className="w-3.5 h-3.5 text-teal-300" /> : <MicOff className="w-3.5 h-3.5 text-white" />}
+                  <span>{isMicOn ? 'Mute' : 'Unmuted'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleCamera}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                    isCamOn ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-red-600 text-white'
+                  }`}
+                  title={isCamOn ? 'Stop Video' : 'Start Video'}
+                >
+                  {isCamOn ? <Video className="w-3.5 h-3.5 text-[#5eead4]" /> : <VideoOff className="w-3.5 h-3.5 text-white" />}
+                  <span>{isCamOn ? 'Video' : 'Start Video'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleToggleScreenShare}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow ${
+                    isScreenSharing ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-[#2998d6] hover:bg-[#1f85be] text-white'
+                  }`}
+                  title={isScreenSharing ? 'Stop Screen Share' : 'Start Screen Share'}
+                >
+                  <Monitor className="w-3.5 h-3.5" />
+                  <span>{isScreenSharing ? 'Stop Share' : 'Share'}</span>
+                </button>
+
+                <div className="h-4 w-px bg-slate-700 mx-1" />
+
+                <button
+                  type="button"
+                  onClick={toggleFullscreen}
+                  className="px-3 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow"
+                  title="Minimise Full Screen (Esc)"
+                >
+                  <Minimize2 className="w-3.5 h-3.5" />
+                  <span>Minimise</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Bottom Host Control Dock */}
@@ -1098,7 +1267,7 @@ export default function VirtualTrainingDeliveryModal({
               </button>
             </div>
 
-            {/* Center Controls: Screen Share */}
+            {/* Center Controls: Screen Share & Fullscreen */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -1113,6 +1282,28 @@ export default function VirtualTrainingDeliveryModal({
                 <span>{isScreenSharing ? 'Stop Screen Share' : 'Share'}</span>
               </button>
 
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className={`px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer ${
+                  isFullscreen
+                    ? 'bg-[#2998d6] text-white font-bold'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                }`}
+                title={isFullscreen ? 'Minimise Presentation Screen (Esc)' : 'Maximise Presentation Screen'}
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="w-4 h-4 text-white" />
+                    <span className="hidden sm:inline">Minimise</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-4 h-4 text-[#38bdf8]" />
+                    <span className="hidden sm:inline">Full Screen</span>
+                  </>
+                )}
+              </button>
             </div>
 
             {/* Right Controls: Tab Switchers */}

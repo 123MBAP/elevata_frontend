@@ -17,7 +17,8 @@ import {
   Hand,
   Printer,
   Monitor,
-  Maximize2
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { Training, useApp } from '../../context/AppContext';
 import { apiRequest } from '../../lib/api';
@@ -87,6 +88,90 @@ export default function VirtualTrainingAttendeeModal({
   const [progress, setProgress] = useState(0);
   const [showCertificate, setShowCertificate] = useState(false);
   const [attendeeViewMode, setAttendeeViewMode] = useState<'presentation' | 'speaker'>('speaker');
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const stageContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      const isNowFullscreen = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).mozFullScreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isNowFullscreen);
+    };
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+    document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+      document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+        setIsFullscreen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isFullscreen]);
+
+  const toggleFullscreen = async () => {
+    const container = stageContainerRef.current;
+    if (!container) return;
+
+    const isCurrentlyFullscreen = !!(
+      document.fullscreenElement ||
+      (document as any).webkitFullscreenElement ||
+      (document as any).mozFullScreenElement ||
+      (document as any).msFullscreenElement ||
+      isFullscreen
+    );
+
+    if (!isCurrentlyFullscreen) {
+      try {
+        if (container.requestFullscreen) {
+          await container.requestFullscreen();
+        } else if ((container as any).webkitRequestFullscreen) {
+          await (container as any).webkitRequestFullscreen();
+        } else if ((container as any).mozRequestFullScreen) {
+          await (container as any).mozRequestFullScreen();
+        } else if ((container as any).msRequestFullscreen) {
+          await (container as any).msRequestFullscreen();
+        }
+      } catch (e) {
+        console.warn('[Attendee Stage] Fullscreen error, falling back to in-app maximize:', e);
+      }
+      setIsFullscreen(true);
+    } else {
+      try {
+        if (document.exitFullscreen && document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else if ((document as any).webkitExitFullscreen && (document as any).webkitFullscreenElement) {
+          await (document as any).webkitExitFullscreen();
+        } else if ((document as any).mozCancelFullScreen && (document as any).mozFullScreenElement) {
+          await (document as any).mozCancelFullScreen();
+        } else if ((document as any).msExitFullscreen && (document as any).msFullscreenElement) {
+          await (document as any).msExitFullscreen();
+        }
+      } catch (e) {
+        console.warn('[Attendee Stage] Exit fullscreen error:', e);
+      }
+      setIsFullscreen(false);
+    }
+  };
 
   // Attendee local camera stream
   useEffect(() => {
@@ -628,13 +713,13 @@ export default function VirtualTrainingAttendeeModal({
             <span>{formatTime(sessionSeconds)}</span>
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/80 rounded-full border border-slate-700 text-[11px]">
+          {/* <div className="flex items-center gap-2 px-3 py-1 bg-slate-800/80 rounded-full border border-slate-700 text-[11px]">
             <span className="text-slate-400">Completion:</span>
             <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
               <div className="h-full bg-[#2998d6] rounded-full transition-all duration-300" style={{ width: `${Math.min(100, progress * 2)}%` }} />
             </div>
             <span className="font-mono font-bold text-[#38bdf8]">{Math.min(100, progress * 2)}%</span>
-          </div>
+          </div> */}
         </div>
 
         {/* Right: Exit / Leave */}
@@ -668,7 +753,14 @@ export default function VirtualTrainingAttendeeModal({
         <main className="flex min-h-[min(70dvh,44rem)] flex-1 flex-col justify-between overflow-hidden bg-[#060911] p-2.5 relative sm:p-4 lg:min-h-0">
           
           {/* Main Stage Viewport */}
-          <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#1e293b] bg-[#0d1322] shadow-2xl">
+          <div
+            ref={stageContainerRef}
+            className={`${
+              isFullscreen
+                ? 'fixed inset-0 z-[100] flex h-screen w-screen flex-col overflow-hidden bg-black'
+                : 'relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-[#1e293b] bg-[#0d1322] shadow-2xl'
+            }`}
+          >
             
             {/* STATE 1: WAITING ROOM (if not yet admitted) */}
             {!isAdmitted ? (
@@ -910,6 +1002,26 @@ export default function VirtualTrainingAttendeeModal({
                     <span className="px-2.5 py-1 bg-teal-950/80 border border-teal-500/40 text-teal-300 text-[10px] font-bold rounded-md uppercase tracking-wider shadow hidden sm:inline-block">
                       {isLivekitConnected ? 'LiveKit Cloud SFU' : remoteStream ? 'WebRTC HD P2P' : 'Live Snapshot HD'}
                     </span>
+
+                    {/* Stage Fullscreen Maximize / Minimize Button */}
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      className="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 text-slate-200 hover:text-white border border-slate-700 rounded-lg text-[11px] font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg"
+                      title={isFullscreen ? 'Minimise Full Screen (Esc)' : 'Maximise Full Screen'}
+                    >
+                      {isFullscreen ? (
+                        <>
+                          <Minimize2 className="w-3.5 h-3.5 text-[#38bdf8]" />
+                          <span className="hidden sm:inline">Minimise</span>
+                        </>
+                      ) : (
+                        <>
+                          <Maximize2 className="w-3.5 h-3.5 text-[#38bdf8]" />
+                          <span className="hidden sm:inline">Full Screen</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
 
@@ -1030,6 +1142,59 @@ export default function VirtualTrainingAttendeeModal({
                     </div>
                   </div>
                 </div>
+
+                {/* Floating Fullscreen Controls for Attendee */}
+                {isFullscreen && (
+                  <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-slate-950/90 backdrop-blur-md px-4 py-2 rounded-xl border border-slate-700/80 shadow-2xl">
+                    <button
+                      type="button"
+                      onClick={handleToggleAttendeeMic}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                        isMicOn ? 'bg-[#2998d6] text-white' : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+                      }`}
+                      title={isMicOn ? 'Mute Microphone' : 'Unmute Microphone'}
+                    >
+                      {isMicOn ? <Mic className="w-3.5 h-3.5" /> : <MicOff className="w-3.5 h-3.5 text-slate-400" />}
+                      <span>{isMicOn ? 'Mute' : 'Unmute'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleToggleAttendeeCam}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                        isCamOn ? 'bg-slate-800 hover:bg-slate-700 text-slate-200' : 'bg-red-600 text-white'
+                      }`}
+                      title={isCamOn ? 'Stop Camera' : 'Start Camera'}
+                    >
+                      {isCamOn ? <Video className="w-3.5 h-3.5 text-[#38bdf8]" /> : <VideoOff className="w-3.5 h-3.5 text-white" />}
+                      <span>{isCamOn ? 'Camera' : 'Start Video'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleToggleHand}
+                      className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                        isHandRaised ? 'bg-[#2998d6] text-white font-bold' : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                      }`}
+                      title={isHandRaised ? 'Lower Hand' : 'Raise Hand'}
+                    >
+                      <Hand className="w-3.5 h-3.5 text-[#38bdf8]" />
+                      <span>{isHandRaised ? 'Hand Raised' : 'Raise Hand'}</span>
+                    </button>
+
+                    <div className="h-4 w-px bg-slate-700 mx-1" />
+
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      className="px-3 py-1.5 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer shadow"
+                      title="Minimise Full Screen (Esc)"
+                    >
+                      <Minimize2 className="w-3.5 h-3.5" />
+                      <span>Minimise</span>
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1063,7 +1228,7 @@ export default function VirtualTrainingAttendeeModal({
               </button>
             </div>
 
-            {/* Center Controls: Hand - Zero Emojis */}
+            {/* Center Controls: Hand & Screen Fullscreen */}
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -1076,6 +1241,29 @@ export default function VirtualTrainingAttendeeModal({
               >
                 <Hand className={`w-3.5 h-3.5 ${isHandRaised ? 'text-white' : 'text-[#38bdf8]'}`} />
                 <span>{isHandRaised ? 'Hand Raised' : 'Hand'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={toggleFullscreen}
+                className={`px-3.5 py-2 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer ${
+                  isFullscreen
+                    ? 'bg-[#2998d6] text-white font-bold'
+                    : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
+                }`}
+                title={isFullscreen ? 'Minimise Presentation Screen (Esc)' : 'Maximise Presentation Screen'}
+              >
+                {isFullscreen ? (
+                  <>
+                    <Minimize2 className="w-3.5 h-3.5 text-white" />
+                    <span className="hidden sm:inline">Minimise</span>
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="w-3.5 h-3.5 text-[#38bdf8]" />
+                    <span className="hidden sm:inline">Full Screen</span>
+                  </>
+                )}
               </button>
             </div>
 

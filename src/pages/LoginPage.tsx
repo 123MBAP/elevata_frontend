@@ -154,6 +154,16 @@ export default function LoginPage() {
               Register
             </Link>
           </p>
+
+          <div className="pt-3 border-t border-white/10 flex items-center justify-center gap-3 text-[11px] text-white/50">
+            <Link to="/terms" className="hover:text-white/80 transition-colors">
+              Terms & Conditions
+            </Link>
+            <span>•</span>
+            <Link to="/privacy" className="hover:text-white/80 transition-colors">
+              Privacy Policy
+            </Link>
+          </div>
         </form>
       </motion.div>
     </div>

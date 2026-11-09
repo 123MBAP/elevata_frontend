@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+﻿import { useState, useMemo, useEffect } from 'react';
 import { useApp, Application } from '../context/AppContext';
 import { formatRWF } from '../lib/mockData';
 import { Card, CardContent } from '../assets/components/ui/card';
