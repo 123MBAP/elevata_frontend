@@ -62,17 +62,32 @@ export interface Opportunity {
   } | null;
 }
 
+export interface ApplicationPayment {
+  id: string;
+  amount: number;
+  method: string;
+  reference: string;
+  phoneNumber?: string;
+  paidAt: string;
+  paidBy: string;
+  status: 'Completed' | 'Pending' | 'Failed';
+  notes?: string;
+}
+
 export interface Application {
   id: string;
   opportunityId: string;
   opportunityTitle: string;
+  institution?: string;
+  businessId?: string;
   smeId: string;
   smeName: string;
   smeSector: string;
   smeReadiness: number;
   smeHealth: number;
-  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected';
+  status: 'Submitted' | 'Under Review' | 'Approved' | 'Rejected' | 'Pending' | 'Disbursed' | 'Completed';
   appliedAt: string;
+  submittedAt?: string;
   feedback: string;
   aiSuggestions: string[];
   requestedAmount?: number;
@@ -81,7 +96,22 @@ export interface Application {
   contactPhone?: string;
   contactEmail?: string;
   notes?: string;
+  applicantNotes?: string;
   documents?: ApplicationDocument[];
+
+  // Financial, loan & repayment tracking
+  approvedAmount?: number;
+  interestRate?: number;
+  monthlyInstallment?: number;
+  totalPayable?: number;
+  totalPaid?: number;
+  remainingBalance?: number;
+  nextDueDate?: string;
+  disbursed?: boolean;
+  disbursedAt?: string;
+  disbursedAmount?: number;
+  disbursementRef?: string;
+  payments?: ApplicationPayment[];
 }
 
 export interface ApplicationDocument {
@@ -248,7 +278,36 @@ interface AppContextType {
     notes?: string;
     documents: Record<string, File>;
   }) => Promise<Application>;
-  updateApplicationStatus: (appId: string, status: Application['status'], feedback?: string) => Promise<void>;
+  updateApplicationStatus: (
+    appId: string,
+    status: Application['status'],
+    feedback?: string,
+    options?: {
+      approvedAmount?: number;
+      interestRate?: number;
+      termMonths?: number;
+      monthlyInstallment?: number;
+      disburseNow?: boolean;
+    }
+  ) => Promise<void>;
+  makeApplicationPayment: (
+    applicationId: string,
+    paymentData: {
+      amount: number;
+      paymentMethod: string;
+      reference?: string;
+      phoneNumber?: string;
+      notes?: string;
+    }
+  ) => Promise<Application>;
+  disburseApplicationFunds: (
+    applicationId: string,
+    data?: {
+      disbursedAmount?: number;
+      notes?: string;
+    }
+  ) => Promise<Application>;
+  uploadApplicationDocument: (applicationId: string, documentType: string, file: File) => Promise<Application>;
   createTraining: (training: Omit<Training, 'id' | 'participantsCount' | 'attended' | 'completed' | 'hasCertificate'>) => void;
   updateTraining: (trainingId: string, data: Partial<Training>) => void;
   deleteTraining: (trainingId: string) => void;
@@ -305,6 +364,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (res?.success && Array.isArray(res.data)) {
         setApplications(res.data.map((application: any) => ({
           ...application,
+          institution: application.institution || application.opportunity?.institution || '',
           smeReadiness: application.smeReadiness ?? 0,
           smeHealth: application.smeHealth ?? 0,
           feedback: application.feedback || 'Application received. Pending review.',
@@ -1024,22 +1084,112 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return created;
   };
 
-  const updateApplicationStatus = async (appId: string, status: Application['status'], feedback?: string) => {
+  const updateApplicationStatus = async (
+    appId: string,
+    status: Application['status'],
+    feedback?: string,
+    options?: {
+      approvedAmount?: number;
+      interestRate?: number;
+      termMonths?: number;
+      monthlyInstallment?: number;
+      disburseNow?: boolean;
+    }
+  ) => {
     const res = await apiRequest(`/applications/${appId}/status`, {
       method: 'PATCH',
-      body: JSON.stringify({ status, feedback })
+      body: JSON.stringify({
+        status,
+        feedback,
+        ...(options || {})
+      })
     });
-    setApplications(prev => prev.map(app => (
-      app.id === appId
-        ? {
-            ...app,
-            ...res.data,
-            smeReadiness: res.data.smeReadiness ?? app.smeReadiness,
-            smeHealth: res.data.smeHealth ?? app.smeHealth,
-            aiSuggestions: res.data.aiSuggestions || app.aiSuggestions
-          }
-        : app
-    )));
+    if (res?.success && res.data) {
+      setApplications(prev => prev.map(app => (
+        app.id === appId
+          ? {
+              ...app,
+              ...res.data,
+              smeReadiness: res.data.smeReadiness ?? app.smeReadiness,
+              smeHealth: res.data.smeHealth ?? app.smeHealth,
+              aiSuggestions: res.data.aiSuggestions || app.aiSuggestions
+            }
+          : app
+      )));
+    }
+  };
+
+  const makeApplicationPayment = async (
+    applicationId: string,
+    paymentData: {
+      amount: number;
+      paymentMethod: string;
+      reference?: string;
+      phoneNumber?: string;
+      notes?: string;
+    }
+  ): Promise<Application> => {
+    const res = await apiRequest(`/applications/${applicationId}/payments`, {
+      method: 'POST',
+      body: JSON.stringify(paymentData)
+    });
+    if (!res?.success || !res.data) {
+      throw new Error(res?.message || 'Payment processing failed.');
+    }
+    const updated: Application = res.data;
+    setApplications(prev => prev.map(app => (app.id === applicationId ? updated : app)));
+    if (typeof refreshBusinessData === 'function') {
+      try { await refreshBusinessData(); } catch {}
+    }
+    return updated;
+  };
+
+  const disburseApplicationFunds = async (
+    applicationId: string,
+    data?: {
+      disbursedAmount?: number;
+      notes?: string;
+    }
+  ): Promise<Application> => {
+    const res = await apiRequest(`/applications/${applicationId}/disburse`, {
+      method: 'POST',
+      body: JSON.stringify(data || {})
+    });
+    if (!res?.success || !res.data) {
+      throw new Error(res?.message || 'Fund disbursement failed.');
+    }
+    const updated: Application = res.data;
+    setApplications(prev => prev.map(app => (app.id === applicationId ? updated : app)));
+    if (typeof refreshBusinessData === 'function') {
+      try { await refreshBusinessData(); } catch {}
+    }
+    return updated;
+  };
+
+  const uploadApplicationDocument = async (applicationId: string, documentType: string, file: File): Promise<Application> => {
+    const form = new FormData();
+    form.append('documentTypes', JSON.stringify([documentType]));
+    form.append('documents', file);
+
+    const res = await apiRequest(`/applications/${applicationId}/documents`, {
+      method: 'POST',
+      body: form
+    });
+
+    if (!res?.success || !res.data) {
+      throw new Error(res?.message || 'Failed to upload document.');
+    }
+
+    const updatedApp: Application = {
+      ...res.data,
+      institution: res.data.institution || res.data.opportunity?.institution || '',
+      smeReadiness: res.data.smeReadiness ?? Math.round(activeSme.healthScore * 1.05),
+      smeHealth: res.data.smeHealth ?? activeSme.healthScore,
+      aiSuggestions: res.data.aiSuggestions || []
+    };
+
+    setApplications(prev => prev.map(app => (app.id === applicationId ? updatedApp : app)));
+    return updatedApp;
   };
 
   const syncLiveRoomToBackend = async (trainingId: string, updates: { status?: string; attendees?: any[]; chatMessages?: any[]; liveState?: TrainingLiveState }) => {
@@ -1392,6 +1542,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       publishOpportunity,
       applyForOpportunity,
       updateApplicationStatus,
+      makeApplicationPayment,
+      disburseApplicationFunds,
+      uploadApplicationDocument,
       createTraining,
       updateTraining,
       deleteTraining,

@@ -26,7 +26,8 @@ import {
   Settings,
   ChevronRight,
   ChevronLeft,
-  X
+  X,
+  Coins
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -129,6 +130,20 @@ export default function Sidebar({
       icon: <Target className="w-5 h-5" />
     },
     {
+      id: 'my-applications',
+      path: '/my-applications',
+      label: 'My Applications',
+      tooltip: 'Applications, Statuses & Requirements',
+      icon: <ClipboardCheck className="w-5 h-5" />
+    },
+    {
+      id: 'sme-repayments',
+      path: '/repayments',
+      label: 'Loan Repayments',
+      tooltip: 'Disbursed Loans, Payments & Statements',
+      icon: <Coins className="w-5 h-5" />
+    },
+    {
       id: 'reports',
       path: '/reports',
       label: 'Financial Statements & Reports',
@@ -165,6 +180,13 @@ export default function Sidebar({
       label: 'Credit Applications',
       tooltip: 'Underwriting & Loan Reviews',
       icon: <ClipboardCheck className="w-5 h-5" />
+    },
+    {
+      id: 'repayments',
+      path: '/banker/repayments',
+      label: 'SME Repayment Ledger',
+      tooltip: 'Disbursements & Repayment Tracking',
+      icon: <Coins className="w-5 h-5" />
     },
     {
       id: 'publisher',
@@ -226,6 +248,13 @@ export default function Sidebar({
       icon: <ClipboardCheck className="w-5 h-5" />
     },
     {
+      id: 'admin-repayments',
+      path: '/banker/repayments',
+      label: 'SME Repayment Ledger',
+      tooltip: 'Disbursements & Repayment Tracking',
+      icon: <Coins className="w-5 h-5" />
+    },
+    {
       id: 'admin-publisher',
       path: '/banker/publisher',
       label: 'Credit Opportunities',
@@ -263,6 +292,24 @@ export default function Sidebar({
       : smeNavItems;
 
   const isItemActive = (path: string) => {
+    if (path === '/my-applications' || path === '/opportunity-hub?tab=applications') {
+      const searchParams = new URLSearchParams(location.search);
+      return (
+        location.pathname === '/my-applications' ||
+        location.pathname === '/applications' ||
+        (location.pathname === '/opportunity-hub' && searchParams.get('tab') === 'applications')
+      );
+    }
+    if (path === '/repayments') {
+      return location.pathname === '/repayments' || location.pathname === '/my-repayments';
+    }
+    if (path === '/opportunity-hub') {
+      const searchParams = new URLSearchParams(location.search);
+      return (
+        location.pathname === '/opportunity-hub' &&
+        searchParams.get('tab') !== 'applications'
+      );
+    }
     if (path === '/activities') {
       return isActivitiesRoute;
     }
@@ -271,6 +318,9 @@ export default function Sidebar({
     }
     if (path === '/banker') {
       return location.pathname === '/banker';
+    }
+    if (path === '/banker/repayments') {
+      return location.pathname === '/banker/repayments' || location.pathname === '/banker/ledger';
     }
     if (path === '/admin/users') {
       return location.pathname === '/admin/users';

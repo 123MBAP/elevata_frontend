@@ -27,6 +27,9 @@ import ElevataBotPage from './pages/ElevataBotPage';
 import BusinessProfilePage from './pages/BusinessProfilePage';
 import SmeTrainingManager from './pages/SmeTrainingManager';
 import BankerTrainingManager from './pages/BankerTrainingManager';
+import BankerRepaymentsLedger from './pages/BankerRepaymentsLedger';
+import SmeApplications from './pages/SmeApplications';
+import SmeRepayments from './pages/SmeRepayments';
 
 function App() {
   return (
@@ -46,6 +49,10 @@ function App() {
                 <Route index element={<SmeDashboard />} />
                 <Route path="profile" element={<BusinessProfilePage />} />
                 <Route path="opportunity-hub" element={<OpportunityHub />} />
+                <Route path="my-applications" element={<SmeApplications />} />
+                <Route path="applications" element={<SmeApplications />} />
+                <Route path="repayments" element={<SmeRepayments />} />
+                <Route path="my-repayments" element={<SmeRepayments />} />
                 <Route path="trainings" element={<SmeTrainingManager />} />
                 <Route path="training-manager" element={<SmeTrainingManager />} />
                 <Route path="inventory" element={<Inventory />} />
@@ -66,6 +73,8 @@ function App() {
                   <Route path="banker/trainings" element={<BankerTrainingManager />} />
                   <Route path="banker/training-manager" element={<BankerTrainingManager />} />
                   <Route path="banker/applications" element={<BankerApplications />} />
+                  <Route path="banker/repayments" element={<BankerRepaymentsLedger />} />
+                  <Route path="banker/ledger" element={<BankerRepaymentsLedger />} />
                   <Route path="banker/monitoring" element={<SmeMonitoring />} />
                 </Route>
 

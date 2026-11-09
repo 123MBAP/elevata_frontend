@@ -49,16 +49,43 @@ interface DocumentDetail {
 }
 
 export default function BankerApplications() {
-  const { applications, opportunities, smes, updateApplicationStatus } = useApp();
+  const {
+    applications,
+    opportunities,
+    smes,
+    updateApplicationStatus,
+    makeApplicationPayment,
+    disburseApplicationFunds
+  } = useApp();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   
   // Selected application for slide-over / full review modal
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
-  const [activeReviewTab, setActiveReviewTab] = useState<'overview' | 'metrics' | 'documents' | 'eligibility'>('overview');
+  const [activeReviewTab, setActiveReviewTab] = useState<'overview' | 'metrics' | 'documents' | 'eligibility' | 'payments'>('overview');
   const [reviewStatus, setReviewStatus] = useState<Application['status']>('Under Review');
   const [reviewFeedback, setReviewFeedback] = useState('');
+
+  // Underwriting terms configuration
+  const [approvedAmount, setApprovedAmount] = useState<number>(5000000);
+  const [interestRate, setInterestRate] = useState<number>(12);
+  const [termMonths, setTermMonths] = useState<number>(12);
+  const [disburseNow, setDisburseNow] = useState<boolean>(false);
+
+  // Banker offline payment recording
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState<boolean>(false);
+  const [offlinePaymentAmount, setOfflinePaymentAmount] = useState<number | string>('');
+  const [offlinePaymentMethod, setOfflinePaymentMethod] = useState<string>('Bank Transfer');
+  const [offlinePaymentRef, setOfflinePaymentRef] = useState<string>('');
+  const [offlinePaymentNotes, setOfflinePaymentNotes] = useState<string>('');
+  const [isSubmittingOfflinePayment, setIsSubmittingOfflinePayment] = useState<boolean>(false);
+
+  // Banker disbursement modal
+  const [isDisburseModalOpen, setIsDisburseModalOpen] = useState<boolean>(false);
+  const [disburseAmountInput, setDisburseAmountInput] = useState<number | string>('');
+  const [disburseNotesInput, setDisburseNotesInput] = useState<string>('');
+  const [isSubmittingDisburse, setIsSubmittingDisburse] = useState<boolean>(false);
 
   // Document preview modal state
   const [previewDoc, setPreviewDoc] = useState<DocumentDetail | null>(null);
@@ -91,9 +118,13 @@ export default function BankerApplications() {
   // Open review helper
   const handleOpenReview = (app: Application) => {
     setSelectedAppId(app.id);
-    setActiveReviewTab('overview');
+    setActiveReviewTab(['Approved', 'Disbursed', 'Completed'].includes(app.status) ? 'payments' : 'overview');
     setReviewStatus(app.status);
     setReviewFeedback(app.feedback || '');
+    setApprovedAmount(app.approvedAmount || app.requestedAmount || 5000000);
+    setInterestRate(app.interestRate || 12);
+    setTermMonths(app.termMonths || 12);
+    setDisburseNow(false);
   };
 
   // Submit review feedback
@@ -102,7 +133,18 @@ export default function BankerApplications() {
     if (!selectedAppId || !selectedApp) return;
 
     try {
-      await updateApplicationStatus(selectedAppId, reviewStatus, reviewFeedback);
+      const parsedAmount = Number(approvedAmount) || selectedApp.requestedAmount || 5000000;
+      const parsedRate = Number(interestRate) || 12;
+      const parsedTerm = Number(termMonths) || 12;
+      const calculatedInstallment = Math.round((parsedAmount * (1 + (parsedRate / 100) * (parsedTerm / 12))) / (parsedTerm || 1));
+
+      await updateApplicationStatus(selectedAppId, reviewStatus, reviewFeedback, {
+        approvedAmount: parsedAmount,
+        interestRate: parsedRate,
+        termMonths: parsedTerm,
+        monthlyInstallment: calculatedInstallment,
+        disburseNow: reviewStatus === 'Approved' ? disburseNow : false
+      });
     } catch (error: unknown) {
       triggerToast(error instanceof Error ? error.message : 'Unable to save this decision.');
       return;
@@ -110,6 +152,58 @@ export default function BankerApplications() {
 
     triggerToast(`Application #${selectedApp.id} updated to "${reviewStatus}" successfully.`);
     setSelectedAppId(null);
+  };
+
+  // Disburse funds action
+  const handleDisburseFunds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppId || !selectedApp) return;
+
+    setIsSubmittingDisburse(true);
+    try {
+      const amt = Number(disburseAmountInput) || selectedApp.approvedAmount || selectedApp.requestedAmount || 5000000;
+      await disburseApplicationFunds(selectedAppId, {
+        disbursedAmount: amt,
+        notes: disburseNotesInput || 'Capital disbursement released from lending desk.'
+      });
+      triggerToast(`Capital of ${formatRWF(amt)} successfully disbursed to SME borrower.`);
+      setIsDisburseModalOpen(false);
+    } catch (err: any) {
+      triggerToast(err?.message || 'Disbursement recording failed.');
+    } finally {
+      setIsSubmittingDisburse(false);
+    }
+  };
+
+  // Record offline payment action
+  const handleRecordOfflinePayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAppId || !selectedApp) return;
+
+    const amt = Number(offlinePaymentAmount);
+    if (!amt || amt <= 0) {
+      triggerToast('Please provide a valid repayment amount.');
+      return;
+    }
+
+    setIsSubmittingOfflinePayment(true);
+    try {
+      await makeApplicationPayment(selectedAppId, {
+        amount: amt,
+        paymentMethod: offlinePaymentMethod,
+        reference: offlinePaymentRef || `BNK-${Date.now().toString(36).toUpperCase()}`,
+        notes: offlinePaymentNotes || 'Offline repayment recorded by credit officer'
+      });
+      triggerToast(`Offline payment of ${formatRWF(amt)} recorded in borrower ledger.`);
+      setIsRecordPaymentOpen(false);
+      setOfflinePaymentAmount('');
+      setOfflinePaymentRef('');
+      setOfflinePaymentNotes('');
+    } catch (err: any) {
+      triggerToast(err?.message || 'Offline payment recording failed.');
+    } finally {
+      setIsSubmittingOfflinePayment(false);
+    }
   };
 
   const isTextDocumentType = (mimeType?: string | null) =>
@@ -219,7 +313,7 @@ export default function BankerApplications() {
     const total = applications.length;
     const submitted = applications.filter(a => a.status === 'Submitted').length;
     const review = applications.filter(a => a.status === 'Under Review').length;
-    const approved = applications.filter(a => a.status === 'Approved').length;
+    const approved = applications.filter(a => ['Approved', 'Disbursed', 'Completed'].includes(a.status)).length;
     const rejected = applications.filter(a => a.status === 'Rejected').length;
 
     return { total, submitted, review, approved, rejected };
@@ -228,7 +322,10 @@ export default function BankerApplications() {
   const getStatusStyle = (status: Application['status']) => {
     switch (status) {
       case 'Approved':
+      case 'Disbursed':
         return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+      case 'Completed':
+        return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case 'Rejected':
         return 'bg-rose-50 text-rose-700 border-rose-200';
       case 'Under Review':
@@ -241,6 +338,8 @@ export default function BankerApplications() {
   const getStatusIcon = (status: Application['status']) => {
     switch (status) {
       case 'Approved':
+      case 'Disbursed':
+      case 'Completed':
         return <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0" />;
       case 'Rejected':
         return <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />;
@@ -606,12 +705,13 @@ export default function BankerApplications() {
 
               {/* Navigation Tabs Bar (Segmented Control - fully visible without scrollbar clipping) */}
               <div className="px-5 sm:px-6 py-2.5 bg-slate-100/60 border-b border-slate-200 shrink-0">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 p-1 bg-slate-200/80 rounded-xl">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-1.5 p-1 bg-slate-200/80 rounded-xl">
                   {[
                     { id: 'overview', label: '1. Applicant Dossier', sub: 'Profile & Request', icon: Building2 },
                     { id: 'metrics', label: '2. Health & Metrics', sub: '6-Mo Financials', icon: TrendingUp },
                     { id: 'documents', label: `3. Documents (${activeDocumentsList.length})`, sub: 'Verified Files', icon: FileText },
-                    { id: 'eligibility', label: '4. Underwriting AI', sub: 'Matrix & Risk', icon: Sliders }
+                    { id: 'eligibility', label: '4. Underwriting AI', sub: 'Matrix & Risk', icon: Sliders },
+                    { id: 'payments', label: `5. Payments & Ledger (${selectedApp?.payments?.length || 0})`, sub: 'Repayments & Disbursal', icon: Coins }
                   ].map(tab => {
                     const Icon = tab.icon;
                     const isActive = activeReviewTab === tab.id;
@@ -1070,6 +1170,169 @@ export default function BankerApplications() {
                   </div>
                 )}
 
+                {/* TAB 5: PAYMENTS & REPAYMENTS LEDGER */}
+                {activeReviewTab === 'payments' && selectedApp && (
+                  <div className="space-y-5">
+                    {/* Facility Summary Card */}
+                    <div className="p-4 bg-linear-to-r from-emerald-50/90 to-sky-50/70 border border-emerald-200 rounded-xl space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                            <Coins className="w-4 h-4" />
+                          </span>
+                          <div>
+                            <h4 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">
+                              Credit Facility Account &amp; Repayment Ledger
+                            </h4>
+                            <p className="text-[10px] text-slate-500">
+                              Track disbursements, live installment collections, and record counter deposits.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {selectedApp.disbursed ? (
+                            <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold uppercase tracking-wider border border-emerald-300 flex items-center gap-1">
+                              <CheckCircle className="w-3 h-3 text-emerald-600" /> Disbursed {selectedApp.disbursedAt ? `(${selectedApp.disbursedAt.slice(0, 10)})` : ''}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-1 bg-amber-50 text-amber-800 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-200">
+                              Pending Capital Disbursement
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* 4 Financial Metric Cards */}
+                      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Approved Facility</span>
+                          <div className="text-sm sm:text-base font-extrabold text-slate-900 font-mono mt-0.5">
+                            {formatRWF(selectedApp.approvedAmount || selectedApp.requestedAmount || 5000000)}
+                          </div>
+                          <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">
+                            {selectedApp.interestRate || 12}% p.a. · {selectedApp.termMonths || 12} Mos
+                          </span>
+                        </div>
+
+                        <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Monthly Installment</span>
+                          <div className="text-sm sm:text-base font-extrabold text-[#1f85be] font-mono mt-0.5">
+                            {formatRWF(selectedApp.monthlyInstallment || 0)}
+                          </div>
+                          <span className="text-[9px] text-slate-500 block mt-0.5 font-medium">
+                            Next Due: <strong className="text-slate-800">{selectedApp.nextDueDate || 'Within 30 days'}</strong>
+                          </span>
+                        </div>
+
+                        <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Total Repaid by SME</span>
+                          <div className="text-sm sm:text-base font-extrabold text-emerald-700 font-mono mt-0.5">
+                            {formatRWF(selectedApp.totalPaid || 0)}
+                          </div>
+                          <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">
+                            of {formatRWF(selectedApp.totalPayable || 0)} payable
+                          </span>
+                        </div>
+
+                        <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                          <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Remaining Balance</span>
+                          <div className="text-sm sm:text-base font-extrabold text-slate-900 font-mono mt-0.5">
+                            {formatRWF(selectedApp.remainingBalance !== undefined ? selectedApp.remainingBalance : (selectedApp.totalPayable || 0))}
+                          </div>
+                          <span className="text-[9px] font-semibold block mt-0.5 text-slate-500">
+                            {(selectedApp.remainingBalance ?? 1) === 0 ? '✓ Facility fully repaid' : 'Active repayment cycle'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Banker Actions */}
+                      <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-emerald-200/60">
+                        {!selectedApp.disbursed && (
+                          <Button
+                            type="button"
+                            onClick={() => {
+                              setDisburseAmountInput(selectedApp.approvedAmount || selectedApp.requestedAmount || 5000000);
+                              setDisburseNotesInput(`Disbursement release for facility #${selectedApp.id}`);
+                              setIsDisburseModalOpen(true);
+                            }}
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-8 px-3.5 shadow-xs border-none flex items-center gap-1.5"
+                          >
+                            <Coins className="w-3.5 h-3.5" />
+                            Disburse Capital to SME
+                          </Button>
+                        )}
+
+                        <Button
+                          type="button"
+                          onClick={() => {
+                            setOfflinePaymentAmount(selectedApp.monthlyInstallment || 466667);
+                            setOfflinePaymentRef(`BNK-${Date.now().toString(36).toUpperCase()}`);
+                            setOfflinePaymentNotes(`Branch deposit for ${selectedApp.smeName}`);
+                            setIsRecordPaymentOpen(true);
+                          }}
+                          className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-300 font-bold text-xs h-8 px-3.5 shadow-xs flex items-center gap-1.5"
+                        >
+                          <Coins className="w-3.5 h-3.5 text-[#2998d6]" />
+                          Record Offline Payment Received
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Repayment Transaction Ledger */}
+                    <div className="p-4 bg-white border border-slate-200 rounded-xl shadow-xs space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                          <Coins className="w-3.5 h-3.5 text-[#2998d6]" />
+                          Borrower Repayment History &amp; Collections Log ({selectedApp.payments?.length || 0})
+                        </span>
+                        <span className="text-[9.5px] text-slate-400 font-mono">
+                          Live Bank Audit Trail
+                        </span>
+                      </div>
+
+                      {selectedApp.payments && selectedApp.payments.length > 0 ? (
+                        <div className="overflow-x-auto rounded-lg border border-slate-200">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-600">
+                              <tr>
+                                <th className="p-2.5">Date</th>
+                                <th className="p-2.5">Reference</th>
+                                <th className="p-2.5">Paid By</th>
+                                <th className="p-2.5">Method</th>
+                                <th className="p-2.5 text-right">Amount (RWF)</th>
+                                <th className="p-2.5 text-center">Status</th>
+                                <th className="p-2.5">Notes</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                              {selectedApp.payments.map((p) => (
+                                <tr key={p.id} className="hover:bg-slate-50">
+                                  <td className="p-2.5 text-slate-600">{new Date(p.paidAt).toLocaleDateString()}</td>
+                                  <td className="p-2.5 font-bold text-slate-900">{p.reference}</td>
+                                  <td className="p-2.5 font-sans text-slate-700">{p.paidBy}</td>
+                                  <td className="p-2.5 font-sans text-slate-600">{p.method}</td>
+                                  <td className="p-2.5 text-right font-bold text-emerald-700">{formatRWF(p.amount)}</td>
+                                  <td className="p-2.5 text-center">
+                                    <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[9.5px] font-bold">
+                                      {p.status}
+                                    </span>
+                                  </td>
+                                  <td className="p-2.5 font-sans text-slate-500 text-[10.5px] truncate max-w-xs">{p.notes || '-'}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="p-6 bg-slate-50 rounded-lg border border-dashed border-slate-300 text-center text-slate-500 text-xs">
+                          No repayment transactions recorded yet for this facility.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
               </div>
 
               {/* REVIEW UNDERWRITING DECISION FOOTER */}
@@ -1082,7 +1345,7 @@ export default function BankerApplications() {
                   <div className="flex flex-wrap gap-1.5">
                     <button
                       type="button"
-                      onClick={() => applyPresetFeedback('Approved', 'Approved. All criteria and verified documentation meet bank credit policy standards. Disbursement must be completed in the institution system.')}
+                      onClick={() => applyPresetFeedback('Approved', 'Approved. All criteria and verified documentation meet bank credit policy standards. Ready for capital disbursement.')}
                       className="px-2 py-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded text-[9.5px] font-bold transition"
                     >
                       Approve (Standard)
@@ -1116,15 +1379,9 @@ export default function BankerApplications() {
                       required
                     >
                       <option value="Under Review">Under Review (Pending)</option>
-                      <option value="Approved">Approved</option>
+                      <option value="Approved">Approved (Grant Credit Facility)</option>
                       <option value="Rejected">Rejected (Decline Application)</option>
                     </select>
-
-                    {reviewStatus === 'Approved' && (
-                      <p className="pt-1.5 text-[10px] text-amber-700 font-semibold">
-                        This records the application decision only. Disbursement is unavailable in Elevata.
-                      </p>
-                    )}
                   </div>
 
                   <div className="space-y-1 sm:col-span-2">
@@ -1142,6 +1399,89 @@ export default function BankerApplications() {
                   </div>
                 </div>
 
+                {/* APPROVED CREDIT FACILITY TERMS CONFIGURATION */}
+                {reviewStatus === 'Approved' && (
+                  <div className="p-3.5 bg-emerald-50/80 border border-emerald-200 rounded-xl space-y-3">
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-900 flex items-center gap-1.5">
+                      <Coins className="w-3.5 h-3.5 text-emerald-700" />
+                      Approved Loan Facility Parameters
+                    </span>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="space-y-1">
+                        <label className="block text-[9.5px] font-bold text-slate-600 uppercase">
+                          Approved Amount (RWF)
+                        </label>
+                        <input
+                          type="number"
+                          min="100000"
+                          step="50000"
+                          value={approvedAmount}
+                          onChange={(e) => setApprovedAmount(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-900 focus:outline-none focus:border-[#2998d6]"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[9.5px] font-bold text-slate-600 uppercase">
+                          Interest Rate (% p.a.)
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          max="40"
+                          step="0.5"
+                          value={interestRate}
+                          onChange={(e) => setInterestRate(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-900 focus:outline-none focus:border-[#2998d6]"
+                          required
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="block text-[9.5px] font-bold text-slate-600 uppercase">
+                          Tenor (Months)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="60"
+                          value={termMonths}
+                          onChange={(e) => setTermMonths(Number(e.target.value))}
+                          className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs bg-white font-mono font-bold text-slate-900 focus:outline-none focus:border-[#2998d6]"
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {/* Calculated installment breakdown */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 pt-1 border-t border-emerald-200/60 text-xs">
+                      <div>
+                        <span className="text-[9.5px] text-slate-500">Calculated Monthly Installment: </span>
+                        <strong className="text-emerald-900 font-mono">
+                          {formatRWF(Math.round((approvedAmount * (1 + (interestRate / 100) * (termMonths / 12))) / (termMonths || 1)))}
+                        </strong>
+                      </div>
+                      <div>
+                        <span className="text-[9.5px] text-slate-500">Total Repayable: </span>
+                        <strong className="text-slate-900 font-mono">
+                          {formatRWF(Math.round(approvedAmount * (1 + (interestRate / 100) * (termMonths / 12))))}
+                        </strong>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer text-[10.5px] font-bold text-emerald-950">
+                        <input
+                          type="checkbox"
+                          checked={disburseNow}
+                          onChange={(e) => setDisburseNow(e.target.checked)}
+                          className="rounded text-[#2998d6] focus:ring-[#2998d6] w-4 h-4"
+                        />
+                        Disburse Funds Immediately upon decision
+                      </label>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-2 pt-1">
                   <Button
                     type="button"
@@ -1155,6 +1495,215 @@ export default function BankerApplications() {
                     className="bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold text-xs h-9 px-6 shadow-sm border-none"
                   >
                     Commit Decision
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* DISBURSE CAPITAL MODAL (BANKER ACTION) */}
+      <AnimatePresence>
+        {isDisburseModalOpen && selectedApp && (
+          <div className="fixed inset-0 z-70 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
+            >
+              <div className="p-5 border-b border-slate-200 bg-[#1a2332] text-white flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-xl bg-white/10 text-emerald-400">
+                    <Coins className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider">Release Capital Disbursement</h3>
+                    <p className="text-[11px] text-slate-300">{selectedApp.smeName} · {selectedApp.opportunityTitle}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsDisburseModalOpen(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleDisburseFunds} className="p-5 space-y-4 text-xs">
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">Approved Facility</span>
+                  <span className="text-base font-extrabold text-emerald-950 font-mono">
+                    {formatRWF(selectedApp.approvedAmount || selectedApp.requestedAmount || 5000000)}
+                  </span>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                    Disbursement Amount (RWF) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={disburseAmountInput}
+                    onChange={(e) => setDisburseAmountInput(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono font-bold text-slate-900 focus:outline-none focus:border-[#2998d6]"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                    Disbursement Reference / Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={disburseNotesInput}
+                    onChange={(e) => setDisburseNotesInput(e.target.value)}
+                    placeholder="e.g. Wire transfer via central clearing"
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#2998d6]"
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                  <Button
+                    type="button"
+                    onClick={() => setIsDisburseModalOpen(false)}
+                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs h-9 px-4"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmittingDisburse}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs h-9 px-5 shadow-xs border-none"
+                  >
+                    {isSubmittingDisburse ? 'Releasing Funds...' : 'Confirm Capital Disbursement'}
+                  </Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* RECORD OFFLINE REPAYMENT MODAL (BANKER ACTION) */}
+      <AnimatePresence>
+        {isRecordPaymentOpen && selectedApp && (
+          <div className="fixed inset-0 z-70 flex items-center justify-center bg-slate-950/70 p-4 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-lg rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden"
+            >
+              <div className="p-5 border-b border-slate-200 bg-[#1a2332] text-white flex justify-between items-center">
+                <div className="flex items-center gap-2">
+                  <span className="p-2 rounded-xl bg-white/10 text-[#38bdf8]">
+                    <Coins className="w-5 h-5" />
+                  </span>
+                  <div>
+                    <h3 className="text-sm font-extrabold uppercase tracking-wider">Record Borrower Repayment</h3>
+                    <p className="text-[11px] text-slate-300">{selectedApp.smeName} · Ref #{selectedApp.id.slice(0, 8)}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsRecordPaymentOpen(false)}
+                  className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleRecordOfflinePayment} className="p-5 space-y-4 text-xs">
+                <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                  <div>
+                    <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Remaining Balance</span>
+                    <span className="text-sm font-extrabold text-slate-900 font-mono">
+                      {formatRWF(selectedApp.remainingBalance !== undefined ? selectedApp.remainingBalance : (selectedApp.totalPayable || 5000000))}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Scheduled Installment</span>
+                    <span className="text-sm font-extrabold text-[#1f85be] font-mono">
+                      {formatRWF(selectedApp.monthlyInstallment || 0)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                    Payment Amount Received (RWF) <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1000"
+                    value={offlinePaymentAmount}
+                    onChange={(e) => setOfflinePaymentAmount(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono font-bold text-slate-900 focus:outline-none focus:border-[#2998d6]"
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                    Payment Channel / Instrument <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={offlinePaymentMethod}
+                    onChange={(e) => setOfflinePaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-300 rounded-lg text-xs bg-white text-slate-900 font-bold focus:outline-none focus:border-[#2998d6]"
+                  >
+                    <option value="Bank Transfer (RTGS / Internal)">Bank Transfer (RTGS / Internal Transfer)</option>
+                    <option value="Branch Cash Deposit">Branch Cash Deposit (Over the counter)</option>
+                    <option value="Standing Order">Standing Order / Automated Debit</option>
+                    <option value="Cheque Deposit">Bank Cheque Clearance</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                      Bank Ref / Slip #
+                    </label>
+                    <input
+                      type="text"
+                      value={offlinePaymentRef}
+                      onChange={(e) => setOfflinePaymentRef(e.target.value)}
+                      placeholder="e.g. SLIP-8921"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-800"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-700">
+                      Notes
+                    </label>
+                    <input
+                      type="text"
+                      value={offlinePaymentNotes}
+                      onChange={(e) => setOfflinePaymentNotes(e.target.value)}
+                      placeholder="e.g. Cleared installment"
+                      className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-xs text-slate-800"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
+                  <Button
+                    type="button"
+                    onClick={() => setIsRecordPaymentOpen(false)}
+                    className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 font-bold text-xs h-9 px-4"
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    disabled={isSubmittingOfflinePayment}
+                    className="bg-[#2998d6] hover:bg-[#1f85be] text-white font-bold text-xs h-9 px-5 shadow-xs border-none"
+                  >
+                    {isSubmittingOfflinePayment ? 'Recording...' : 'Commit Repayment to Ledger'}
                   </Button>
                 </div>
               </form>

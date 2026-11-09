@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react';
-import { Link } from 'react-router-dom';
-import { useApp, Training, Opportunity } from '../context/AppContext';
+import { useState, useMemo, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useApp, Training, Opportunity, Application } from '../context/AppContext';
 import { useAuth } from '../context/AuthContext';
 import { formatRWF } from '../lib/mockData';
 import {
@@ -46,7 +46,11 @@ import {
   Layers,
   ArrowRight,
   List,
-  LayoutGrid
+  LayoutGrid,
+  CreditCard,
+  Receipt,
+  Wallet,
+  History
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 import FormattedText from '../assets/components/ui/FormattedText';
@@ -73,7 +77,15 @@ export interface ScoredOpportunity extends Opportunity {
   missing: string[];
 }
 
-export default function OpportunityHub() {
+interface OpportunityHubProps {
+  initialTab?: 'marketplace' | 'readiness' | 'trainings' | 'applications';
+}
+
+export default function OpportunityHub({ initialTab }: OpportunityHubProps = {}) {
+  const [searchParams] = useSearchParams();
+  const queryTab = searchParams.get('tab') as 'marketplace' | 'readiness' | 'trainings' | 'applications' | null;
+  const initialResolvedTab = initialTab || (queryTab && ['marketplace', 'readiness', 'trainings', 'applications'].includes(queryTab) ? queryTab : 'marketplace');
+
   const { user } = useAuth();
   const {
     opportunities,
@@ -82,7 +94,8 @@ export default function OpportunityHub() {
     activeSme,
     applyForOpportunity,
     bookmarkOpportunity,
-    bookmarkedOpportunities
+    bookmarkedOpportunities,
+    makeApplicationPayment
   } = useApp();
 
   // 90-Day evaluation policy calculation for SME account maturity
@@ -107,7 +120,15 @@ export default function OpportunityHub() {
   const evaluationProgressPercent = Math.min(100, Math.round((smeSystemDays / EVALUATION_PERIOD_DAYS) * 100));
 
   // Tab control inside SME Hub
-  const [activeTab, setActiveTab] = useState<'marketplace' | 'readiness' | 'trainings' | 'applications'>('marketplace');
+  const [activeTab, setActiveTab] = useState<'marketplace' | 'readiness' | 'trainings' | 'applications'>(initialResolvedTab);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    } else if (queryTab && ['marketplace', 'readiness', 'trainings', 'applications'].includes(queryTab)) {
+      setActiveTab(queryTab);
+    }
+  }, [initialTab, queryTab]);
   
   // Search & Filter state
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,6 +138,70 @@ export default function OpportunityHub() {
 
   // Selected opportunity for details panel
   const [selectedOppId, setSelectedOppId] = useState<string | null>(null);
+
+  // SME Loan Repayment State
+  const [payingApp, setPayingApp] = useState<Application | null>(null);
+  const [paymentAmount, setPaymentAmount] = useState<number | string>('');
+  const [paymentPreset, setPaymentPreset] = useState<'installment' | 'full' | 'custom'>('installment');
+  const [paymentMethod, setPaymentMethod] = useState<string>('MTN Mobile Money');
+  const [paymentPhone, setPaymentPhone] = useState<string>('');
+  const [paymentRef, setPaymentRef] = useState<string>('');
+  const [paymentNotes, setPaymentNotes] = useState<string>('');
+  const [isSubmittingPayment, setIsSubmittingPayment] = useState<boolean>(false);
+  const [paymentReceipt, setPaymentReceipt] = useState<any | null>(null);
+  const [expandedHistoryAppId, setExpandedHistoryAppId] = useState<string | null>(null);
+
+  // Open repayment modal helper
+  const handleOpenPaymentModal = (app: Application) => {
+    setPayingApp(app);
+    const defaultInstallment = app.monthlyInstallment || 0;
+    setPaymentAmount(defaultInstallment > 0 ? defaultInstallment : (app.remainingBalance || 500000));
+    setPaymentPreset('installment');
+    setPaymentMethod('MTN Mobile Money');
+    setPaymentPhone(app.contactPhone || user?.phone || '');
+    setPaymentRef(`PAY-${Date.now().toString(36).toUpperCase()}`);
+    setPaymentNotes(`Monthly installment repayment for ${app.opportunityTitle}`);
+    setPaymentReceipt(null);
+  };
+
+  const handleProcessPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingApp) return;
+
+    const numAmount = Number(paymentAmount);
+    if (!numAmount || numAmount <= 0) {
+      triggerToast('Please specify a valid payment amount greater than zero.');
+      return;
+    }
+
+    setIsSubmittingPayment(true);
+    try {
+      const updated = await makeApplicationPayment(payingApp.id, {
+        amount: numAmount,
+        paymentMethod,
+        phoneNumber: paymentPhone,
+        reference: paymentRef,
+        notes: paymentNotes
+      });
+
+      setPaymentReceipt({
+        receiptNumber: paymentRef || `REC-${Date.now().toString(36).toUpperCase()}`,
+        paidAt: new Date().toLocaleString(),
+        amount: numAmount,
+        channel: paymentMethod,
+        reference: paymentRef,
+        opportunityTitle: payingApp.opportunityTitle,
+        institution: payingApp.institution || 'Financial Institution',
+        remainingBalance: updated.remainingBalance ?? 0,
+        monthlyInstallment: updated.monthlyInstallment ?? payingApp.monthlyInstallment
+      });
+      triggerToast(`Payment of ${formatRWF(numAmount)} confirmed and processed successfully.`);
+    } catch (err: any) {
+      triggerToast(err?.message || 'Payment execution failed. Please check network/account balance.');
+    } finally {
+      setIsSubmittingPayment(false);
+    }
+  };
 
   // AI Assistant Chat state (simulated)
   const [chatInput, setChatInput] = useState('');
@@ -1276,60 +1361,339 @@ export default function OpportunityHub() {
           </div>
         )}
 
-        {/* TAB 4: Applications */}
+        {/* TAB 4: Applications & Financing Repayments */}
         {activeTab === 'applications' && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">My Application Workspace</h3>
-              <p className="text-[10px] text-slate-400 mt-0.5 font-sans">Track status and respond to requirements requests.</p>
+          <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-4">
+              <div>
+                <h3 className="text-sm font-extrabold text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-[#2998d6]" />
+                  Financing Applications &amp; Repayment Workspace
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Track live application statuses across credit desks, view approved terms, and make loan repayments.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700">
+                  Total Applications: {applications.length}
+                </span>
+                <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  Approved: {applications.filter(a => ['Approved', 'Disbursed', 'Completed'].includes(a.status)).length}
+                </span>
+              </div>
             </div>
 
-            <div className="space-y-3">
-              {applications.map(app => (
-                <div key={app.id} className="accounting-card p-4 space-y-3">
-                  <div className="flex justify-between items-start gap-4">
-                    <div>
-                      <h4 className="text-xs font-bold text-slate-900">{app.opportunityTitle}</h4>
-                      <span className="text-[9px] text-slate-400 font-mono">App Ref: {app.id} · Applied: {app.appliedAt}</span>
-                    </div>
+            <div className="space-y-4">
+              {applications.map(app => {
+                const isApprovedOrActive = ['Approved', 'Disbursed', 'Completed'].includes(app.status);
+                const isDisbursed = app.disbursed || app.status === 'Disbursed';
+                const isCompleted = app.status === 'Completed' || (app.remainingBalance !== undefined && app.remainingBalance <= 0);
+                const approvedAmt = app.approvedAmount || app.requestedAmount || 5000000;
+                const installment = app.monthlyInstallment || Math.round((approvedAmt * 1.12) / (app.termMonths || 12));
+                const totalPayable = app.totalPayable || Math.round(approvedAmt * 1.12);
+                const totalPaid = app.totalPaid || 0;
+                const remainingBal = app.remainingBalance !== undefined ? app.remainingBalance : Math.max(0, totalPayable - totalPaid);
+                const repaymentPct = totalPayable > 0 ? Math.min(100, Math.round((totalPaid / totalPayable) * 100)) : 0;
+                const isHistoryOpen = expandedHistoryAppId === app.id;
 
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                      app.status === 'Approved'
-                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                        : app.status === 'Rejected'
-                        ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                        : app.status === 'Under Review'
-                        ? 'bg-sky-50 text-[#2998d6] border border-sky-200'
-                        : 'bg-slate-100 text-slate-600'
-                    }`}>
-                      {app.status}
-                    </span>
-                  </div>
+                return (
+                  <div key={app.id} className="accounting-card p-5 space-y-4 border border-slate-200 bg-white shadow-xs rounded-xl">
+                    {/* Top Row: Title, Institution, Status Badges */}
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-3">
+                      <div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h4 className="text-sm font-extrabold text-slate-900 tracking-tight">{app.opportunityTitle}</h4>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+                            <Building2 className="w-3 h-3 text-[#2998d6]" />
+                            {app.institution || 'Verified Financial Partner'}
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 font-mono mt-1">
+                          Application Ref: <span className="font-semibold text-slate-600">{app.id}</span> · Submitted on {app.appliedAt}
+                        </p>
+                      </div>
 
-                  <div className="p-3 bg-slate-50/80 rounded text-xs space-y-2 border border-slate-200">
-                    <div>
-                      <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest block font-sans">Institution Feedback</span>
-                      <p className="text-slate-600 font-sans mt-0.5 text-[11px] leading-relaxed">{app.feedback}</p>
-                    </div>
-
-                    {app.aiSuggestions.length > 0 && (
-                      <div className="pt-2 border-t border-slate-200 space-y-1 text-slate-500">
-                        <span className="text-[9px] font-bold text-[#2998d6] uppercase tracking-widest flex items-center gap-1 font-sans">
-                          <Sparkles className="w-3.5 h-3.5 text-[#2998d6]" /> AI Underwriting Fast-Track Recommendation
+                      <div className="flex items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-extrabold uppercase tracking-wider ${
+                          isCompleted
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : app.status === 'Approved' || app.status === 'Disbursed'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : app.status === 'Under Review'
+                            ? 'bg-sky-50 text-[#1f85be] border border-sky-200'
+                            : app.status === 'Rejected'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-slate-100 text-slate-700 border border-slate-200'
+                        }`}>
+                          <span className={`w-2 h-2 rounded-full ${
+                            isCompleted ? 'bg-emerald-600' :
+                            app.status === 'Approved' || app.status === 'Disbursed' ? 'bg-emerald-500' :
+                            app.status === 'Under Review' ? 'bg-[#2998d6] animate-pulse' :
+                            app.status === 'Rejected' ? 'bg-rose-500' : 'bg-slate-400'
+                          }`} />
+                          {isCompleted ? 'Fully Repaid' : app.status === 'Disbursed' ? 'Active Loan (Disbursed)' : app.status}
                         </span>
-                        <ul className="list-disc pl-4 space-y-0.5 text-slate-600 text-[10.5px]">
-                          {app.aiSuggestions.map((s, i) => (
-                            <li key={i}>{s}</li>
-                          ))}
-                        </ul>
+                      </div>
+                    </div>
+
+                    {/* Step-by-Step Status Tracker Visualizer */}
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200/70">
+                      <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                        <div className="flex flex-col items-center">
+                          <div className="w-6 h-6 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-[10px] mb-1">
+                            ✓
+                          </div>
+                          <span className="font-bold text-slate-800 text-[10px]">1. Submitted</span>
+                          <span className="text-[9px] text-slate-400 font-mono">{app.appliedAt}</span>
+                        </div>
+
+                        <div className="flex flex-col items-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] mb-1 ${
+                            app.status === 'Submitted'
+                              ? 'bg-amber-100 text-amber-700 border border-amber-300'
+                              : 'bg-emerald-500 text-white'
+                          }`}>
+                            {app.status === 'Submitted' ? '⋯' : '✓'}
+                          </div>
+                          <span className="font-bold text-slate-800 text-[10px]">2. Under Review</span>
+                          <span className="text-[9px] text-slate-400">
+                            {app.status === 'Submitted' ? 'Awaiting Officer' : 'Risk Assessment'}
+                          </span>
+                        </div>
+
+                        <div className="flex flex-col items-center">
+                          <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] mb-1 ${
+                            isApprovedOrActive
+                              ? 'bg-emerald-500 text-white'
+                              : app.status === 'Rejected'
+                              ? 'bg-rose-500 text-white'
+                              : 'bg-slate-200 text-slate-500'
+                          }`}>
+                            {isApprovedOrActive ? '✓' : app.status === 'Rejected' ? '✕' : '3'}
+                          </div>
+                          <span className="font-bold text-slate-800 text-[10px]">
+                            {app.status === 'Rejected' ? 'Declined' : isCompleted ? 'Completed' : '3. Decision & Terms'}
+                          </span>
+                          <span className="text-[9px] text-slate-400">
+                            {isApprovedOrActive ? (isDisbursed ? 'Capital Released' : 'Approved') : 'Credit Outcome'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Request Summary details */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-slate-50/60 p-3 rounded-lg border border-slate-200/50 text-xs">
+                      <div>
+                        <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Requested Amount</span>
+                        <span className="font-bold text-slate-800 font-mono text-xs">{formatRWF(app.requestedAmount || 0)}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Tenor</span>
+                        <span className="font-bold text-slate-800 font-mono text-xs">{app.termMonths || 12} Months</span>
+                      </div>
+                      <div>
+                        <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Primary Contact</span>
+                        <span className="font-bold text-slate-800 text-xs truncate block">{app.contactPhone || 'Registered phone'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Purpose</span>
+                        <span className="font-medium text-slate-700 text-xs truncate block">{app.purpose || 'Working capital'}</span>
+                      </div>
+                    </div>
+
+                    {/* Official Banker Feedback Notes */}
+                    <div className="p-3 bg-slate-50/90 rounded-lg text-xs space-y-1.5 border border-slate-200">
+                      <span className="text-[9.5px] font-extrabold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <Building2 className="w-3.5 h-3.5 text-[#2998d6]" />
+                        Official Banker Review Feedback &amp; Next Steps
+                      </span>
+                      <p className="text-slate-700 font-sans text-xs leading-relaxed italic bg-white p-2.5 rounded border border-slate-200/80">
+                        "{app.feedback || 'Application is under credit committee evaluation.'}"
+                      </p>
+                    </div>
+
+                    {/* APPROVED FINANCING & PAYMENT DASHBOARD */}
+                    {isApprovedOrActive && (
+                      <div className="p-4 bg-linear-to-r from-emerald-50/80 to-sky-50/60 border border-emerald-200 rounded-xl space-y-4">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-200/60 pb-3">
+                          <div className="flex items-center gap-2">
+                            <span className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                              <Coins className="w-4 h-4" />
+                            </span>
+                            <div>
+                              <h5 className="font-extrabold text-slate-900 text-xs uppercase tracking-wider">
+                                Active Credit Facility &amp; Payment Schedule
+                              </h5>
+                              <p className="text-[10.5px] text-slate-600">
+                                {isDisbursed ? 'Disbursed and active for repayments.' : 'Approved by lender. Ready for installment payments.'}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            {isDisbursed ? (
+                              <span className="px-2.5 py-1 bg-emerald-100 text-emerald-800 rounded text-[10px] font-bold uppercase tracking-wider border border-emerald-300 flex items-center gap-1">
+                                <CheckCircle className="w-3 h-3 text-emerald-600" /> Disbursed {app.disbursedAt ? `(${app.disbursedAt.slice(0, 10)})` : ''}
+                              </span>
+                            ) : (
+                              <span className="px-2.5 py-1 bg-amber-50 text-amber-800 rounded text-[10px] font-bold uppercase tracking-wider border border-amber-200">
+                                Approved — Pending Capital Release
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 4 Financial Metric Cards */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                          <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Approved Facility</span>
+                            <div className="text-sm sm:text-base font-extrabold text-slate-900 font-mono mt-0.5">
+                              {formatRWF(approvedAmt)}
+                            </div>
+                            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">
+                              Rate: {app.interestRate || 12}% p.a. · {app.termMonths || 12} Mos
+                            </span>
+                          </div>
+
+                          <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Monthly Installment</span>
+                            <div className="text-sm sm:text-base font-extrabold text-[#1f85be] font-mono mt-0.5">
+                              {formatRWF(installment)}
+                            </div>
+                            <span className="text-[9px] text-slate-500 block mt-0.5 font-medium">
+                              Next Due: <strong className="text-slate-800">{app.nextDueDate || 'Within 30 days'}</strong>
+                            </span>
+                          </div>
+
+                          <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Total Repaid</span>
+                            <div className="text-sm sm:text-base font-extrabold text-emerald-700 font-mono mt-0.5">
+                              {formatRWF(totalPaid)}
+                            </div>
+                            <div className="w-full bg-slate-100 rounded-full h-1.5 mt-1.5 overflow-hidden border border-slate-200">
+                              <div className="bg-emerald-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${repaymentPct}%` }} />
+                            </div>
+                            <span className="text-[9px] text-slate-500 font-semibold block mt-0.5">
+                              {repaymentPct}% of {formatRWF(totalPayable)}
+                            </span>
+                          </div>
+
+                          <div className="p-3 bg-white rounded-lg border border-slate-200 shadow-2xs">
+                            <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Remaining Balance</span>
+                            <div className={`text-sm sm:text-base font-extrabold font-mono mt-0.5 ${remainingBal === 0 ? 'text-emerald-700' : 'text-slate-900'}`}>
+                              {formatRWF(remainingBal)}
+                            </div>
+                            <span className="text-[9px] font-semibold block mt-0.5 text-slate-500">
+                              {remainingBal === 0 ? '✓ Loan fully settled' : 'Principal + Interest balance'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Interactive Repayment Action Bar */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                          <div className="flex items-center gap-2">
+                            {remainingBal > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => handleOpenPaymentModal(app)}
+                                className="px-4 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-2 transition hover:scale-102"
+                              >
+                                <CreditCard className="w-4 h-4" />
+                                Make Payment / Pay Installment
+                              </button>
+                            ) : (
+                              <div className="flex items-center gap-1.5 text-emerald-800 text-xs font-bold bg-emerald-100 px-3 py-1.5 rounded-lg border border-emerald-300">
+                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                Facility Completely Repaid
+                              </div>
+                            )}
+
+                            <button
+                              type="button"
+                              onClick={() => setExpandedHistoryAppId(isHistoryOpen ? null : app.id)}
+                              className="px-3.5 py-2 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-xs font-bold flex items-center gap-1.5 transition shadow-2xs"
+                            >
+                              <History className="w-3.5 h-3.5 text-slate-500" />
+                              {isHistoryOpen ? 'Hide Payment History' : `Payment History (${app.payments?.length || 0})`}
+                            </button>
+                          </div>
+
+                          <span className="text-[10px] text-slate-500 font-mono">
+                            Supports MTN MoMo, Airtel, BK, Equity, Visa/Mastercard
+                          </span>
+                        </div>
+
+                        {/* Collapsible Payment History Table */}
+                        {isHistoryOpen && (
+                          <div className="pt-3 border-t border-emerald-200/60 space-y-2">
+                            <h6 className="text-[11px] font-extrabold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                              <Receipt className="w-3.5 h-3.5 text-[#2998d6]" />
+                              Repayment Transaction Ledger
+                            </h6>
+
+                            {app.payments && app.payments.length > 0 ? (
+                              <div className="overflow-x-auto bg-white rounded-lg border border-slate-200">
+                                <table className="w-full text-left text-xs">
+                                  <thead className="bg-slate-100/70 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-600">
+                                    <tr>
+                                      <th className="p-2.5">Date &amp; Time</th>
+                                      <th className="p-2.5">Reference</th>
+                                      <th className="p-2.5">Payment Method</th>
+                                      <th className="p-2.5">Paid By</th>
+                                      <th className="p-2.5 text-right">Amount (RWF)</th>
+                                      <th className="p-2.5 text-center">Status</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-100 font-mono text-[11px]">
+                                    {app.payments.map((p) => (
+                                      <tr key={p.id} className="hover:bg-slate-50">
+                                        <td className="p-2.5 text-slate-600">{new Date(p.paidAt).toLocaleDateString()}</td>
+                                        <td className="p-2.5 font-bold text-slate-800">{p.reference}</td>
+                                        <td className="p-2.5 font-sans text-slate-700">{p.method}</td>
+                                        <td className="p-2.5 font-sans text-slate-600">{p.paidBy}</td>
+                                        <td className="p-2.5 text-right font-bold text-emerald-700">{formatRWF(p.amount)}</td>
+                                        <td className="p-2.5 text-center">
+                                          <span className="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-[9.5px] font-bold">
+                                            {p.status}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            ) : (
+                              <div className="p-4 bg-white rounded-lg border border-dashed border-slate-300 text-center text-xs text-slate-500">
+                                No repayments logged yet. Click "Make Payment" above to pay your first installment.
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
+
               {applications.length === 0 && (
-                <div className="rounded border border-dashed border-slate-300 p-10 text-center text-xs text-slate-500">
-                  No applications submitted yet.
+                <div className="rounded-xl border border-dashed border-slate-300 p-12 text-center text-xs text-slate-500 bg-white space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 mx-auto flex items-center justify-center">
+                    <Coins className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800">No Applications Submitted Yet</h4>
+                    <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
+                      Browse available opportunities published by accredited banks and financial institutions in the marketplace.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('marketplace')}
+                    className="px-4 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg text-xs font-bold transition"
+                  >
+                    Explore Matched Opportunities
+                  </button>
                 </div>
               )}
             </div>
@@ -2123,6 +2487,299 @@ export default function OpportunityHub() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* LOAN REPAYMENT MODAL */}
+      {payingApp && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-xl max-h-[92vh] overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+            {/* Header */}
+            <div className="p-5 border-b border-slate-200 bg-linear-to-r from-[#1a2332] to-[#24334a] text-white flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2.5">
+                <span className="p-2 rounded-xl bg-white/10 text-[#38bdf8]">
+                  <CreditCard className="w-5 h-5" />
+                </span>
+                <div>
+                  <h3 className="text-sm font-extrabold uppercase tracking-wider">Loan Installment Repayment</h3>
+                  <p className="text-[11px] text-slate-300">
+                    {payingApp.opportunityTitle} · {payingApp.institution || 'Financial Partner'}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPayingApp(null)}
+                className="p-1.5 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleProcessPayment} className="p-6 overflow-y-auto space-y-4 text-xs">
+              {/* Summary Strip */}
+              <div className="grid grid-cols-2 gap-2 p-3 bg-slate-50 border border-slate-200 rounded-xl">
+                <div>
+                  <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Remaining Balance</span>
+                  <span className="text-sm font-extrabold text-slate-900 font-mono">
+                    {formatRWF(payingApp.remainingBalance !== undefined ? payingApp.remainingBalance : (payingApp.totalPayable || 5000000))}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-wider block">Standard Monthly Due</span>
+                  <span className="text-sm font-extrabold text-[#1f85be] font-mono">
+                    {formatRWF(payingApp.monthlyInstallment || 0)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Amount Selection */}
+              <div className="space-y-2">
+                <label className="block text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
+                  Select Payment Amount <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentPreset('installment');
+                      setPaymentAmount(payingApp.monthlyInstallment || 466667);
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition ${
+                      paymentPreset === 'installment'
+                        ? 'border-[#2998d6] bg-sky-50/70 text-[#1f85be] font-bold ring-1 ring-[#2998d6]'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-[9px] uppercase tracking-wider block opacity-70">Monthly Installment</span>
+                    <span className="text-xs font-mono font-bold">{formatRWF(payingApp.monthlyInstallment || 466667)}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentPreset('full');
+                      setPaymentAmount(payingApp.remainingBalance || 5000000);
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition ${
+                      paymentPreset === 'full'
+                        ? 'border-[#2998d6] bg-sky-50/70 text-[#1f85be] font-bold ring-1 ring-[#2998d6]'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-[9px] uppercase tracking-wider block opacity-70">Full Settlement</span>
+                    <span className="text-xs font-mono font-bold">{formatRWF(payingApp.remainingBalance || 5000000)}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPaymentPreset('custom');
+                    }}
+                    className={`p-2.5 rounded-lg border text-left transition ${
+                      paymentPreset === 'custom'
+                        ? 'border-[#2998d6] bg-sky-50/70 text-[#1f85be] font-bold ring-1 ring-[#2998d6]'
+                        : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="text-[9px] uppercase tracking-wider block opacity-70">Custom Amount</span>
+                    <span className="text-xs font-bold">Specify RWF</span>
+                  </button>
+                </div>
+
+                <div className="relative mt-1">
+                  <input
+                    type="number"
+                    min="1000"
+                    max={payingApp.remainingBalance || 50000000}
+                    value={paymentAmount}
+                    onChange={(e) => {
+                      setPaymentAmount(e.target.value);
+                      setPaymentPreset('custom');
+                    }}
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm font-mono font-bold text-slate-900 focus:outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
+                    placeholder="Enter amount to pay in RWF..."
+                    required
+                  />
+                  <span className="absolute right-3 top-2.5 text-[10px] font-bold text-slate-400 font-mono">RWF</span>
+                </div>
+              </div>
+
+              {/* Payment Channel Selector */}
+              <div className="space-y-2">
+                <label className="block text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
+                  Payment Method / Channel <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {[
+                    { id: 'MTN Mobile Money', label: 'MTN MoMo', sub: 'Instant prompt (*182#)' },
+                    { id: 'Airtel Money', label: 'Airtel Money', sub: 'Instant USSD push' },
+                    { id: 'Bank Transfer (BK / Equity)', label: 'Bank Transfer', sub: 'BK, Equity, I&M' },
+                    { id: 'Credit / Debit Card', label: 'Card Payment', sub: 'Visa / Mastercard' }
+                  ].map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setPaymentMethod(m.id)}
+                      className={`p-2.5 rounded-lg border text-left transition flex items-center justify-between ${
+                        paymentMethod === m.id
+                          ? 'border-[#2998d6] bg-sky-50 text-slate-900 font-bold ring-1 ring-[#2998d6]'
+                          : 'border-slate-200 bg-white text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <div>
+                        <span className="text-xs block">{m.label}</span>
+                        <span className="text-[9.5px] text-slate-500 block font-normal">{m.sub}</span>
+                      </div>
+                      {paymentMethod === m.id && <CheckCircle className="w-4 h-4 text-[#2998d6]" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Channel-specific input */}
+              {paymentMethod.includes('Money') && (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
+                    Mobile Money Phone Number <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    value={paymentPhone}
+                    onChange={(e) => setPaymentPhone(e.target.value)}
+                    placeholder="e.g. 0788 123 456"
+                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-900 focus:outline-none focus:border-[#2998d6] focus:ring-1 focus:ring-[#2998d6]"
+                    required
+                  />
+                  <p className="text-[10px] text-slate-500">
+                    A push authorization request will be dispatched to this mobile phone number.
+                  </p>
+                </div>
+              )}
+
+              {/* Reference & Notes */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
+                    Transaction Reference
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentRef}
+                    onChange={(e) => setPaymentRef(e.target.value)}
+                    placeholder="Auto-generated"
+                    className="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-mono font-bold text-slate-800"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-extrabold text-slate-700 uppercase tracking-wider">
+                    Narration / Note
+                  </label>
+                  <input
+                    type="text"
+                    value={paymentNotes}
+                    onChange={(e) => setPaymentNotes(e.target.value)}
+                    placeholder="e.g. November Installment"
+                    className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#2998d6]"
+                  />
+                </div>
+              </div>
+
+              {/* Impact Preview */}
+              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-lg flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 block">Balance After Payment</span>
+                  <span className="text-xs font-extrabold text-emerald-900 font-mono">
+                    {formatRWF(Math.max(0, (payingApp.remainingBalance || 5000000) - Number(paymentAmount || 0)))}
+                  </span>
+                </div>
+                <span className="text-[10px] text-emerald-700 font-semibold bg-white px-2.5 py-1 rounded border border-emerald-200">
+                  Instant Ledger Credit
+                </span>
+              </div>
+
+              {/* Footer Buttons */}
+              <div className="pt-2 border-t border-slate-200 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPayingApp(null)}
+                  className="px-4 py-2 bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 rounded-lg font-bold text-xs"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  type="submit"
+                  disabled={isSubmittingPayment}
+                  className="px-6 py-2 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg font-bold text-xs flex items-center gap-2 shadow-xs transition disabled:opacity-50"
+                >
+                  {isSubmittingPayment ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Authorizing Repayment...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      <span>Authorize &amp; Pay {formatRWF(Number(paymentAmount || 0))}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* PAYMENT RECEIPT MODAL */}
+      {paymentReceipt && (
+        <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-xs z-60 flex items-center justify-center p-3 sm:p-5">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-150 p-6 space-y-4">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 mx-auto flex items-center justify-center">
+              <CheckCircle className="w-7 h-7" />
+            </div>
+
+            <div className="text-center space-y-1">
+              <h3 className="text-base font-extrabold text-slate-900">Payment Successfully Recorded</h3>
+              <p className="text-xs text-slate-500">Official Elevata Loan Repayment Receipt</p>
+            </div>
+
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2 text-xs">
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500">Receipt Number</span>
+                <span className="font-bold text-slate-900 font-mono">{paymentReceipt.receiptNumber}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500">Date &amp; Time</span>
+                <span className="font-semibold text-slate-700">{paymentReceipt.paidAt}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500">Payment Channel</span>
+                <span className="font-bold text-slate-800">{paymentReceipt.channel}</span>
+              </div>
+              <div className="flex justify-between border-b border-slate-200 pb-2">
+                <span className="text-slate-500">Amount Paid</span>
+                <span className="font-extrabold text-emerald-700 font-mono text-sm">{formatRWF(paymentReceipt.amount)}</span>
+              </div>
+              <div className="flex justify-between pt-1">
+                <span className="text-slate-500">Remaining Balance</span>
+                <span className="font-extrabold text-slate-900 font-mono">{formatRWF(paymentReceipt.remainingBalance)}</span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setPaymentReceipt(null);
+                setPayingApp(null);
+              }}
+              className="w-full py-2.5 bg-[#2998d6] hover:bg-[#1f85be] text-white rounded-lg text-xs font-bold transition shadow-xs"
+            >
+              Done &amp; Return to Applications
+            </button>
           </div>
         </div>
       )}
