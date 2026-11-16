@@ -51,6 +51,14 @@ export interface Opportunity {
   grantDuration?: number;
   appMethod?: string;
   appSteps?: string[];
+  videoUrl?: string | null;
+  guideDocument?: {
+    name?: string;
+    url?: string;
+    size?: string;
+    type?: string;
+  } | null;
+  metadata?: any;
   publisher?: {
     institutionName: string;
     representativeName?: string;
@@ -268,6 +276,8 @@ interface AppContextType {
   refreshTrainings: (smeId?: string) => Promise<void>;
   bookmarkedOpportunities: string[];
   publishOpportunity: (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => Promise<Opportunity>;
+  updateOpportunity: (id: string, data: Partial<Opportunity>) => Promise<Opportunity>;
+  deleteOpportunity: (id: string) => Promise<void>;
   applyForOpportunity: (data: {
     opportunityId: string;
     requestedAmount: number;
@@ -1045,6 +1055,26 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     return createdOpp;
   };
 
+  const updateOpportunity = async (id: string, data: Partial<Opportunity>): Promise<Opportunity> => {
+    const res = await apiRequest(`/opportunities/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    const updatedOpp: Opportunity = {
+      ...(res?.data || data),
+      id,
+      sectors: Array.isArray(res?.data?.sectors) ? res.data.sectors : (data.sectors || []),
+      requiredDocs: Array.isArray(res?.data?.requiredDocs) ? res.data.requiredDocs : (data.requiredDocs || [])
+    } as Opportunity;
+    setOpportunities(prev => prev.map(o => o.id === id ? { ...o, ...updatedOpp } : o));
+    return updatedOpp;
+  };
+
+  const deleteOpportunity = async (id: string): Promise<void> => {
+    await apiRequest(`/opportunities/${id}`, { method: 'DELETE' });
+    setOpportunities(prev => prev.filter(o => o.id !== id));
+  };
+
   const applyForOpportunity = async (data: {
     opportunityId: string;
     requestedAmount: number;
@@ -1540,6 +1570,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       refreshTrainings,
       bookmarkedOpportunities,
       publishOpportunity,
+      updateOpportunity,
+      deleteOpportunity,
       applyForOpportunity,
       updateApplicationStatus,
       makeApplicationPayment,
