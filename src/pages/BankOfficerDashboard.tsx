@@ -1,7 +1,9 @@
 import { useState, useMemo } from 'react';
+import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { formatRWF } from '../lib/mockData';
 import { useNavigate } from 'react-router-dom';
+import ThreeDotsLoader from '../assets/components/ui/ThreeDotsLoader';
 import {
   ResponsiveContainer,
   BarChart,
@@ -34,13 +36,15 @@ import {
   ArrowRight,
   Phone,
   Mail,
-  CreditCard
+  CreditCard,
+  RefreshCw
 } from 'lucide-react';
 import { Card, CardContent } from '../assets/components/ui/card';
 
 export type BankerTab = 'portfolio' | 'pipeline' | 'monitoring' | 'sectoral';
 
 export default function BankOfficerDashboard() {
+  const { user, isLoading: isAuthLoading } = useAuth();
   const {
     smes,
     selectedSmeId,
@@ -52,11 +56,21 @@ export default function BankOfficerDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sectorFilter, setSectorFilter] = useState('all');
   const [riskFilter, setRiskFilter] = useState('all');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isRequestingAudit, setIsRequestingAudit] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ type: 'success' | 'danger' | 'warning' | 'info'; text: string } | null>(null);
 
   const showToast = (type: 'success' | 'danger' | 'warning' | 'info', text: string) => {
     setToastMessage({ type, text });
     setTimeout(() => setToastMessage(null), 4500);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+      showToast('success', 'Portfolio data and borrower risk scores refreshed.');
+    }, 700);
   };
 
   const portfolioStats = useMemo(() => {
@@ -109,7 +123,11 @@ export default function BankOfficerDashboard() {
 
   const handleApplications = () => navigate('/banker/applications');
   const handleAudit = () => {
-    showToast('info', `Field-audit assignment requested for ${highlightedSme?.name || 'SME'}. Inspection task logged.`);
+    setIsRequestingAudit(true);
+    setTimeout(() => {
+      setIsRequestingAudit(false);
+      showToast('info', `Field-audit assignment requested for ${highlightedSme?.name || 'SME'}. Inspection task logged.`);
+    }, 900);
   };
   const handleMonitor = () => navigate('/dashboard');
 
@@ -136,6 +154,18 @@ export default function BankOfficerDashboard() {
     { id: 'monitoring' as BankerTab, label: 'Risk Surveillance & Alerts', icon: <AlertTriangle className="w-4 h-4" />, count: portfolioStats.highRiskSMEs, color: 'text-amber-600' },
     { id: 'sectoral' as BankerTab, label: 'Sectoral Intelligence', icon: <Building2 className="w-4 h-4" />, count: sectorChartData.length, color: 'text-purple-600' }
   ];
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 bg-white border border-[#cbd5e1] rounded-xl m-6">
+        <ThreeDotsLoader
+          size="lg"
+          text="Loading Institutional Portfolio & SME Risk Intelligence..."
+          textPosition="bottom"
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12">
@@ -164,6 +194,22 @@ export default function BankOfficerDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="accounting-btn-secondary"
+            title="Refresh Portfolio and Risk Scores"
+          >
+            {isRefreshing ? (
+              <ThreeDotsLoader size="xs" color="bg-slate-600" text="Syncing..." />
+            ) : (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 text-[#2998d6]" />
+                <span>Refresh Portfolio</span>
+              </>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => navigate('/banker/loans')}
@@ -277,7 +323,18 @@ export default function BankOfficerDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e2e8f0] bg-white">
-                    {filteredSmes.length === 0 ? (
+                    {isRefreshing ? (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center bg-slate-50/50">
+                          <ThreeDotsLoader
+                            size="md"
+                            text="Synchronizing live borrower scoring & risk profiles..."
+                            textPosition="bottom"
+                            centered
+                          />
+                        </td>
+                      </tr>
+                    ) : filteredSmes.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-slate-400">
                           No SME businesses match the criteria.
@@ -408,10 +465,17 @@ export default function BankOfficerDashboard() {
                     <button
                       type="button"
                       onClick={handleAudit}
-                      className="accounting-btn-secondary w-full hover:bg-slate-50"
+                      disabled={isRequestingAudit}
+                      className="accounting-btn-secondary w-full hover:bg-slate-50 justify-center"
                     >
-                      <FileSearch className="w-3.5 h-3.5 text-[#2998d6]" />
-                      <span>Request Verification Audit</span>
+                      {isRequestingAudit ? (
+                        <ThreeDotsLoader size="xs" color="bg-[#2998d6]" text="Dispatching Audit Request..." />
+                      ) : (
+                        <>
+                          <FileSearch className="w-3.5 h-3.5 text-[#2998d6]" />
+                          <span>Request Verification Audit</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

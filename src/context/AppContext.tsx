@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import {
   SmeProfile,
   Sale,
@@ -12,6 +12,7 @@ import {
 } from '../lib/mockData';
 import { apiRequest } from '../lib/api';
 import { useAuth } from './AuthContext';
+import { fromLocalInputDate } from '../lib/ledgerClassification';
 
 export interface Opportunity {
   id: string;
@@ -51,6 +52,14 @@ export interface Opportunity {
   grantDuration?: number;
   appMethod?: string;
   appSteps?: string[];
+  videoUrl?: string | null;
+  guideDocument?: {
+    name?: string;
+    url?: string;
+    size?: string;
+    type?: string;
+  } | null;
+  metadata?: any;
   publisher?: {
     institutionName: string;
     representativeName?: string;
@@ -214,16 +223,16 @@ interface AppContextType {
   deleteSale: (smeId: string, saleId: number | string) => void;
   addInventoryItem: (smeId: string, name: string, category: string, quantity: number, price: number, supplier: string) => void;
   deleteInventoryItem: (smeId: string, itemId: string) => void;
-  addExpense: (smeId: string, description: string, category: string, amount: number) => void;
-  deleteExpense: (smeId: string, expenseId: string | number) => void;
+  addExpense: (smeId: string, description: string, category: string, amount: number) => Promise<void>;
+  deleteExpense: (smeId: string, expenseId: string | number) => Promise<void>;
   addPurchase: (smeId: string, supplier: string, items: any[], invoiceRef?: string, paymentMethod?: string, notes?: string, date?: string) => Promise<any>;
-  deletePurchase: (smeId: string, purchaseId: string | number) => void;
-  addCashIn: (smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string }) => void;
-  deleteCashIn: (smeId: string, id: string | number) => void;
-  addCashOut: (smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string }) => void;
-  deleteCashOut: (smeId: string, id: string | number) => void;
-  addOtherActivity: (smeId: string, data: { title: string; description?: string; date: string; status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold'; moneyInvolved: boolean; amount?: number; paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'N/A'; category?: string }) => void;
-  deleteOtherActivity: (smeId: string, id: string | number) => void;
+  deletePurchase: (smeId: string, purchaseId: string | number) => Promise<void>;
+  addCashIn: (smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string; status?: string; metadata?: Record<string, unknown> }) => Promise<void>;
+  deleteCashIn: (smeId: string, id: string | number) => Promise<void>;
+  addCashOut: (smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string; status?: string; metadata?: Record<string, unknown> }) => Promise<void>;
+  deleteCashOut: (smeId: string, id: string | number) => Promise<void>;
+  addOtherActivity: (smeId: string, data: { title: string; description?: string; date: string; status?: 'Planned' | 'In Progress' | 'Completed' | 'On Hold'; moneyInvolved: boolean; amount?: number; paymentStatus?: 'Completed' | 'Pending' | 'Partial' | 'N/A'; category?: string }) => Promise<void>;
+  deleteOtherActivity: (smeId: string, id: string | number) => Promise<void>;
   resetAll: () => void;
   
   // Products Master Catalog
@@ -240,7 +249,7 @@ interface AppContextType {
   }) => Promise<ProductItem>;
   updateProduct: (id: string, data: Partial<ProductItem>) => Promise<ProductItem>;
   deleteProduct: (id: string) => Promise<void>;
-  recordStockIntake: (supplier: string, items: any[], notes?: string, date?: string) => Promise<any>;
+  recordStockIntake: (supplier: string, items: any[], notes?: string, date?: string, invoiceNumber?: string) => Promise<any>;
   recordSaleTransaction: (payload: {
     customer: string;
     customerContact?: string;
@@ -268,6 +277,8 @@ interface AppContextType {
   refreshTrainings: (smeId?: string) => Promise<void>;
   bookmarkedOpportunities: string[];
   publishOpportunity: (opp: Omit<Opportunity, 'id' | 'views' | 'saved' | 'applicationsCount' | 'status' | 'createdAt'>) => Promise<Opportunity>;
+  updateOpportunity: (id: string, data: Partial<Opportunity>) => Promise<Opportunity>;
+  deleteOpportunity: (id: string) => Promise<void>;
   applyForOpportunity: (data: {
     opportunityId: string;
     requestedAmount: number;
@@ -529,6 +540,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         totalAmount: entry.totalAmount || 0,
         date: entry.date ? entry.date : (entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : new Date().toLocaleDateString('en-US')),
         status: entry.status || 'Completed',
+        paymentMethod: entry.paymentMethod || (/Payment:\s*([^|]+)/.exec(entry.notes || '')?.[1]?.trim()) || 'Cash',
         items: entry.items || [],
         notes: entry.notes || entry.metadata?.notes
       })) : [],
@@ -537,6 +549,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         amount: entry.amount,
         source: entry.counterparty || 'Business income',
         reason: entry.description,
+        status: entry.status || 'Completed',
+        metadata: entry.metadata || undefined,
         category: entry.category || 'Other Inflow',
         paymentMethod: entry.paymentMethod || 'Bank Transfer',
         date: entry.occurredAt ? new Date(entry.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (entry.date || new Date().toLocaleDateString('en-US')),
@@ -548,6 +562,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         category: entry.category || 'Expense',
         description: entry.description,
         paymentMethod: entry.paymentMethod || 'Cash',
+        status: entry.status || 'Completed',
+        metadata: entry.metadata || undefined,
         date: entry.occurredAt ? new Date(entry.occurredAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : (entry.date || new Date().toLocaleDateString('en-US')),
         notes: entry.metadata?.notes || entry.notes
       })) : [],
@@ -877,10 +893,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }));
   };
 
-  const recordStockIntake = async (supplier: string, items: any[], notes?: string, date?: string): Promise<any> => {
+  const recordStockIntake = async (supplier: string, items: any[], notes?: string, date?: string, invoiceNumber?: string): Promise<any> => {
     const res = await apiRequest('/inventory/stock-intake', {
       method: 'POST',
-      body: JSON.stringify({ supplier, items, notes, date })
+      body: JSON.stringify({ supplier, items, notes, date, invoiceNumber })
     });
     if (!res?.success || !res.data?.intake) {
       throw new Error('Stock intake did not return a persisted record.');
@@ -950,8 +966,10 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         quantity: Number(it.quantity || 0),
         unitPrice: Number(it.unitPrice || 0)
       })),
-      notes || (invoiceRef ? `Invoice: ${invoiceRef} | Payment: ${paymentMethod}` : undefined),
-      date
+      // Payment method has no column on stock intakes yet; keep it as a parseable "Payment: X" note segment.
+      [notes, notes && notes.includes('Payment:') ? null : `Payment: ${paymentMethod}`].filter(Boolean).join(' | '),
+      date,
+      invoiceRef
     );
     return res.data.intake;
   };
@@ -963,7 +981,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     await refreshBusinessData();
   };
 
-  const addCashIn = async (_smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string }) => {
+  const addCashIn = async (_smeId: string, data: { amount: number; source: string; reason: string; paymentMethod: string; category?: string; date?: string; notes?: string; status?: string; metadata?: Record<string, unknown> }) => {
     await apiRequest('/business/ledger', {
       method: 'POST',
       body: JSON.stringify({
@@ -973,8 +991,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         description: data.reason,
         paymentMethod: data.paymentMethod,
         category: data.category || data.reason,
-        occurredAt: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
-        metadata: { notes: data.notes }
+        status: data.status || 'Completed',
+        occurredAt: fromLocalInputDate(data.date).toISOString(),
+        metadata: { ...(data.metadata || {}), notes: data.notes }
       })
     });
     await refreshBusinessData();
@@ -985,7 +1004,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     await refreshBusinessData();
   };
 
-  const addCashOut = async (_smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string }) => {
+  const addCashOut = async (_smeId: string, data: { amount: number; category: string; description: string; paymentMethod: string; date?: string; notes?: string; status?: string; metadata?: Record<string, unknown> }) => {
     await apiRequest('/business/ledger', {
       method: 'POST',
       body: JSON.stringify({
@@ -994,8 +1013,9 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         category: data.category,
         description: data.description,
         paymentMethod: data.paymentMethod,
-        occurredAt: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
-        metadata: { notes: data.notes }
+        status: data.status || 'Completed',
+        occurredAt: fromLocalInputDate(data.date).toISOString(),
+        metadata: { ...(data.metadata || {}), notes: data.notes }
       })
     });
     await refreshBusinessData();
@@ -1015,7 +1035,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         category: data.category || 'Milestone',
         description: data.title,
         status: data.status || 'Completed',
-        occurredAt: data.date ? new Date(data.date).toISOString() : new Date().toISOString(),
+        occurredAt: fromLocalInputDate(data.date).toISOString(),
         metadata: { description: data.description, paymentStatus: data.paymentStatus, moneyInvolved: data.moneyInvolved }
       })
     });
@@ -1043,6 +1063,26 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     };
     setOpportunities(prev => [createdOpp, ...prev.filter(o => o.id !== createdOpp.id)]);
     return createdOpp;
+  };
+
+  const updateOpportunity = async (id: string, data: Partial<Opportunity>): Promise<Opportunity> => {
+    const res = await apiRequest(`/opportunities/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+    const updatedOpp: Opportunity = {
+      ...(res?.data || data),
+      id,
+      sectors: Array.isArray(res?.data?.sectors) ? res.data.sectors : (data.sectors || []),
+      requiredDocs: Array.isArray(res?.data?.requiredDocs) ? res.data.requiredDocs : (data.requiredDocs || [])
+    } as Opportunity;
+    setOpportunities(prev => prev.map(o => o.id === id ? { ...o, ...updatedOpp } : o));
+    return updatedOpp;
+  };
+
+  const deleteOpportunity = async (id: string): Promise<void> => {
+    await apiRequest(`/opportunities/${id}`, { method: 'DELETE' });
+    setOpportunities(prev => prev.filter(o => o.id !== id));
   };
 
   const applyForOpportunity = async (data: {
@@ -1540,6 +1580,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       refreshTrainings,
       bookmarkedOpportunities,
       publishOpportunity,
+      updateOpportunity,
+      deleteOpportunity,
       applyForOpportunity,
       updateApplicationStatus,
       makeApplicationPayment,

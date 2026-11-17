@@ -20,6 +20,7 @@ import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { apiRequest } from '../lib/api';
 import ElevataMarkdown from '../assets/components/AI/ElevataMarkdown';
+import ThreeDotsLoader from '../assets/components/ui/ThreeDotsLoader';
 
 interface ChatMessage {
   id: string;
@@ -654,13 +655,12 @@ export default function ElevataBotPage() {
                     <div className="w-8 h-8 rounded-lg bg-[#2998d6] text-white flex items-center justify-center shrink-0 shadow-2xs">
                       <Bot className="w-4 h-4" />
                     </div>
-                    <div className="bg-white border border-[#cbd5e1] rounded-2xl rounded-tl-none px-4 py-2.5 shadow-2xs flex items-center gap-2">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#2998d6] animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#2998d6] animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#2998d6] animate-bounce" />
-                      <span className="text-xs text-slate-500 font-medium pl-1">
-                        Elevata AI is evaluating financial indicators...
-                      </span>
+                    <div className="bg-white border border-[#cbd5e1] rounded-2xl rounded-tl-none px-4 py-2.5 shadow-2xs flex items-center">
+                      <ThreeDotsLoader
+                        size="sm"
+                        color="bg-[#2998d6]"
+                        text="Elevata AI is evaluating financial indicators..."
+                      />
                     </div>
                   </div>
                 )}
