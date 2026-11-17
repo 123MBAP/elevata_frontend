@@ -365,7 +365,7 @@ export default function BusinessProfilePage() {
       id: 'balance' as ProfileTab,
       label: 'Balance Sheet & Capital',
       icon: <Coins className="w-4 h-4" />,
-      count: totalAssets > 0 ? 4 : 0,
+      count: [smeForm.currentAssets, smeForm.fixedAssets, smeForm.shortTermLiabilities, smeForm.longTermLiabilities].filter((v) => Number(v) > 0).length,
       color: 'text-teal-600'
     },
     {
@@ -379,7 +379,7 @@ export default function BusinessProfilePage() {
       id: 'strategy' as ProfileTab,
       label: 'Strategy & Intelligence',
       icon: <Target className="w-4 h-4" />,
-      count: 5,
+      count: [smeForm.businessStage, smeForm.digitizationLevel, smeForm.targetMarket, smeForm.operationalChallenges, smeForm.strategicGoals].filter((v) => String(v || '').trim()).length,
       color: 'text-purple-600'
     }
   ];
@@ -398,7 +398,7 @@ export default function BusinessProfilePage() {
       item: 'Enterprise Legal Name',
       value: smeForm.businessName || '—',
       amount: 0,
-      status: smeForm.businessName ? 'Verified' : 'Pending',
+      status: smeForm.businessName ? 'Provided' : 'Missing',
       notes: `${smeForm.businessType || 'General Enterprise'} | Registered under ${smeForm.ownerName || 'Managing Director'}`
     },
     {
@@ -409,7 +409,7 @@ export default function BusinessProfilePage() {
       item: 'Operating Address',
       value: `${smeForm.district || 'Kigali'}, ${smeForm.province || 'Rwanda'}`,
       amount: 0,
-      status: smeForm.district ? 'Verified' : 'Pending',
+      status: smeForm.district ? 'Provided' : 'Missing',
       notes: `${smeForm.sector} / ${smeForm.cell} / ${smeForm.village} | Landmark: ${smeForm.knownPlace || 'None'}`
     },
     {
@@ -420,7 +420,7 @@ export default function BusinessProfilePage() {
       item: 'Current Assets (Cash, Stock, Receivables)',
       value: 'Short-term Liquidity',
       amount: Number(smeForm.currentAssets || 0),
-      status: 'Audited',
+      status: Number(smeForm.currentAssets || 0) > 0 ? 'Self-declared' : 'Not provided',
       notes: 'Available cash balance, current inventory, and active customer receivables'
     },
     {
@@ -431,7 +431,7 @@ export default function BusinessProfilePage() {
       item: 'Fixed Assets & Premises',
       value: 'Long-term Capital',
       amount: Number(smeForm.fixedAssets || 0),
-      status: 'Audited',
+      status: Number(smeForm.fixedAssets || 0) > 0 ? 'Self-declared' : 'Not provided',
       notes: 'Industrial equipment, machinery, motor vehicles, and physical infrastructure'
     },
     {
@@ -442,7 +442,7 @@ export default function BusinessProfilePage() {
       item: 'Short-term Liabilities (Trade Payables)',
       value: 'Short-term Obligations',
       amount: Number(smeForm.shortTermLiabilities || 0),
-      status: 'Audited',
+      status: Number(smeForm.shortTermLiabilities || 0) > 0 ? 'Self-declared' : 'Not provided',
       notes: 'Supplier invoices due within 90 days, vendor credit lines, and unpaid utilities'
     },
     {
@@ -453,7 +453,7 @@ export default function BusinessProfilePage() {
       item: 'Long-term Liabilities (Term Loans)',
       value: 'Debt Facilities',
       amount: Number(smeForm.longTermLiabilities || 0),
-      status: 'Audited',
+      status: Number(smeForm.longTermLiabilities || 0) > 0 ? 'Self-declared' : 'Not provided',
       notes: 'Commercial bank debt, equipment financing mortgages, and long-term credit lines'
     },
     {
@@ -464,7 +464,7 @@ export default function BusinessProfilePage() {
       item: 'Monthly Operating Turnover',
       value: 'Gross Sales Velocity',
       amount: Number(smeForm.monthlyTurnover || 0),
-      status: 'Audited',
+      status: Number(smeForm.monthlyTurnover || 0) > 0 ? 'Self-declared' : 'Not provided',
       notes: `Annualized Projected Revenue: ${formatRWF(Number(smeForm.monthlyTurnover || 0) * 12)} (${smeForm.grossMarginPercentage}% Gross Margin)`
     },
     {
@@ -475,7 +475,7 @@ export default function BusinessProfilePage() {
       item: 'Monthly Staff Payroll',
       value: `${totalEmployees} Personnel (${smeForm.fullTimeEmployees} Full-time, ${smeForm.partTimeEmployees} Casual)`,
       amount: Number(smeForm.monthlyPayroll || 0),
-      status: 'Audited',
+      status: Number(smeForm.monthlyPayroll || 0) > 0 ? 'Self-declared' : 'Not provided',
       notes: `Key Roles: ${smeForm.keyRoles || 'Operational Staff'}`
     },
     ...smeForm.equipments.map((eq, idx) => ({
@@ -486,7 +486,7 @@ export default function BusinessProfilePage() {
       item: eq.name || `Equipment #${idx + 1}`,
       value: eq.condition || 'Operational',
       amount: Number(eq.value || 0),
-      status: 'Logged',
+      status: 'Self-declared',
       notes: `Asset Category: ${eq.category} | Condition: ${eq.condition}`
     }))
   ];
@@ -660,7 +660,7 @@ export default function BusinessProfilePage() {
                 <label className="accounting-label">Official Administrator Email</label>
                 <input
                   type="text"
-                  value={user?.email || 'admin@elevata.com'}
+                  value={user?.email || '—'}
                   readOnly
                   className="accounting-input w-full bg-slate-50 font-mono font-bold"
                 />
@@ -670,7 +670,7 @@ export default function BusinessProfilePage() {
                 <label className="accounting-label">Contact Phone Number</label>
                 <input
                   type="text"
-                  value={user?.phone || '+250 780 000 000'}
+                  value={user?.phone || '—'}
                   readOnly
                   className="accounting-input w-full bg-slate-50 font-mono"
                 />
@@ -858,9 +858,15 @@ export default function BusinessProfilePage() {
 
                 <div>
                   <label className="accounting-label">Accreditation Status</label>
-                  <div className="accounting-input w-full bg-emerald-50 text-emerald-800 font-bold border-emerald-200 flex items-center gap-2 text-xs">
-                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>Verified Lending Partner</span>
+                  <div
+                    className={`accounting-input w-full font-bold flex items-center gap-2 text-xs ${
+                      user?.is_approved
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}
+                  >
+                    {user?.is_approved ? <CheckCircle className="w-4 h-4 shrink-0" /> : <AlertCircle className="w-4 h-4 shrink-0" />}
+                    <span>{user?.is_approved ? 'Approved lending partner' : 'Awaiting admin approval'}</span>
                   </div>
                 </div>
               </div>
@@ -1009,7 +1015,7 @@ export default function BusinessProfilePage() {
                   <p className="text-xs text-slate-500 mt-0.5">
                     {activeTab === 'general' && 'Manage legal registry parameters, contact intelligence, and geographical coordinates.'}
                     {activeTab === 'equipment' && 'Log tangible machinery, asset condition, and replacement valuation.'}
-                    {activeTab === 'balance' && 'Maintain audited asset balances, term liabilities, and owner capital for underwriting.'}
+                    {activeTab === 'balance' && 'Enter your asset balances, liabilities and owner capital. These are self-declared until a lender reviews them.'}
                     {activeTab === 'workforce' && 'Track payroll commitments, permanent workforce, and key organizational roles.'}
                     {activeTab === 'strategy' && 'Articulate market positioning, digitization maturity, and expansion targets.'}
                   </p>
@@ -1075,16 +1081,27 @@ export default function BusinessProfilePage() {
                   </div>
 
                   <div>
-                    <label className="accounting-label">KYC & Credit Verification Tier</label>
-                    <select
-                      value="Tier-1 (Verified SME Profile)"
-                      className="accounting-select w-full opacity-90 cursor-default"
-                      disabled
+                    <label className="accounting-label">Account Verification Status</label>
+                    <div
+                      className={`accounting-input w-full flex items-center gap-2 text-xs font-bold ${
+                        user?.is_approved
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                          : 'bg-amber-50 text-amber-800 border-amber-200'
+                      }`}
                     >
-                      <option value="Tier-1 (Verified SME Profile)">Tier-1 Verified SME Account</option>
-                      <option value="Underwriting Ready">Underwriting & Credit Ready</option>
-                      <option value="Audit Cleared">Regulatory Audit Cleared</option>
-                    </select>
+                      {user?.is_approved ? (
+                        <CheckCircle className="w-4 h-4 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-4 h-4 shrink-0" />
+                      )}
+                      <span>
+                        {user?.is_approved
+                          ? 'Approved by Elevata admin'
+                          : user?.isVerified
+                          ? 'Email verified — awaiting admin approval'
+                          : 'Not verified yet'}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1900,7 +1917,14 @@ export default function BusinessProfilePage() {
                               )}
                             </td>
                             <td className="py-3 px-4 text-center">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                              <span
+                                title="Entered by the business owner. Not yet checked by Elevata or a lender."
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${
+                                  item.status === 'Missing' || item.status === 'Not provided'
+                                    ? 'bg-amber-50 text-amber-700'
+                                    : 'bg-slate-100 text-slate-700'
+                                }`}
+                              >
                                 {item.status}
                               </span>
                             </td>

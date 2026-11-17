@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatRWF, ProductItem, Sale, PurchaseTransaction, CashInTransaction, CashOutTransaction, OtherActivity } from '../lib/mockData';
+import { CASH_IN_REASONS, CASH_OUT_CATEGORIES, isCreditPayment, toLocalInputDate } from '../lib/ledgerClassification';
 import { Button } from '../assets/components/ui/button';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Input } from '../assets/components/ui/input';
@@ -23,6 +24,7 @@ import {
   Truck,
   Star,
   CheckCircle,
+  AlertCircle,
   Bell,
   Users
 } from 'lucide-react';
@@ -113,7 +115,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
 
   const handleEnableNotifications = async () => {
     if (typeof window === 'undefined' || !('Notification' in window)) {
-      alert('Desktop notifications are not supported by this browser.');
+      showError('Desktop notifications are not supported by this browser.');
       return;
     }
 
@@ -129,7 +131,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
         showToast('Desktop notifications enabled successfully!');
         setShowAttentionBanner(false);
       } else if (permission === 'denied') {
-        showToast('Desktop notifications were blocked in browser settings.');
+        showError('Desktop notifications were blocked in browser settings.');
       }
     } catch (err) {
       console.error('Failed to request notification permission:', err);
@@ -137,11 +139,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   };
 
   // Toast feedback
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), type === 'error' ? 6000 : 3500);
   };
+  const showError = (text: string) => showToast(text, 'error');
+  const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
 
   useEffect(() => {
     refreshSales();
@@ -172,7 +176,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const [saleDeliveryLocation, setSaleDeliveryLocation] = useState('');
   const [saleContact, setSaleContact] = useState('');
   const [salePaymentMethod, setSalePaymentMethod] = useState('Cash');
-  const [saleDate, setSaleDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [saleDate, setSaleDate] = useState(() => toLocalInputDate());
   const [saleInvoiceRef, setSaleInvoiceRef] = useState('');
   const [saleTin, setSaleTin] = useState('');
   const [saleNotes, setSaleNotes] = useState('');
@@ -220,13 +224,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const handleRecordSale = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!saleCustomer.trim()) {
-      alert('Please specify the buyer / client name.');
+      showError('Please enter the customer name.');
       return;
     }
 
     const validItems = saleItems.filter(item => (item.product || item.productId) && Number(item.quantity) > 0);
     if (validItems.length === 0) {
-      alert('Please add at least one product line item.');
+      showError('Please add at least one product line with a quantity.');
       return;
     }
 
@@ -243,7 +247,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
         customer: saleCustomer.trim(),
         customerContact: saleContact.trim() || undefined,
         invoiceNumber: saleInvoiceRef.trim() || undefined,
-        paymentStatus: 'Completed',
+        // A credit sale is not paid yet: it is owed by the customer until collected.
+        paymentStatus: isCreditPayment(salePaymentMethod) ? 'Pending' : 'Completed',
         paymentMethod: salePaymentMethod,
         date: saleDate,
         notes: metaParts || undefined,
@@ -271,8 +276,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       setSaleItems([
         { id: '1', productId: '', product: '', unit: 'pcs', price: 0, quantity: 1, availableStock: 0 }
       ]);
-    } catch (err: any) {
-      alert(err.message || 'Failed to record sale.');
+    } catch (err) {
+      showError(errorText(err, 'Failed to record sale.'));
     } finally {
       setIsSubmittingSale(false);
     }
@@ -285,7 +290,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const [purchaseWarehouse, setPurchaseWarehouse] = useState('main');
   const [purchasePaymentMethod, setPurchasePaymentMethod] = useState('Cash');
   const [purchaseInvoiceRef, setPurchaseInvoiceRef] = useState('');
-  const [purchaseDate, setPurchaseDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [purchaseDate, setPurchaseDate] = useState(() => toLocalInputDate());
   const [purchaseSupplierTin, setPurchaseSupplierTin] = useState('');
   const [purchaseSupplierContact, setPurchaseSupplierContact] = useState('');
   const [purchaseReceivedBy, setPurchaseReceivedBy] = useState('');
@@ -333,13 +338,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const handleRecordPurchase = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!purchaseSupplier.trim()) {
-      alert('Please specify the supplier / vendor name.');
+      showError('Please enter the supplier name.');
       return;
     }
 
     const validItems = purchaseItems.filter(item => (item.name || item.productId) && Number(item.quantity) > 0);
     if (validItems.length === 0) {
-      alert('Please enter at least one product purchase item.');
+      showError('Please add at least one item with a quantity.');
       return;
     }
 
@@ -379,8 +384,8 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       setPurchaseItems([
         { id: '1', productId: '', name: '', unit: 'pcs', unitPrice: 0, quantity: 1 }
       ]);
-    } catch (err: any) {
-      alert(err.message || 'Failed to record purchase.');
+    } catch (err) {
+      showError(errorText(err, 'Failed to record purchase.'));
     } finally {
       setIsSubmittingPurchase(false);
     }
@@ -393,37 +398,46 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const [cashInSource, setCashInSource] = useState('');
   const [cashInReason, setCashInReason] = useState('Loan received');
   const [cashInPaymentMethod, setCashInPaymentMethod] = useState('Bank Transfer');
-  const [cashInDate, setCashInDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [cashInDate, setCashInDate] = useState(() => toLocalInputDate());
   const [cashInBankRef, setCashInBankRef] = useState('');
   const [cashInAccount, setCashInAccount] = useState('');
   const [cashInNotes, setCashInNotes] = useState('');
 
-  const handleRecordCashIn = (e: React.FormEvent) => {
+  const [isSubmittingCashIn, setIsSubmittingCashIn] = useState(false);
+
+  const handleRecordCashIn = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Number(cashInAmount);
     if (!amt || amt <= 0) {
-      alert('Please enter a valid cash inflow amount.');
+      showError('Please enter an amount greater than 0.');
       return;
     }
     if (!cashInSource.trim()) {
-      alert('Please specify the source of funds (e.g. Bank, Investor, Grantor, Owner).');
+      showError('Please enter where the money came from (bank, investor, owner, customer...).');
       return;
     }
 
-    const cashInMeta = [
-      cashInBankRef ? `Ref: ${cashInBankRef}` : null,
-      cashInAccount ? `Account: ${cashInAccount}` : null,
-      cashInNotes.trim() || null
-    ].filter(Boolean).join(' | ');
-
-    addCashIn(activeSme.id, {
-      amount: amt,
-      source: cashInSource.trim(),
-      reason: cashInReason,
-      paymentMethod: cashInPaymentMethod,
-      date: cashInDate,
-      notes: cashInMeta || undefined
-    });
+    try {
+      setIsSubmittingCashIn(true);
+      await addCashIn(activeSme.id, {
+        amount: amt,
+        source: cashInSource.trim(),
+        reason: cashInReason,
+        category: cashInReason,
+        paymentMethod: cashInPaymentMethod,
+        date: cashInDate,
+        notes: cashInNotes.trim() || undefined,
+        metadata: {
+          reference: cashInBankRef.trim() || undefined,
+          receivingAccount: cashInAccount.trim() || undefined
+        }
+      });
+    } catch (err) {
+      showError(errorText(err, 'Failed to save cash in. Nothing was recorded.'));
+      return;
+    } finally {
+      setIsSubmittingCashIn(false);
+    }
 
     showToast(`Cash Inflow of ${formatRWF(amt)} from ${cashInSource} logged successfully!`);
     sendDesktopNotification('Cash Inflow Logged', `Cash Inflow of ${formatRWF(amt)} from ${cashInSource} recorded.`);
@@ -447,7 +461,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const [cashOutCategory, setCashOutCategory] = useState('Utilities');
   const [cashOutDescription, setCashOutDescription] = useState('');
   const [cashOutPaymentMethod, setCashOutPaymentMethod] = useState('Cash');
-  const [cashOutDate, setCashOutDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [cashOutDate, setCashOutDate] = useState(() => toLocalInputDate());
   const [cashOutVoucherRef, setCashOutVoucherRef] = useState('');
   const [cashOutApproval, setCashOutApproval] = useState('');
   const [cashOutNotes, setCashOutNotes] = useState('');
@@ -481,32 +495,40 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
 
   const batchTotal = cashOutBatchLines.reduce((sum, item) => sum + Number(item.amount || 0), 0);
 
-  const handleRecordSingleCashOut = (e: React.FormEvent) => {
+  const [isSubmittingCashOut, setIsSubmittingCashOut] = useState(false);
+
+  const handleRecordSingleCashOut = async (e: React.FormEvent) => {
     e.preventDefault();
     const amt = Number(cashOutAmount);
     if (!amt || amt <= 0) {
-      alert('Please enter a valid cash outflow / expense amount.');
+      showError('Please enter an amount greater than 0.');
       return;
     }
     if (!cashOutDescription.trim()) {
-      alert('Please specify the recipient or expense description.');
+      showError('Please describe what the money was paid for.');
       return;
     }
 
-    const cashOutMeta = [
-      cashOutVoucherRef ? `Voucher: ${cashOutVoucherRef}` : null,
-      cashOutApproval ? `Approved by: ${cashOutApproval}` : null,
-      cashOutNotes.trim() || null
-    ].filter(Boolean).join(' | ');
-
-    addCashOut(activeSme.id, {
-      amount: amt,
-      category: cashOutCategory,
-      description: cashOutDescription.trim(),
-      paymentMethod: cashOutPaymentMethod,
-      date: cashOutDate,
-      notes: cashOutMeta || undefined
-    });
+    try {
+      setIsSubmittingCashOut(true);
+      await addCashOut(activeSme.id, {
+        amount: amt,
+        category: cashOutCategory,
+        description: cashOutDescription.trim(),
+        paymentMethod: cashOutPaymentMethod,
+        date: cashOutDate,
+        notes: cashOutNotes.trim() || undefined,
+        metadata: {
+          voucherRef: cashOutVoucherRef.trim() || undefined,
+          approvedBy: cashOutApproval.trim() || undefined
+        }
+      });
+    } catch (err) {
+      showError(errorText(err, 'Failed to save cash out. Nothing was recorded.'));
+      return;
+    } finally {
+      setIsSubmittingCashOut(false);
+    }
 
     showToast(`Cash Outflow / Expense of ${formatRWF(amt)} for "${cashOutDescription}" recorded!`);
     sendDesktopNotification('Expense Voucher Recorded', `Expense of ${formatRWF(amt)} for "${cashOutDescription}" logged.`);
@@ -519,23 +541,36 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     setCashOutNotes('');
   };
 
-  const handleRecordBatchCashOut = (e: React.FormEvent) => {
+  const handleRecordBatchCashOut = async (e: React.FormEvent) => {
     e.preventDefault();
     const validLines = cashOutBatchLines.filter(item => item.description.trim() && Number(item.amount) > 0);
     if (validLines.length === 0) {
-      alert('Please enter at least one valid expense description and amount.');
+      showError('Please enter at least one line with a description and an amount.');
       return;
     }
 
-    validLines.forEach(item => {
-      addCashOut(activeSme.id, {
-        amount: Number(item.amount),
-        category: item.category,
-        description: item.description.trim(),
-        paymentMethod: item.paymentMethod,
-        date: cashOutDate
-      });
-    });
+    // Save one line at a time so a failure tells the user exactly which lines were saved.
+    setIsSubmittingCashOut(true);
+    const savedIds: string[] = [];
+    try {
+      for (const item of validLines) {
+        await addCashOut(activeSme.id, {
+          amount: Number(item.amount),
+          category: item.category,
+          description: item.description.trim(),
+          paymentMethod: item.paymentMethod,
+          date: cashOutDate
+        });
+        savedIds.push(item.id);
+      }
+    } catch (err) {
+      // Keep only the unsaved lines on screen so the user can retry them.
+      setCashOutBatchLines(prev => prev.filter(line => !savedIds.includes(line.id)));
+      showError(`${savedIds.length} of ${validLines.length} lines saved. ${errorText(err, 'The rest failed')} — the unsaved lines are still in the form.`);
+      return;
+    } finally {
+      setIsSubmittingCashOut(false);
+    }
 
     showToast(`Recorded ${validLines.length} cashout / expense item(s) totaling ${formatRWF(batchTotal)}!`);
     sendDesktopNotification('Batch Expenses Logged', `Recorded ${validLines.length} expense items totaling ${formatRWF(batchTotal)}.`);
@@ -552,22 +587,26 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const [otherTitle, setOtherTitle] = useState('');
   const [otherCategory, setOtherCategory] = useState('Milestone');
   const [otherStatus, setOtherStatus] = useState<'Planned' | 'In Progress' | 'Completed' | 'On Hold'>('Completed');
-  const [otherDate, setOtherDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [otherDate, setOtherDate] = useState(() => toLocalInputDate());
   const [otherMoneyInvolved, setOtherMoneyInvolved] = useState(false);
   const [otherAmount, setOtherAmount] = useState('');
   const [otherPaymentStatus, setOtherPaymentStatus] = useState<'Completed' | 'Pending' | 'Partial' | 'N/A'>('Completed');
   const [otherDescription, setOtherDescription] = useState('');
 
-  const handleRecordOtherActivity = (e: React.FormEvent) => {
+  const [isSubmittingOther, setIsSubmittingOther] = useState(false);
+
+  const handleRecordOtherActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!otherTitle.trim()) {
-      alert('Activity Title is required.');
+      showError('Please enter a title for the activity.');
       return;
     }
 
     const amt = Number(otherAmount) || 0;
 
-    addOtherActivity(activeSme.id, {
+    try {
+      setIsSubmittingOther(true);
+      await addOtherActivity(activeSme.id, {
       title: otherTitle.trim(),
       description: otherDescription.trim() || undefined,
       date: otherDate,
@@ -576,7 +615,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
       amount: amt > 0 ? amt : undefined,
       paymentStatus: amt > 0 ? otherPaymentStatus : 'N/A',
       category: otherCategory.trim() || 'Milestone'
-    });
+      });
+    } catch (err) {
+      showError(errorText(err, 'Failed to save activity. Nothing was recorded.'));
+      return;
+    } finally {
+      setIsSubmittingOther(false);
+    }
 
     showToast(`Business Activity "${otherTitle}" recorded successfully!`);
     sendDesktopNotification('Activity Logged', `Milestone / Activity "${otherTitle}" logged.`);
@@ -772,10 +817,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -20 }}
-          className="fixed top-20 right-6 z-50 bg-emerald-700 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 border border-emerald-500"
+          role={toastMessage.type === 'error' ? 'alert' : 'status'}
+          className={`fixed top-20 right-6 z-50 text-white text-xs px-4 py-3 rounded-xl shadow-xl flex items-center space-x-2 border ${
+            toastMessage.type === 'error' ? 'bg-rose-700 border-rose-500' : 'bg-emerald-700 border-emerald-500'
+          }`}
         >
-          <CheckCircle className="w-4 h-4 text-emerald-200" />
-          <span className="font-medium">{toastMessage}</span>
+          {toastMessage.type === 'error' ? <AlertCircle className="w-4 h-4 text-rose-200" /> : <CheckCircle className="w-4 h-4 text-emerald-200" />}
+          <span className="font-medium">{toastMessage.text}</span>
         </motion.div>
       )}
 
@@ -952,16 +1000,18 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
             </div>
 
             <div>
-              <label className="accounting-label">Ledger Status</label>
-              <select
-                value="Cleared"
-                className="accounting-select w-full opacity-80 cursor-not-allowed"
-                disabled
-              >
-                <option value="Cleared">Cleared & Confirmed</option>
-                <option value="Pending">Pending Reconciliation</option>
-                <option value="Hold">Audit Hold</option>
-              </select>
+              <label className="accounting-label">Payment Status</label>
+              {(() => {
+                const method = activeTab === 'sales' ? salePaymentMethod : activeTab === 'purchases' ? purchasePaymentMethod : activeTab === 'cash_in' ? cashInPaymentMethod : cashOutPaymentMethod;
+                const onCredit = (activeTab === 'sales' || activeTab === 'purchases') && isCreditPayment(method);
+                return (
+                  <div className={`accounting-input w-full flex items-center gap-2 text-xs font-semibold ${onCredit ? 'bg-amber-50 text-amber-800 border-amber-200' : 'bg-emerald-50 text-emerald-800 border-emerald-200'}`}>
+                    {onCredit
+                      ? activeTab === 'sales' ? 'On credit — customer still owes this' : 'On credit — you still owe the supplier'
+                      : activeTab === 'other' ? 'No payment recorded for milestones' : 'Paid now'}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -1545,14 +1595,15 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                     onChange={(e) => setCashInReason(e.target.value)}
                     className="accounting-select w-full"
                   >
-                    <option value="Loan received">Commercial Bank Loan Received</option>
-                    <option value="Owner capital injection">Owner Equity / Capital Injection</option>
-                    <option value="Grant received">Donor / Government Grant Award</option>
-                    <option value="Customer advance">Customer Advance / Retainer</option>
-                    <option value="Receivable collected">Accounts Receivable Collection</option>
-                    <option value="Asset disposal">Disposal of Fixed Assets</option>
-                    <option value="Other inflow">Other Direct Cash Inflow</option>
+                    {CASH_IN_REASONS.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
                   </select>
+                  {CASH_IN_REASONS.find((r) => r.value === cashInReason)?.classification.note && (
+                    <p className="mt-1 text-[11px] text-slate-500">
+                      {CASH_IN_REASONS.find((r) => r.value === cashInReason)?.classification.note}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="accounting-label">
@@ -1615,9 +1666,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               </div>
 
               <div className="flex items-center gap-2 self-end sm:self-auto">
-                <button type="submit" className="accounting-btn-primary">
+                <button type="submit" disabled={isSubmittingCashIn} className="accounting-btn-primary">
                   <Check className="w-4 h-4" />
-                  <span>Save</span>
+                  <span>{isSubmittingCashIn ? 'Saving...' : 'Save'}</span>
                 </button>
                 <button
                   type="button"
@@ -1715,23 +1766,22 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                         onChange={(e) => setCashOutCategory(e.target.value)}
                         className="accounting-select w-full"
                       >
-                        <optgroup label="Operational Expenses">
-                          <option value="Utilities">Utilities (Water, Power, Internet)</option>
-                          <option value="Rent">Rent & Facility Leases</option>
-                          <option value="Salaries">Staff Payroll & Direct Wages</option>
-                          <option value="Repairs">Machinery Repairs & Maintenance</option>
-                          <option value="Transport">Transport, Fuel & Haulage</option>
-                          <option value="Marketing">Marketing, Ads & Promotions</option>
-                          <option value="Taxes">Taxes, Municipal Levies & RRA</option>
-                          <option value="General Expenses">General Office Operations</option>
+                        <optgroup label="Business expenses (reduce profit)">
+                          {CASH_OUT_CATEGORIES.filter((c) => c.group === 'expense').map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
                         </optgroup>
-                        <optgroup label="Financial Outflows">
-                          <option value="Loan Repayment">Bank Loan / Credit Repayment</option>
-                          <option value="Supplier Settlement">Accounts Payable / Supplier Payment</option>
-                          <option value="Owner Drawing">Owner Drawing / Dividend Cashout</option>
-                          <option value="Asset Purchase">Machinery / Fixed Asset Purchase</option>
+                        <optgroup label="Other payments (not expenses)">
+                          {CASH_OUT_CATEGORIES.filter((c) => c.group === 'non_expense').map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
                         </optgroup>
                       </select>
+                      {CASH_OUT_CATEGORIES.find((c) => c.value === cashOutCategory)?.classification.note && (
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {CASH_OUT_CATEGORIES.find((c) => c.value === cashOutCategory)?.classification.note}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="accounting-label">
@@ -1794,9 +1844,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   </div>
 
                   <div className="flex items-center gap-2 self-end sm:self-auto">
-                    <button type="submit" className="accounting-btn-primary">
+                    <button type="submit" disabled={isSubmittingCashOut} className="accounting-btn-primary">
                       <Check className="w-4 h-4" />
-                      <span>Save</span>
+                      <span>{isSubmittingCashOut ? 'Saving...' : 'Save'}</span>
                     </button>
                     <button
                       type="button"
@@ -1865,13 +1915,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                               onChange={(e) => handleBatchLineChange(row.id, 'category', e.target.value)}
                               className="accounting-select w-full !h-8 !min-h-8 text-xs"
                             >
-                              <option value="Utilities">Utilities</option>
-                              <option value="Rent">Rent</option>
-                              <option value="Salaries">Salaries</option>
-                              <option value="Repairs">Repairs</option>
-                              <option value="Transport">Transport</option>
-                              <option value="Marketing">Marketing</option>
-                              <option value="General Expenses">General Expenses</option>
+                              {CASH_OUT_CATEGORIES.filter((c) => c.group === 'expense').map((c) => (
+                                <option key={c.value} value={c.value}>{c.value}</option>
+                              ))}
                             </select>
                           </td>
                           <td className="py-2 px-2">
@@ -1926,9 +1972,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 </div>
 
                 <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#e2e8f0]">
-                  <button type="submit" className="accounting-btn-primary">
+                  <button type="submit" disabled={isSubmittingCashOut} className="accounting-btn-primary">
                     <Check className="w-4 h-4" />
-                    <span>Save Batch</span>
+                    <span>{isSubmittingCashOut ? 'Saving...' : 'Save Batch'}</span>
                   </button>
                   <button
                     type="button"
@@ -2056,9 +2102,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               </div>
 
               <div className="flex items-center gap-2 self-end sm:self-auto">
-                <button type="submit" className="accounting-btn-primary">
+                <button type="submit" disabled={isSubmittingOther} className="accounting-btn-primary">
                   <Check className="w-4 h-4" />
-                  <span>Save</span>
+                  <span>{isSubmittingOther ? 'Saving...' : 'Save'}</span>
                 </button>
                 <button
                   type="button"

@@ -112,6 +112,8 @@ export interface CashInTransaction {
   paymentMethod: string;
   date: string;
   notes?: string;
+  status?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface CashOutTransaction {
@@ -122,6 +124,8 @@ export interface CashOutTransaction {
   paymentMethod: string;
   date: string;
   notes?: string;
+  status?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface OtherActivity {
