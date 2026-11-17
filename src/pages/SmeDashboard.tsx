@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useApp } from '../context/AppContext';
 import { formatRWF, MonthlyFinancial, InventoryItem, LoanDetails } from '../lib/mockData';
+import ThreeDotsLoader from '../assets/components/ui/ThreeDotsLoader';
 import {
   ResponsiveContainer,
   BarChart,
@@ -72,8 +73,24 @@ const DEFAULT_MONTHLY_DATA: MonthlyFinancial[] = [
 ];
 
 export default function SmeDashboard() {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading } = useAuth();
   const navigate = useNavigate();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isAskingCopilot, setIsAskingCopilot] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 700);
+  };
+
+  const handleAskCopilot = () => {
+    setIsAskingCopilot(true);
+    setTimeout(() => {
+      navigate('/bot');
+    }, 450);
+  };
 
   useEffect(() => {
     if (user?.role === 'ADMIN') {
@@ -146,6 +163,18 @@ export default function SmeDashboard() {
     { id: 'radar' as SmeDashboardTab, label: 'Risk Surveillance', icon: <AlertTriangle className="w-4 h-4" />, count: activeSme.riskAlerts?.length || 0, color: 'text-amber-600' }
   ];
 
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-8 bg-white border border-[#cbd5e1] rounded-xl m-6">
+        <ThreeDotsLoader
+          size="lg"
+          text="Syncing SME Financial Operations & Runway Intelligence..."
+          textPosition="bottom"
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 pb-12">
       {/* ========================================================================= */}
@@ -167,6 +196,22 @@ export default function SmeDashboard() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            type="button"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+            className="accounting-btn-secondary"
+            title="Refresh Live Financials"
+          >
+            {isRefreshing ? (
+              <ThreeDotsLoader size="xs" color="bg-slate-600" text="Syncing..." />
+            ) : (
+              <>
+                <RefreshCw className="w-3.5 h-3.5 text-slate-500" />
+                <span>Refresh Live</span>
+              </>
+            )}
+          </button>
           <button
             type="button"
             onClick={() => navigate('/loans')}
@@ -355,7 +400,18 @@ export default function SmeDashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#e2e8f0] bg-white">
-                    {filteredInventory.length === 0 ? (
+                    {isRefreshing ? (
+                      <tr>
+                        <td colSpan={5} className="py-10 text-center bg-slate-50/50">
+                          <ThreeDotsLoader
+                            size="md"
+                            text="Synchronizing live inventory valuations and catalog items..."
+                            textPosition="bottom"
+                            centered
+                          />
+                        </td>
+                      </tr>
+                    ) : filteredInventory.length === 0 ? (
                       <tr>
                         <td colSpan={5} className="py-8 text-center text-slate-400">
                           No inventory items registered. Use the master catalog to create items.
@@ -440,11 +496,18 @@ export default function SmeDashboard() {
                 <div className="pt-2 border-t border-[#e2e8f0]">
                   <button
                     type="button"
-                    onClick={() => navigate('/bot')}
-                    className="accounting-btn-primary w-full"
+                    onClick={handleAskCopilot}
+                    disabled={isAskingCopilot}
+                    className="accounting-btn-primary w-full justify-center"
                   >
-                    <Activity className="w-3.5 h-3.5" />
-                    <span>Ask Elevata Copilot Advisor</span>
+                    {isAskingCopilot ? (
+                      <ThreeDotsLoader size="xs" color="bg-white" text="Opening Elevata Copilot..." />
+                    ) : (
+                      <>
+                        <Activity className="w-3.5 h-3.5" />
+                        <span>Ask Elevata Copilot Advisor</span>
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
