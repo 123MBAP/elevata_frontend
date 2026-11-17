@@ -144,6 +144,10 @@ export interface SmeProfile {
   id: string;
   name: string;
   sector: 'Retail' | 'Agriculture' | 'Logistics' | 'Technology';
+  /** Exact business category name (drives the category template). */
+  businessType?: string;
+  /** Self-declared operational profile (staff, balance sheet, sectorDetails...). */
+  operational?: Record<string, unknown>;
   ownerName: string;
   email: string;
   healthScore: number;

@@ -37,6 +37,7 @@ import {
   type CashFlowClass,
   type PnlClass
 } from '../lib/ledgerClassification';
+import { useBusinessTemplate, type CategoryTemplate } from '../lib/categoryTemplate';
 
 type Period = 'day' | 'week' | 'month' | 'quarter' | 'year';
 export type ReportTab = 'pnl' | 'cashflow' | 'sales_journal' | 'purchases_cogs' | 'activity_log';
@@ -113,10 +114,71 @@ const weekKey = (date: Date) => {
   return monday;
 };
 
+type Totals = {
+  revenue: number;
+  cogs: number;
+  grossProfit: number;
+  opex: number;
+  netProfit: number;
+  receivables: number;
+  salesCount: number;
+};
+
+const pct = (part: number, whole: number) => (whole > 0 ? `${Math.round((part / whole) * 100)}%` : null);
+const perUnit = (amount: number, units: number) => (units > 0 ? formatRWF(Math.round(amount / units)) : null);
+
+/** Computes the template's KPI list for the selected period. Missing inputs show a hint instead of a number. */
+const computeHighlights = (template: CategoryTemplate, t: Totals, operational: Record<string, unknown>) => {
+  const details = (operational.sectorDetails || {}) as Record<string, unknown>;
+  const employees = Number(operational.totalEmployees || 0) || Number(operational.fullTimeEmployees || 0) + Number(operational.partTimeEmployees || 0);
+  return template.kpis.map((kpi) => {
+    let value: string | null = null;
+    let hint: string | undefined;
+    switch (kpi.formula) {
+      case 'gross_margin':
+        value = pct(t.grossProfit, t.revenue);
+        break;
+      case 'net_margin':
+        value = pct(t.netProfit, t.revenue);
+        break;
+      case 'cogs_ratio':
+        value = pct(t.cogs, t.revenue);
+        hint = 'Cost of goods sold ÷ revenue';
+        break;
+      case 'expense_ratio':
+        value = pct(t.opex, t.revenue);
+        break;
+      case 'receivables_ratio':
+        value = pct(t.receivables, t.revenue);
+        hint = t.receivables > 0 ? `${formatRWF(t.receivables)} still to collect` : undefined;
+        break;
+      case 'average_sale':
+        value = t.salesCount > 0 ? formatRWF(Math.round(t.revenue / t.salesCount)) : null;
+        break;
+      case 'revenue_per_employee':
+        value = perUnit(t.revenue, employees);
+        if (!employees) hint = 'Add your staff numbers in Business Profile → Workforce';
+        break;
+      case 'revenue_per_unit': {
+        const units = Number(details[kpi.field || ''] || 0);
+        value = perUnit(t.revenue, units);
+        if (!units) {
+          const field = template.profileFields.find((f) => f.key === kpi.field);
+          hint = `Add "${field?.label || kpi.field}" in Business Profile`;
+        }
+        break;
+      }
+    }
+    if (value === null && !hint && t.revenue <= 0) hint = 'No revenue in this period';
+    return { key: kpi.key, label: kpi.label, value, hint };
+  });
+};
+
 const signed = (row: LedgerRow) => (row.direction === 'in' ? row.amount : row.direction === 'out' ? -row.amount : 0);
 
 export default function ReportsWorkspace() {
   const { activeSme, products } = useApp();
+  const { template } = useBusinessTemplate(activeSme.businessType);
   const [activeTab, setActiveTab] = useState<ReportTab>('pnl');
   const [period, setPeriod] = useState<Period>('month');
   const [from, setFrom] = useState(toLocalInputDate(periodStart('month')));
@@ -382,6 +444,11 @@ export default function ReportsWorkspace() {
     };
   }, [filteredByDate]);
 
+  const highlights = useMemo(
+    () => computeHighlights(template, totals, (activeSme.operational || {}) as Record<string, unknown>),
+    [template, totals, activeSme.operational]
+  );
+
   // Chart: P&L view per bucket (revenue, costs = COGS + opex, profit).
   const chartData = useMemo(() => {
     const buckets = new Map<string, { label: string; Revenue: number; Costs: number; Profit: number }>();
@@ -420,8 +487,8 @@ export default function ReportsWorkspace() {
   const tabsConfig: { id: ReportTab; label: string; icon: React.ReactNode; color: string }[] = [
     { id: 'pnl', label: 'Profit & Loss', icon: <TrendingUp className="w-4 h-4" />, color: 'text-emerald-600' },
     { id: 'cashflow', label: 'Cash Flow', icon: <ArrowDownLeft className="w-4 h-4" />, color: 'text-teal-600' },
-    { id: 'sales_journal', label: 'Sales Book', icon: <ShoppingBag className="w-4 h-4" />, color: 'text-blue-600' },
-    { id: 'purchases_cogs', label: 'Purchases & Stock Cost', icon: <Truck className="w-4 h-4" />, color: 'text-amber-600' },
+    { id: 'sales_journal', label: template.journals.sales.label, icon: <ShoppingBag className="w-4 h-4" />, color: 'text-blue-600' },
+    { id: 'purchases_cogs', label: template.tracksStock ? `${template.journals.purchases.label} & Stock Cost` : template.journals.purchases.label, icon: <Truck className="w-4 h-4" />, color: 'text-amber-600' },
     { id: 'activity_log', label: 'Full Activity Log', icon: <ListChecks className="w-4 h-4" />, color: 'text-purple-600' }
   ];
   const activeTabLabel = tabsConfig.find((t) => t.id === activeTab)?.label || 'Report';
@@ -650,9 +717,9 @@ export default function ReportsWorkspace() {
           {/* KPI cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <div className="accounting-card p-4 border-[#cbd5e1]">
-              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Sales revenue</span>
+              <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">{template.terms.sales} revenue</span>
               <div className="mt-1 text-lg sm:text-xl font-bold font-mono text-emerald-700">{formatRWF(totals.revenue)}</div>
-              <div className="mt-1 text-[11px] text-slate-500">{totals.salesCount} sales · {formatRWF(totals.receivables)} not paid yet</div>
+              <div className="mt-1 text-[11px] text-slate-500">{totals.salesCount} {template.terms.sales.toLowerCase()} · {formatRWF(totals.receivables)} not paid yet</div>
             </div>
             <div className="accounting-card p-4 border-[#cbd5e1]">
               <span className="accounting-label uppercase tracking-wider text-slate-500 font-bold">Gross profit</span>
@@ -670,6 +737,24 @@ export default function ReportsWorkspace() {
               <div className="mt-1 text-[11px] text-slate-500">Includes loans & owner money · financing {formatRWF(totals.financing.net)}</div>
             </div>
           </div>
+
+          {/* Highlights chosen by the business category template */}
+          {highlights.length > 0 && (
+            <div>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+                Highlights for {activeSme.businessType || 'your business'}
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                {highlights.map((h) => (
+                  <div key={h.key} className="accounting-card p-4 border-[#cbd5e1]">
+                    <span className="accounting-label text-slate-500 font-bold">{h.label}</span>
+                    <div className="mt-1 text-lg font-bold font-mono text-slate-900">{h.value ?? '—'}</div>
+                    {h.hint && <div className="mt-1 text-[11px] text-slate-500">{h.hint}</div>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {totals.cogsMissingLines > 0 && (
             <div className="flex items-start gap-2 rounded-[4px] border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">

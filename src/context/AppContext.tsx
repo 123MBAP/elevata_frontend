@@ -268,6 +268,7 @@ interface AppContextType {
   }) => Promise<any>;
   refreshProducts: () => Promise<void>;
   refreshSales: () => Promise<void>;
+  refreshBusinessData: () => Promise<void>;
 
   // Opportunities, applications, and virtual trainings state
   opportunities: Opportunity[];
@@ -506,6 +507,8 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       ...EMPTY_SME,
       ...raw,
       sector,
+      // Exact category name; `sector` above is narrowed to the legacy four values.
+      businessType: raw.businessType || raw.sector || '',
       inventoryItems: Array.isArray(raw.inventoryItems) ? raw.inventoryItems : [],
       monthlyData: Array.isArray(raw.monthlyData) ? raw.monthlyData : [],
       riskAlerts: Array.isArray(raw.riskAlerts) ? raw.riskAlerts : [],
@@ -1573,6 +1576,7 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       recordSaleTransaction,
       refreshProducts,
       refreshSales,
+      refreshBusinessData,
       opportunities,
       applications,
       refreshApplications,

@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import { formatRWF, ProductItem, Sale, PurchaseTransaction, CashInTransaction, CashOutTransaction, OtherActivity } from '../lib/mockData';
 import { CASH_IN_REASONS, CASH_OUT_CATEGORIES, isCreditPayment, toLocalInputDate } from '../lib/ledgerClassification';
+import { useBusinessTemplate, unitLabel } from '../lib/categoryTemplate';
 import { Button } from '../assets/components/ui/button';
 import { Card, CardContent } from '../assets/components/ui/card';
 import { Input } from '../assets/components/ui/input';
@@ -72,6 +73,14 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
     refreshSales,
     refreshProducts
   } = useApp();
+
+  // Category template: wording, journals, units, segments and extra categories for this kind of business.
+  const { template } = useBusinessTemplate(activeSme.businessType);
+  const T = template.terms;
+  const unitOptions = template.units.map((u) => ({ value: u, label: unitLabel(u) }));
+  const standardExpenseValues = new Set(CASH_OUT_CATEGORIES.map((c) => c.value.toLowerCase()));
+  const sectorExpenseCategories = template.expenseCategories.filter((c) => !standardExpenseValues.has(c.toLowerCase()));
+  const defaultSegment = template.customerSegments[0]?.value || 'retail';
 
   const [searchParams, setSearchParams] = useSearchParams();
   const urlTab = searchParams.get('tab');
@@ -173,6 +182,18 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   // ==========================================
   const [saleCustomer, setSaleCustomer] = useState('');
   const [saleCustomerSegment, setSaleCustomerSegment] = useState('retail');
+
+  // Keep form choices valid when the category template loads or changes.
+  useEffect(() => {
+    if (!template.customerSegments.some((seg) => seg.value === saleCustomerSegment)) {
+      setSaleCustomerSegment(defaultSegment);
+    }
+    if (template.journals[activeTab]?.enabled === false) {
+      const firstEnabled = (Object.keys(template.journals) as ActivityTab[]).find((key) => template.journals[key].enabled);
+      if (firstEnabled) setActiveTab(firstEnabled);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [template]);
   const [saleDeliveryLocation, setSaleDeliveryLocation] = useState('');
   const [saleContact, setSaleContact] = useState('');
   const [salePaymentMethod, setSalePaymentMethod] = useState('Cash');
@@ -266,7 +287,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
 
       // Reset all sales form fields
       setSaleCustomer('');
-      setSaleCustomerSegment('retail');
+      setSaleCustomerSegment(defaultSegment);
       setSaleDeliveryLocation('');
       setSaleContact('');
       setSalePaymentMethod('Cash');
@@ -784,12 +805,12 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
   const netOperatingCashflow = totalInflow - totalOutflow;
 
   const tabsConfig = [
-    { id: 'sales' as ActivityTab, label: 'Sales Book', icon: <ShoppingBag className="w-4 h-4" />, count: salesList.length, color: 'text-emerald-600' },
-    { id: 'purchases' as ActivityTab, label: 'Purchases Book', icon: <Truck className="w-4 h-4" />, count: purchasesList.length, color: 'text-blue-600' },
-    { id: 'cash_in' as ActivityTab, label: 'Cash In Journal', icon: <ArrowDownLeft className="w-4 h-4" />, count: cashInsList.length, color: 'text-teal-600' },
-    { id: 'cash_out' as ActivityTab, label: 'Cash Out & OPEX', icon: <ArrowUpRight className="w-4 h-4" />, count: cashOutsCombined.length, color: 'text-amber-600' },
-    { id: 'other' as ActivityTab, label: 'General Journal', icon: <Star className="w-4 h-4" />, count: otherList.length, color: 'text-purple-600' }
-  ];
+    { id: 'sales' as ActivityTab, label: template.journals.sales.label, icon: <ShoppingBag className="w-4 h-4" />, count: salesList.length, color: 'text-emerald-600' },
+    { id: 'purchases' as ActivityTab, label: template.journals.purchases.label, icon: <Truck className="w-4 h-4" />, count: purchasesList.length, color: 'text-blue-600' },
+    { id: 'cash_in' as ActivityTab, label: template.journals.cash_in.label, icon: <ArrowDownLeft className="w-4 h-4" />, count: cashInsList.length, color: 'text-teal-600' },
+    { id: 'cash_out' as ActivityTab, label: template.journals.cash_out.label, icon: <ArrowUpRight className="w-4 h-4" />, count: cashOutsCombined.length, color: 'text-amber-600' },
+    { id: 'other' as ActivityTab, label: template.journals.other.label, icon: <Star className="w-4 h-4" />, count: otherList.length, color: 'text-purple-600' }
+  ].filter((tab) => template.journals[tab.id]?.enabled !== false || tab.id === activeTab);
 
   const handleDeleteActivity = (item: typeof allActivities[0]) => {
     if (!window.confirm(`Delete activity record "${item.title}"?`)) return;
@@ -962,11 +983,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                 onChange={(e) => handleSelectTab(e.target.value as ActivityTab)}
                 className="accounting-select w-full"
               >
-                <option value="sales">Sales (Client Orders & Receipts)</option>
-                <option value="purchases">Purchases (Supplier Intake & COGS)</option>
-                <option value="cash_in">Cash In (Capital & Inflows)</option>
-                <option value="cash_out">Cash Out & Operational Expenses</option>
-                <option value="other">General Activities & Milestones</option>
+                {tabsConfig.map((tab) => (
+                  <option key={tab.id} value={tab.id}>{tab.label}</option>
+                ))}
               </select>
             </div>
 
@@ -1026,7 +1045,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               <div className="space-y-3">
                 <div>
                   <label className="accounting-label">
-                    Customer / Client Name <span className="text-rose-600">*</span>
+                    {T.customer} Name <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -1038,15 +1057,18 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   />
                 </div>
                 <div>
-                  <label className="accounting-label">Customer Segment / Type</label>
+                  <label className="accounting-label">{T.customer} Type</label>
                   <select
                     value={saleCustomerSegment}
                     onChange={(e) => setSaleCustomerSegment(e.target.value)}
                     className="accounting-select w-full"
                   >
-                    <option value="retail">Direct Retail Buyer</option>
-                    <option value="wholesale">Wholesale Distributor</option>
-                    <option value="institution">Institutional / Corporate</option>
+                    {template.customerSegments.map((seg) => (
+                      <option key={seg.value} value={seg.value}>{seg.label}</option>
+                    ))}
+                    {saleCustomerSegment && !template.customerSegments.some((seg) => seg.value === saleCustomerSegment) && (
+                      <option value={saleCustomerSegment}>{saleCustomerSegment}</option>
+                    )}
                   </select>
                 </div>
                 <div>
@@ -1116,7 +1138,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
             <div className="pt-2">
               <div className="flex items-center justify-between mb-2">
                 <label className="accounting-label font-bold text-slate-800">
-                  Product Line Items & Inventory Decrement <span className="text-rose-600">*</span>
+                  {T.products} {template.tracksStock ? '(stock is reduced automatically)' : ''} <span className="text-rose-600">*</span>
                 </label>
                 <button
                   type="button"
@@ -1176,12 +1198,12 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                             onChange={(e) => handleSaleItemChange(row.id, 'unit', e.target.value)}
                             className="accounting-select w-full !h-8 !min-h-8 text-xs font-mono"
                           >
-                            {UNIT_SELECT_OPTIONS.map((u) => (
+                            {unitOptions.map((u) => (
                               <option key={u.value} value={u.value}>
                                 {u.label}
                               </option>
                             ))}
-                            {row.unit && !UNIT_SELECT_OPTIONS.some((u) => u.value === row.unit) && (
+                            {row.unit && !unitOptions.some((u) => u.value === row.unit) && (
                               <option value={row.unit}>{row.unit}</option>
                             )}
                           </select>
@@ -1259,7 +1281,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   type="button"
                   onClick={() => {
                     setSaleCustomer('');
-                    setSaleCustomerSegment('retail');
+                    setSaleCustomerSegment(defaultSegment);
                     setSaleDeliveryLocation('');
                     setSaleContact('');
                     setSalePaymentMethod('Cash');
@@ -1288,7 +1310,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               <div className="space-y-3">
                 <div>
                   <label className="accounting-label">
-                    Supplier / Vendor Name <span className="text-rose-600">*</span>
+                    {T.supplier} Name <span className="text-rose-600">*</span>
                   </label>
                   <input
                     type="text"
@@ -1351,7 +1373,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
               {/* Column 3 */}
               <div className="space-y-3">
                 <div>
-                  <label className="accounting-label">Supplier TIN / Tax Number</label>
+                  <label className="accounting-label">{T.supplier} TIN / Tax Number</label>
                   <input
                     type="text"
                     value={purchaseSupplierTin}
@@ -1361,7 +1383,7 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                   />
                 </div>
                 <div>
-                  <label className="accounting-label">Supplier Contact Number</label>
+                  <label className="accounting-label">{T.supplier} Contact Number</label>
                   <input
                     type="text"
                     value={purchaseSupplierContact}
@@ -1447,12 +1469,12 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                             onChange={(e) => handlePurchaseItemChange(row.id, 'unit', e.target.value)}
                             className="accounting-select w-full !h-8 !min-h-8 text-xs font-mono"
                           >
-                            {UNIT_SELECT_OPTIONS.map((u) => (
+                            {unitOptions.map((u) => (
                               <option key={u.value} value={u.value}>
                                 {u.label}
                               </option>
                             ))}
-                            {row.unit && !UNIT_SELECT_OPTIONS.some((u) => u.value === row.unit) && (
+                            {row.unit && !unitOptions.some((u) => u.value === row.unit) && (
                               <option value={row.unit}>{row.unit}</option>
                             )}
                           </select>
@@ -1766,6 +1788,13 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                         onChange={(e) => setCashOutCategory(e.target.value)}
                         className="accounting-select w-full"
                       >
+                        {sectorExpenseCategories.length > 0 && (
+                          <optgroup label={`${activeSme.businessType || 'Your business'} expenses`}>
+                            {sectorExpenseCategories.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </optgroup>
+                        )}
                         <optgroup label="Business expenses (reduce profit)">
                           {CASH_OUT_CATEGORIES.filter((c) => c.group === 'expense').map((c) => (
                             <option key={c.value} value={c.value}>{c.label}</option>
@@ -1915,6 +1944,9 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                               onChange={(e) => handleBatchLineChange(row.id, 'category', e.target.value)}
                               className="accounting-select w-full !h-8 !min-h-8 text-xs"
                             >
+                              {sectorExpenseCategories.map((c) => (
+                                <option key={c} value={c}>{c}</option>
+                              ))}
                               {CASH_OUT_CATEGORIES.filter((c) => c.group === 'expense').map((c) => (
                                 <option key={c.value} value={c.value}>{c.value}</option>
                               ))}
@@ -2017,9 +2049,15 @@ export default function BusinessActivities({ defaultTab = 'sales' }: BusinessAct
                     type="text"
                     value={otherCategory}
                     onChange={(e) => setOtherCategory(e.target.value)}
-                    placeholder="e.g. Regulatory Compliance / Asset Purchase"
+                    list="milestone-category-options"
+                    placeholder={`e.g. ${template.milestoneCategories.slice(0, 2).join(' / ')}`}
                     className="accounting-input w-full"
                   />
+                  <datalist id="milestone-category-options">
+                    {template.milestoneCategories.map((c) => (
+                      <option key={c} value={c} />
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
