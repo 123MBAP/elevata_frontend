@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import logo from '../assets/images/elevata_logo.png';
 import { apiRequest } from '../lib/api';
+import { useCategories } from '../lib/categoryTemplate';
+import CategoryPicker from '../assets/components/CategoryPicker';
 
 // Mini Rwandan Administrative Address Database
 const RWANDA_ADDRESSES: Record<string, Record<string, Record<string, Record<string, string[]>>>> = {
@@ -106,23 +108,8 @@ export default function RegisterPage() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  // Dynamic business categories from DB
-  const [businessTypes, setBusinessTypes] = useState<string[]>([]);
-
-  useEffect(() => {
-    async function loadCategories() {
-      try {
-        const res = await apiRequest('/categories');
-        if (res?.success && Array.isArray(res.data?.categories)) {
-          const names = res.data.categories.map((c: any) => c.businessType || c.cat_name).filter(Boolean);
-          setBusinessTypes(names);
-        }
-      } catch (e) {
-        console.warn('Unable to load business categories:', e);
-      }
-    }
-    loadCategories();
-  }, []);
+  // Business categories (with templates) managed by admins
+  const { categories, loading: categoriesLoading, error: categoriesError } = useCategories();
 
   // Wizard Step State
   const [step, setStep] = useState(1);
@@ -296,7 +283,7 @@ export default function RegisterPage() {
     } else if (step === 2) {
       if (formData.registrationType === 'SME') {
         if (!formData.businessName || !formData.businessType) {
-          setError('Please enter your business name and type.');
+          setError(!formData.businessName ? 'Please enter your business name.' : 'Please choose what kind of business it is.');
           return;
         }
       } else {
@@ -668,27 +655,15 @@ export default function RegisterPage() {
 
                   <div>
                     <label className="mb-1 block text-[12px] font-medium uppercase tracking-[0.12em] text-white/80">
-                      Business Category
+                      What kind of business is it?
                     </label>
-                    <div className="relative">
-                      <select
-                        name="businessType"
-                        required
-                        value={formData.businessType}
-                        onChange={handleChange}
-                        className="auth-select appearance-none cursor-pointer"
-                      >
-                        <option value="" disabled className="text-[#8c8c8c]">Select operating category</option>
-                        {businessTypes.map((type) => (
-                          <option key={type} value={type} className="text-[#181818] bg-white">{type}</option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-white/60">
-                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                        </svg>
-                      </div>
-                    </div>
+                    <CategoryPicker
+                      categories={categories}
+                      value={formData.businessType}
+                      onChange={(businessType) => setFormData((prev) => ({ ...prev, businessType }))}
+                      loading={categoriesLoading}
+                      error={categoriesError}
+                    />
                   </div>
                 </>
               ) : (

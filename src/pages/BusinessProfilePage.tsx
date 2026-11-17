@@ -35,8 +35,10 @@ import {
   Compass
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useApp } from '../context/AppContext';
 import { apiRequest } from '../lib/api';
 import { formatRWF } from '../lib/mockData';
+import { invalidateCategoryCache, useBusinessTemplate } from '../lib/categoryTemplate';
 import { Card } from '../assets/components/ui/card';
 import { Input } from '../assets/components/ui/input';
 
@@ -71,6 +73,7 @@ export const EQUIPMENT_CONDITIONS = [
 
 export default function BusinessProfilePage() {
   const { user } = useAuth();
+  const { refreshBusinessData } = useApp();
   const isAdmin = user?.role === 'ADMIN';
   const isFI = user?.role === 'FINANCIAL_INSTITUTION';
 
@@ -118,7 +121,8 @@ export default function BusinessProfilePage() {
     primaryProducts: '',
     operationalChallenges: '',
     strategicGoals: '',
-    digitizationLevel: 'Medium (POS & Mobile Money enabled)'
+    digitizationLevel: 'Medium (POS & Mobile Money enabled)',
+    sectorDetails: {} as Record<string, string>
   });
 
   // Financial Institution Form State
@@ -214,7 +218,8 @@ export default function BusinessProfilePage() {
               primaryProducts: op.primaryProducts || '',
               operationalChallenges: op.operationalChallenges || '',
               strategicGoals: op.strategicGoals || '',
-              digitizationLevel: op.digitizationLevel || 'Medium (POS & Mobile Money enabled)'
+              digitizationLevel: op.digitizationLevel || 'Medium (POS & Mobile Money enabled)',
+              sectorDetails: op.sectorDetails && typeof op.sectorDetails === 'object' ? op.sectorDetails : {}
             };
 
             setSmeForm(loadedSme);
@@ -231,6 +236,12 @@ export default function BusinessProfilePage() {
     }
   }, [user, isFI, isAdmin]);
 
+  // Category template for the selected business type (updates as soon as the category changes).
+  const { template } = useBusinessTemplate(isAdmin || isFI ? null : smeForm.businessType || null);
+  const equipmentCategories = template.equipmentCategories.length ? template.equipmentCategories : EQUIPMENT_CATEGORIES;
+  const setSectorDetail = (key: string, value: string) =>
+    setSmeForm((prev) => ({ ...prev, sectorDetails: { ...prev.sectorDetails, [key]: value } }));
+
   // Derived financial calculations for SME
   const totalEquipmentsValue = smeForm.equipments.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
   const totalAssets = Number(smeForm.currentAssets || 0) + Number(smeForm.fixedAssets || 0);
@@ -243,7 +254,7 @@ export default function BusinessProfilePage() {
     const newItem: EquipmentItem = {
       id: `eq_${Date.now()}`,
       name: '',
-      category: 'Technology & Computers',
+      category: equipmentCategories[0] || 'Other Assets',
       value: 0,
       condition: 'Operational (Good)'
     };
@@ -330,10 +341,16 @@ export default function BusinessProfilePage() {
               primaryProducts: smeForm.primaryProducts,
               operationalChallenges: smeForm.operationalChallenges,
               strategicGoals: smeForm.strategicGoals,
-              digitizationLevel: smeForm.digitizationLevel
+              digitizationLevel: smeForm.digitizationLevel,
+              sectorDetails: smeForm.sectorDetails
             }
           })
         });
+        if (initialSmeData && initialSmeData.businessType !== smeForm.businessType) {
+          invalidateCategoryCache();
+          // Other pages read the category from the dashboard data; refresh it so they adapt right away.
+          refreshBusinessData().catch(() => undefined);
+        }
         setInitialSmeData({ ...smeForm });
         showToast('Business Profile & Financial Ledger saved successfully!');
       }
@@ -1156,9 +1173,14 @@ export default function BusinessProfilePage() {
                             </option>
                           ))}
                           {smeForm.businessType && !availableCategories.includes(smeForm.businessType) && (
-                            <option value={smeForm.businessType}>{smeForm.businessType}</option>
+                            <option value={smeForm.businessType}>{smeForm.businessType} (no longer offered)</option>
                           )}
                         </select>
+                        <p className="mt-1 text-[11px] text-slate-500">
+                          {template.description}
+                          {initialSmeData && smeForm.businessType !== initialSmeData.businessType &&
+                            ' Saving changes the wording, journals, expense categories and report highlights across your workspace.'}
+                        </p>
                       </div>
                     </div>
 
@@ -1283,6 +1305,34 @@ export default function BusinessProfilePage() {
                     />
                   </div>
 
+                  {template.profileFields.length > 0 && (
+                    <div className="pt-1">
+                      <label className="accounting-label font-bold text-slate-800">
+                        {smeForm.businessType || 'Business'} details
+                      </label>
+                      <p className="text-[11px] text-slate-500 mb-2">Used for the report highlights for this kind of business.</p>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+                        {template.profileFields.map((field) => (
+                          <div key={field.key}>
+                            <label className="accounting-label">
+                              {field.label}
+                              {field.unit ? ` (${field.unit})` : ''}
+                            </label>
+                            <input
+                              type={field.type === 'number' ? 'number' : 'text'}
+                              min={field.type === 'number' ? 0 : undefined}
+                              step={field.type === 'number' ? 'any' : undefined}
+                              value={smeForm.sectorDetails[field.key] ?? ''}
+                              onChange={(e) => setSectorDetail(field.key, e.target.value)}
+                              placeholder={field.placeholder}
+                              className="accounting-input w-full"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Bottom Actions Bar */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t border-[#e2e8f0] gap-3">
                     <div className="flex items-center gap-2">
@@ -1378,11 +1428,14 @@ export default function BusinessProfilePage() {
                                   onChange={(e) => handleEquipmentChange(eq.id, 'category', e.target.value)}
                                   className="accounting-select w-full !h-8 !min-h-8 text-xs"
                                 >
-                                  {EQUIPMENT_CATEGORIES.map((cat) => (
+                                  {equipmentCategories.map((cat) => (
                                     <option key={cat} value={cat}>
                                       {cat}
                                     </option>
                                   ))}
+                                  {eq.category && !equipmentCategories.includes(eq.category) && (
+                                    <option value={eq.category}>{eq.category}</option>
+                                  )}
                                 </select>
                               </td>
                               <td className="py-2 px-2">
